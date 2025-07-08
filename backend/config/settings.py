@@ -1,7 +1,7 @@
-from pathlib import Path
 import os
-from dotenv import load_dotenv  # type: ignore
+from pathlib import Path
 
+from dotenv import load_dotenv  # type: ignore
 
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
