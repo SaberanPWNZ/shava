@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  web:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - static_volume:/app/static
+      - media_volume:/app/media
+    environment:
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-your-secret-key-here}
+      - DEBUG=1
+    depends_on:
+      - db
+    command: >
+      sh -c "poetry run python manage.py migrate &&
+             poetry run python manage.py runserver 0.0.0.0:8000"
+
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=shava_db
+      - POSTGRES_USER=shava_user
+      - POSTGRES_PASSWORD=shava_password
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
