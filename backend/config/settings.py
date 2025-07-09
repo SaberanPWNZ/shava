@@ -111,6 +111,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -119,3 +120,163 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Django REST Framework settings
+REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.JSONParser",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.BasicAuthentication",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ],
+    "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
+    "TEST_REQUEST_DEFAULT_FORMAT": "json",
+}
+
+# Logging configuration
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO" if not DEBUG else "DEBUG")
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+
+if not os.path.exists("/.dockerenv"):
+    os.makedirs(LOG_DIR, exist_ok=True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "[{asctime}] {levelname} {name} ({module}:{lineno}) — {message}",
+            "style": "{",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
+        },
+        "json": {
+            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "format": "%(asctime)s %(name)s %(levelname)s %(message)s %(pathname)s %(lineno)d",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose" if DEBUG else "simple",
+            "level": LOG_LEVEL,
+        },
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": os.path.join(LOG_DIR, "django.log")
+            if not os.path.exists("/.dockerenv")
+            else "/tmp/django.log",
+            "formatter": "verbose",
+            "level": LOG_LEVEL,
+            "maxBytes": 1024 * 1024 * 10,  # 10 MB
+            "backupCount": 5,
+        },
+        "error_file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": os.path.join(LOG_DIR, "django_errors.log")
+            if not os.path.exists("/.dockerenv")
+            else "/tmp/django_errors.log",
+            "formatter": "verbose",
+            "level": "ERROR",
+            "maxBytes": 1024 * 1024 * 10,  # 10 MB
+            "backupCount": 5,
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console", "error_file"]
+            if not os.path.exists("/.dockerenv")
+            else ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "DEBUG" if DEBUG else "INFO",
+            "propagate": False,
+        },
+        "shava_project": {
+            "handlers": ["console", "file"]
+            if not os.path.exists("/.dockerenv")
+            else ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        # Логування для ваших додатків
+        "news": {
+            "handlers": ["console", "file"]
+            if not os.path.exists("/.dockerenv")
+            else ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "places": {
+            "handlers": ["console", "file"]
+            if not os.path.exists("/.dockerenv")
+            else ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "users": {
+            "handlers": ["console", "file"]
+            if not os.path.exists("/.dockerenv")
+            else ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "rating": {
+            "handlers": ["console", "file"]
+            if not os.path.exists("/.dockerenv")
+            else ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "reviews": {
+            "handlers": ["console", "file"]
+            if not os.path.exists("/.dockerenv")
+            else ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "shwarma": {
+            "handlers": ["console", "file"]
+            if not os.path.exists("/.dockerenv")
+            else ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "ingredients": {
+            "handlers": ["console", "file"]
+            if not os.path.exists("/.dockerenv")
+            else ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": LOG_LEVEL,
+    },
+}
