@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Shawarma rating app backend"
 authors = ["Saberan <v.kotelnikovdidi@gmail.com>"]
 readme = "README.md"
-package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.12,<4.0"
@@ -26,4 +25,5 @@ isort = "^5.13.2"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
 build-backend = "poetry.core.masonry.api"

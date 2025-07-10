@@ -168,8 +168,8 @@ LOGGING = {
             "style": "{",
         },
         "json": {
-            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
-            "format": "%(asctime)s %(name)s %(levelname)s %(message)s %(pathname)s %(lineno)d",
+            "format": '{"time": "%(asctime)s", "name": "%(name)s", "level": "%(levelname)s", "message": "%(message)s", "path": "%(pathname)s", "line": %(lineno)d}',
+            "datefmt": "%Y-%m-%d %H:%M:%S",
         },
     },
     "handlers": {
@@ -280,3 +280,6 @@ LOGGING = {
         "level": LOG_LEVEL,
     },
 }
+
+# Додаємо налаштування для використання нашої моделі користувача
+AUTH_USER_MODEL = "users.User"
