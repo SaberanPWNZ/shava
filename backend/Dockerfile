@@ -29,7 +29,7 @@ COPY pyproject.toml poetry.lock* ./
 
 
 # Install dependencies directly without virtualenv
-RUN pip install django djangorestframework python-dotenv psycopg2-binary python-json-logger Pillow
+RUN pip install django djangorestframework python-dotenv psycopg2-binary python-json-logger Pillow djangorestframework-simplejwt[crypto]
 
 
 # Copy the rest of the application
