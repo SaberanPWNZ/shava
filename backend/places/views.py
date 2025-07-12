@@ -4,8 +4,8 @@ from rest_framework.decorators import action
 from rest_framework.generics import CreateAPIView  # type: ignore
 from rest_framework.permissions import IsAuthenticated  # type: ignore
 
-from backend.places.models import Place, PlaceRating
-from backend.places.serializers import PlaceCreateSerializer, PlaceRatingSerializer
+from places.models import Place, PlaceRating
+from places.serializers import PlaceCreateSerializer, PlaceRatingSerializer
 
 
 class PlaceCreateView(CreateAPIView):

@@ -3,6 +3,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth import get_user_model
 from django.db.models import Avg
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -26,7 +27,7 @@ class PlaceRating(models.Model):
         verbose_name_plural = "Place Ratings"
 
     def __str__(self):
-        return f"{self.user.username} - {self.place.name} - {self.rating}"
+        return f"{self.place.name} - {self.rating}"
 
 
 class Place(models.Model):
@@ -57,7 +58,7 @@ class Place(models.Model):
         "reviews.Review", related_name="places", blank=True
     )
     # videos #TODO add video field
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     website = models.URLField(blank=True, null=True)
     opening_hours = models.CharField(max_length=100, blank=True, null=True)
@@ -79,6 +80,16 @@ class Place(models.Model):
     def update_rating(self):
         """Update the rating field with the calculated average."""
         self.rating = self.calculate_average_rating()
+        self.save(update_fields=["rating"])
+
+    def calculate_review_average_rating(self):
+        """Calculate the average rating from all related reviews."""
+        avg = self.reviews.aggregate(avg_rating=Avg("rating"))["avg_rating"]
+        return avg if avg is not None else Decimal("0.0")
+
+    def update_rating_from_reviews(self):
+        """Update the rating field with the calculated average from reviews."""
+        self.rating = self.calculate_review_average_rating()
         self.save(update_fields=["rating"])
 
     def google_maps_url(self):
