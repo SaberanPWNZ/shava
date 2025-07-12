@@ -14,5 +14,3 @@ urlpatterns = [
     path("api/users/", include("users.urls")),
     path("api/news/", include("news.urls")),
 ]
-
-# Once package is installed, uncomment the JWT imports and paths above
