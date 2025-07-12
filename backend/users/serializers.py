@@ -37,13 +37,6 @@ class UserSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def validate(self, attrs):
-        if attrs["password"] != attrs.pop("password2"):
-            raise serializers.ValidationError(
-                {"password": "Password fields didn't match."}
-            )
-        return attrs
-
     def create(self, validated_data):
         user = User(**validated_data)
         user.set_password(validated_data["password"])

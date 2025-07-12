@@ -26,7 +26,3 @@ class UserCreateViewSet(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.AllowAny]
-
-    def get_permissions(self):
-        print("UserCreateViewSet permissions:", self.permission_classes)
-        return [permission() for permission in self.permission_classes]
