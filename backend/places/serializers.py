@@ -34,3 +34,17 @@ class PlaceCreateSerializer(ModelSerializer):
             "is_featured",
         ]
         read_only_fields = ["created_at", "updated_at"]
+
+    def create(self, validated_data):
+        validated_data["is_featured"] = False
+        return Place.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
+    def delete(self, instance):
+        instance.delete()
+        return instance
