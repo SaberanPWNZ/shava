@@ -1,6 +1,32 @@
 from decimal import Decimal
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth import get_user_model
+from django.db.models import Avg
+
+User = get_user_model()
+
+
+class PlaceRating(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="place_ratings"
+    )
+    place = models.ForeignKey("Place", on_delete=models.CASCADE, related_name="ratings")
+    rating = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        validators=[MinValueValidator(0.0), MaxValueValidator(10.0)],
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("user", "place")
+        verbose_name = "Place Rating"
+        verbose_name_plural = "Place Ratings"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.place.name} - {self.rating}"
 
 
 class Place(models.Model):
@@ -44,6 +70,16 @@ class Place(models.Model):
 
     def __str__(self):
         return self.name
+
+    def calculate_average_rating(self):
+        """Calculate the average rating from all individual ratings."""
+        avg = self.ratings.aggregate(avg_rating=Avg("rating"))["avg_rating"]
+        return avg if avg is not None else Decimal("0.0")
+
+    def update_rating(self):
+        """Update the rating field with the calculated average."""
+        self.rating = self.calculate_average_rating()
+        self.save(update_fields=["rating"])
 
     def google_maps_url(self):
         if self.latitude and self.longitude:

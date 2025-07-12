@@ -1,4 +1,4 @@
-from backend.places.models import Place
+from backend.places.models import Place, PlaceRating
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
@@ -48,3 +48,29 @@ class PlaceCreateSerializer(ModelSerializer):
     def delete(self, instance):
         instance.delete()
         return instance
+
+
+class PlaceRatingSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = PlaceRating
+        fields = ["id", "user", "place", "rating", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+    def create(self, validated_data):
+        # Create or update the rating
+        user = validated_data.get("user")
+        place = validated_data.get("place")
+        rating = validated_data.get("rating")
+
+        place_rating, created = PlaceRating.objects.update_or_create(
+            user=user,
+            place=place,
+            defaults={"rating": rating},
+        )
+
+        # Update the place's average rating
+        place.update_rating()
+
+        return place_rating
