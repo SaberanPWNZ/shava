@@ -19,8 +19,14 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class UserCreateViewSet(generics.CreateAPIView):
-    """ """
+    """
+    API endpoint that allows users to register without authentication.
+    """
 
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.AllowAny]
+
+    def get_permissions(self):
+        print("UserCreateViewSet permissions:", self.permission_classes)
+        return [permission() for permission in self.permission_classes]

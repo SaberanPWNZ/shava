@@ -210,7 +210,6 @@ LOGGING = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
-        # Логування для ваших додатків
         "news": {
             "handlers": ["console", "file"]
             if not os.path.exists("/.dockerenv")
