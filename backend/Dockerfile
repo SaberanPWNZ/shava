@@ -1,4 +1,3 @@
-
 FROM python:3.12-slim
 
 
@@ -15,31 +14,33 @@ RUN apt-get update && \
         g++ \
         libpq-dev \
         curl \
-        build-essential && \
+        build-essential \
+        libjpeg-dev \
+        zlib1g-dev && \
     rm -rf /var/lib/apt/lists/*
 
 
-RUN pip install poetry
+# Install poetry
+RUN pip install poetry==1.7.1
 
 
-ENV POETRY_NO_INTERACTION=1 \
-    POETRY_VENV_IN_PROJECT=1 \
-    POETRY_CACHE_DIR=/tmp/poetry_cache
-
-
+# Copy only requirements files first to cache dependencies
 COPY pyproject.toml poetry.lock* ./
 
 
-RUN poetry install --only main && rm -rf $POETRY_CACHE_DIR
+# Install dependencies directly without virtualenv
+RUN pip install django djangorestframework python-dotenv psycopg2-binary python-json-logger Pillow djangorestframework-simplejwt[crypto]
 
 
+# Copy the rest of the application
 COPY . .
 
 RUN addgroup --system app && adduser --system --group app
 
 
 RUN mkdir -p /app/static /app/media && \
-    chown -R app:app /app
+    chown -R app:app /app && \
+    chmod +x /app/wait_for_db.py
 
 USER app
 
@@ -49,4 +50,9 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/admin/ || exit 1
 
-CMD ["poetry", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Fix: remove duplicate CMD instruction
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    CMD curl -f http://localhost:8000/admin/ || exit 1
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
