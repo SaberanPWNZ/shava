@@ -3,7 +3,6 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
-# Create your models here.
 class Place(models.Model):
     name = (models.CharField(max_length=200),)
     address = models.CharField(max_length=300)
@@ -20,7 +19,7 @@ class Place(models.Model):
         decimal_places=2,
         default=Decimal(0.0),
         validators=[MinValueValidator(0.0), MaxValueValidator(10.0)],
-    )  # TODO add validators
+    )
     main_image = models.ImageField(upload_to="place_images/")
     additional_images = models.ImageField(
         upload_to="place_additional_images/", blank=True, null=True
@@ -32,3 +31,21 @@ class Place(models.Model):
         "reviews.Review", related_name="places", blank=True
     )
     # videos #TODO add video field
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    website = models.URLField(blank=True, null=True)
+    opening_hours = models.CharField(max_length=100, blank=True, null=True)
+    is_featured = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Place"
+        verbose_name_plural = "Places"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.name
+
+    def google_maps_url(self):
+        if self.latitude and self.longitude:
+            return f"https://www.google.com/maps/search/?api=1&query={self.latitude},{self.longitude}"
+        return None
