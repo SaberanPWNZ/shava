@@ -1,5 +1,7 @@
 from django.db import models
 
+from backend.shwarma.choices import ShwarmaSize
+
 
 class AdditionalImage(models.Model):
     """Модель для додаткових зображень шаурми"""
@@ -27,6 +29,10 @@ class Shwarma(models.Model):
         "places.Place", on_delete=models.CASCADE, related_name="shwarmas"
     )
     description = models.TextField()
+    size = models.CharField(
+        max_length=50,
+        choices=ShwarmaSize.choices
+    )
     ingredients = models.ManyToManyField(
         "ingredients.Ingredient", related_name="shwarmas"
     )

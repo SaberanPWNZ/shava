@@ -5,6 +5,9 @@ from django.contrib.auth import get_user_model
 from django.db.models import Avg
 from django.utils import timezone
 
+from backend.places.choices import DISTRICT_CHOICES
+
+
 User = get_user_model()
 
 
@@ -32,6 +35,9 @@ class PlaceRating(models.Model):
 
 class Place(models.Model):
     name = models.CharField(max_length=200, default="Unnamed Place")
+    district = models.CharField(
+        max_length=100, choices=DISTRICT_CHOICES, default="Unknown"
+    )
     address = models.CharField(max_length=300)
     delivery = models.BooleanField(default=False)
     latitude = models.DecimalField(
