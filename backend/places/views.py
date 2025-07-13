@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.generics import CreateAPIView  # type: ignore
 from rest_framework.permissions import IsAuthenticated  # type: ignore
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from places.models import Place, PlaceRating
 from places.serializers import PlaceCreateSerializer, PlaceRatingSerializer
@@ -17,6 +18,7 @@ class PlaceCreateView(CreateAPIView):
     allowed_methods = ["POST"]
     serializer_class = PlaceCreateSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
 
 class PlaceRatingViewSet(viewsets.ModelViewSet):

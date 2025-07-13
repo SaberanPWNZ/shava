@@ -31,7 +31,7 @@ class PlaceRating(models.Model):
 
 
 class Place(models.Model):
-    name = (models.CharField(max_length=200),)
+    name = models.CharField(max_length=200, default="Unnamed Place")
     address = models.CharField(max_length=300)
     delivery = models.BooleanField(default=False)
     latitude = models.DecimalField(
@@ -46,6 +46,7 @@ class Place(models.Model):
         decimal_places=2,
         default=Decimal(0.0),
         validators=[MinValueValidator(0.0), MaxValueValidator(10.0)],
+        help_text="Average rating calculated from reviews",
     )
     main_image = models.ImageField(upload_to="place_images/")
     additional_images = models.ImageField(
@@ -73,23 +74,14 @@ class Place(models.Model):
         return self.name
 
     def calculate_average_rating(self):
-        """Calculate the average rating from all individual ratings."""
-        avg = self.ratings.aggregate(avg_rating=Avg("rating"))["avg_rating"]
+        """Calculate the average rating from all related reviews."""
+        # Use review_set instead of reviews (due to ForeignKey relationship)
+        avg = self.review_set.aggregate(avg_rating=Avg("score"))["avg_rating"]
         return avg if avg is not None else Decimal("0.0")
 
     def update_rating(self):
-        """Update the rating field with the calculated average."""
-        self.rating = self.calculate_average_rating()
-        self.save(update_fields=["rating"])
-
-    def calculate_review_average_rating(self):
-        """Calculate the average rating from all related reviews."""
-        avg = self.reviews.aggregate(avg_rating=Avg("rating"))["avg_rating"]
-        return avg if avg is not None else Decimal("0.0")
-
-    def update_rating_from_reviews(self):
         """Update the rating field with the calculated average from reviews."""
-        self.rating = self.calculate_review_average_rating()
+        self.rating = self.calculate_average_rating()
         self.save(update_fields=["rating"])
 
     def google_maps_url(self):
