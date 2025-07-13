@@ -212,3 +212,6 @@ __marimo__/
 .jpeg
 .png
 .jpg
+
+# Media files (uploaded content)
+backend/media/
