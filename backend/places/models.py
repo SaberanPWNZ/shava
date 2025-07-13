@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Avg
 from django.utils import timezone
 
-from backend.places.choices import DISTRICT_CHOICES
+from places.choices import DISTRICT_CHOICES
 
 
 User = get_user_model()
@@ -58,9 +58,6 @@ class Place(models.Model):
     additional_images = models.ImageField(
         upload_to="place_additional_images/", blank=True, null=True
     )
-    shwarma = models.ManyToManyField(
-        "shwarma.Shwarma", related_name="places", blank=True
-    )
     reviews = models.ManyToManyField(
         "reviews.Review", related_name="places", blank=True
     )
@@ -87,6 +84,13 @@ class Place(models.Model):
 
     def update_rating(self):
         """Update the rating field with the calculated average from reviews."""
+        self.rating = self.calculate_average_rating()
+        self.save(update_fields=["rating"])
+
+    def google_maps_url(self):
+        if self.latitude and self.longitude:
+            return f"https://www.google.com/maps/search/?api=1&query={self.latitude},{self.longitude}"
+        return None
         self.rating = self.calculate_average_rating()
         self.save(update_fields=["rating"])
 
