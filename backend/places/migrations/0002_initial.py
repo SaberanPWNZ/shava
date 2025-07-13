@@ -10,29 +10,39 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('places', '0001_initial'),
-        ('reviews', '0001_initial'),
+        ("places", "0001_initial"),
+        ("reviews", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='place',
-            name='reviews',
-            field=models.ManyToManyField(blank=True, related_name='places', to='reviews.review'),
+            model_name="place",
+            name="reviews",
+            field=models.ManyToManyField(
+                blank=True, related_name="places", to="reviews.review"
+            ),
         ),
         migrations.AddField(
-            model_name='placerating',
-            name='place',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='ratings', to='places.place'),
+            model_name="placerating",
+            name="place",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="ratings",
+                to="places.place",
+            ),
         ),
         migrations.AddField(
-            model_name='placerating',
-            name='user',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='place_ratings', to=settings.AUTH_USER_MODEL),
+            model_name="placerating",
+            name="user",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="place_ratings",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='placerating',
-            unique_together={('user', 'place')},
+            name="placerating",
+            unique_together={("user", "place")},
         ),
     ]

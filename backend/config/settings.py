@@ -167,9 +167,11 @@ LOGGING = {
         },
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": os.path.join(LOG_DIR, "django.log")
-            if not os.path.exists("/.dockerenv")
-            else "/tmp/django.log",
+            "filename": (
+                os.path.join(LOG_DIR, "django.log")
+                if not os.path.exists("/.dockerenv")
+                else "/tmp/django.log"
+            ),
             "formatter": "verbose",
             "level": LOG_LEVEL,
             "maxBytes": 1024 * 1024 * 10,  # 10 MB
@@ -177,9 +179,11 @@ LOGGING = {
         },
         "error_file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": os.path.join(LOG_DIR, "django_errors.log")
-            if not os.path.exists("/.dockerenv")
-            else "/tmp/django_errors.log",
+            "filename": (
+                os.path.join(LOG_DIR, "django_errors.log")
+                if not os.path.exists("/.dockerenv")
+                else "/tmp/django_errors.log"
+            ),
             "formatter": "verbose",
             "level": "ERROR",
             "maxBytes": 1024 * 1024 * 10,  # 10 MB
@@ -193,9 +197,11 @@ LOGGING = {
             "propagate": False,
         },
         "django.request": {
-            "handlers": ["console", "error_file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "error_file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": "WARNING",
             "propagate": False,
         },
@@ -205,58 +211,74 @@ LOGGING = {
             "propagate": False,
         },
         "shava_project": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
         "news": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
         "places": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
         "users": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
         "rating": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
         "reviews": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
         "shwarma": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
         "ingredients": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },

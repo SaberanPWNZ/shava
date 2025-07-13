@@ -1,5 +1,3 @@
-from django.db import models
-
 DISTRICT_CHOICES = [
     ("Unknown", "Unknown"),
     ("Dnipro", "Дніпровський"),
