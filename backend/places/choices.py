@@ -11,3 +11,12 @@ DISTRICT_CHOICES = [
     ("Holosiiv", "Голосіївський"),
     ("Darnytsia", "Дарницький"),
 ]
+
+
+PLACE_STATUS_CHOICES = [
+    ("Active", "Активний"),
+    ("Inactive", "Неактивний"),
+    ("On_moderation", "На модерації"),
+    ("Closed", "Закритий"),
+    ("Archived", "Архівний"),
+]

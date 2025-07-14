@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Avg
 from django.utils import timezone
 
-from places.choices import DISTRICT_CHOICES
+from places.choices import DISTRICT_CHOICES, PLACE_STATUS_CHOICES
 
 
 User = get_user_model()
@@ -47,6 +47,9 @@ class Place(models.Model):
         max_digits=9, decimal_places=6, blank=True, null=True
     )
     description = models.TextField(blank=True, null=True)
+    status = models.CharField(
+        max_length=50, choices=PLACE_STATUS_CHOICES, default="On_moderation"
+    )
     rating = models.DecimalField(
         max_digits=3,
         decimal_places=2,

@@ -37,17 +37,50 @@ class PlaceCreateSerializer(ModelSerializer):
             "website",
             "opening_hours",
         ]
-        read_only_fields = ["created_at", "updated_at", "rating", "is_featured"]
+        read_only_fields = [
+            "created_at",
+            "updated_at",
+            "rating",
+            "is_featured",
+            "status",
+        ]
 
     def create(self, validated_data):
         # Remove rating from validated_data if present (should be calculated)
         validated_data.pop("rating", None)
         validated_data["is_featured"] = False
+        validated_data["status"] = "On_moderation"
         return Place.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
         # Remove rating from validated_data (should be calculated automatically)
         validated_data.pop("rating", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
+
+class PlaceUpdateSerializer(ModelSerializer):
+    class Meta:
+        model = Place
+        fields = [
+            "name",
+            "district",
+            "address",
+            "delivery",
+            "latitude",
+            "longitude",
+            "description",
+            "main_image",
+            "additional_images",
+            "website",
+            "opening_hours",
+            "status",
+        ]
+        read_only_fields = ["created_at", "updated_at", "rating", "is_featured"]
+
+    def update(self, instance, validated_data):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -77,3 +110,12 @@ class PlaceRatingSerializer(serializers.ModelSerializer):
         place.update_rating()
 
         return place_rating
+
+    def update(self, instance, validated_data):
+        instance.rating = validated_data.get("rating", instance.rating)
+        instance.save()
+
+        # Update the place's average rating automatically
+        instance.place.update_rating()
+
+        return instance

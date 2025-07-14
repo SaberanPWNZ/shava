@@ -8,4 +8,5 @@ router.register(r"ratings", PlaceRatingViewSet)
 urlpatterns = [
     path("", include(router.urls)),
     path("create-place/", PlaceCreateView.as_view(), name="create-place"),
+    path("update-place/<int:pk>/", PlaceCreateView.as_view(), name="update-place"),
 ]

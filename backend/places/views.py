@@ -1,12 +1,16 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.generics import CreateAPIView  # type: ignore
+from rest_framework.generics import CreateAPIView, RetrieveAPIView, UpdateAPIView  # type: ignore
 from rest_framework.permissions import IsAuthenticated  # type: ignore
 from rest_framework.parsers import MultiPartParser, FormParser
 
 from places.models import Place, PlaceRating
-from places.serializers import PlaceCreateSerializer, PlaceRatingSerializer
+from places.serializers import (
+    PlaceCreateSerializer,
+    PlaceRatingSerializer,
+    PlaceUpdateSerializer,
+)
 
 
 class PlaceCreateView(CreateAPIView):
@@ -17,6 +21,13 @@ class PlaceCreateView(CreateAPIView):
     queryset = Place.objects.all()
     allowed_methods = ["POST"]
     serializer_class = PlaceCreateSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+
+class PlaceUpdateView(UpdateAPIView, RetrieveAPIView):
+    queryset = Place.objects.all()
+    serializer_class = PlaceUpdateSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
