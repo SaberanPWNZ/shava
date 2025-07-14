@@ -1,8 +1,35 @@
 from django.test import TestCase
 from places.models import Place
+from places_menu.models import Menu
+from shwarma.models import Shwarma
 
 
 class PlaceModelTest(TestCase):
+    def setUp(self):
+        self.place = Place.objects.create(
+            name="Test Place",
+            district="Unknown",
+            address="Test Address",
+            delivery=True,
+            latitude=50.4501,
+            longitude=30.5234,
+            description="Test Description",
+            main_image="test.jpg",
+        )
+        self.shwarma = Shwarma.objects.create(
+            name="Test Shwarma",
+            place=self.place,
+            description="Test",
+            size="M",
+            price=100,
+            main_image="test.jpg",
+        )
+        self.menu = Menu.objects.create(
+            name="Test Menu",
+            place=self.place,
+            item=self.shwarma,
+        )
+
     def test_create_place(self):
         place = Place.objects.create(
             name="Test Place",
