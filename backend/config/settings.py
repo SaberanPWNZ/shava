@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "reviews",
     "shwarma",
     "ingredients",
+    "places_menu",
 ]
 
 MIDDLEWARE = [
@@ -166,9 +167,11 @@ LOGGING = {
         },
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": os.path.join(LOG_DIR, "django.log")
-            if not os.path.exists("/.dockerenv")
-            else "/tmp/django.log",
+            "filename": (
+                os.path.join(LOG_DIR, "django.log")
+                if not os.path.exists("/.dockerenv")
+                else "/tmp/django.log"
+            ),
             "formatter": "verbose",
             "level": LOG_LEVEL,
             "maxBytes": 1024 * 1024 * 10,  # 10 MB
@@ -176,9 +179,11 @@ LOGGING = {
         },
         "error_file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": os.path.join(LOG_DIR, "django_errors.log")
-            if not os.path.exists("/.dockerenv")
-            else "/tmp/django_errors.log",
+            "filename": (
+                os.path.join(LOG_DIR, "django_errors.log")
+                if not os.path.exists("/.dockerenv")
+                else "/tmp/django_errors.log"
+            ),
             "formatter": "verbose",
             "level": "ERROR",
             "maxBytes": 1024 * 1024 * 10,  # 10 MB
@@ -192,9 +197,11 @@ LOGGING = {
             "propagate": False,
         },
         "django.request": {
-            "handlers": ["console", "error_file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "error_file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": "WARNING",
             "propagate": False,
         },
@@ -204,58 +211,74 @@ LOGGING = {
             "propagate": False,
         },
         "shava_project": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
         "news": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
         "places": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
         "users": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
         "rating": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
         "reviews": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
         "shwarma": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
         "ingredients": {
-            "handlers": ["console", "file"]
-            if not os.path.exists("/.dockerenv")
-            else ["console"],
+            "handlers": (
+                ["console", "file"]
+                if not os.path.exists("/.dockerenv")
+                else ["console"]
+            ),
             "level": LOG_LEVEL,
             "propagate": False,
         },
@@ -269,7 +292,7 @@ LOGGING = {
 AUTH_USER_MODEL = "users.User"
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": False,
@@ -294,7 +317,7 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_REFRESH_EXP_CLAIM": "refresh_exp",
     "SLIDING_TOKEN_LIFETIME": timedelta(minutes=5),
     "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
-    "TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainPairSerializer",
+    "TOKEN_OBTAIN_SERIALIZER": "users.jwt_serializers.EmailTokenObtainPairSerializer",
     "TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSerializer",
     "TOKEN_VERIFY_SERIALIZER": "rest_framework_simplejwt.serializers.TokenVerifySerializer",
     "TOKEN_BLACKLIST_SERIALIZER": "rest_framework_simplejwt.serializers.TokenBlacklistSerializer",

@@ -26,7 +26,6 @@ class UserSerializer(serializers.ModelSerializer):
             "is_moderator",
             "is_admin",
             "password",
-            "groups",
         ]
         read_only_fields = [
             "id",
@@ -40,5 +39,9 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User(**validated_data)
         user.set_password(validated_data["password"])
+        user.is_staff = False
+        user.is_superuser = False
+        user.is_active = True
+        user.is_verified = False
         user.save()
         return user
