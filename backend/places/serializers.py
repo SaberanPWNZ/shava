@@ -61,6 +61,32 @@ class PlaceCreateSerializer(ModelSerializer):
         return instance
 
 
+class PlaceUpdateSerializer(ModelSerializer):
+    class Meta:
+        model = Place
+        fields = [
+            "name",
+            "district",
+            "address",
+            "delivery",
+            "latitude",
+            "longitude",
+            "description",
+            "main_image",
+            "additional_images",
+            "website",
+            "opening_hours",
+            "status",
+        ]
+        read_only_fields = ["created_at", "updated_at", "rating", "is_featured"]
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
+
 class PlaceRatingSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
@@ -84,3 +110,12 @@ class PlaceRatingSerializer(serializers.ModelSerializer):
         place.update_rating()
 
         return place_rating
+
+    def update(self, instance, validated_data):
+        instance.rating = validated_data.get("rating", instance.rating)
+        instance.save()
+
+        # Update the place's average rating automatically
+        instance.place.update_rating()
+
+        return instance

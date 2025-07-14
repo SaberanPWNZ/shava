@@ -18,4 +18,5 @@ PLACE_STATUS_CHOICES = [
     ("Inactive", "Неактивний"),
     ("On_moderation", "На модерації"),
     ("Closed", "Закритий"),
+    ("Archived", "Архівний"),
 ]
