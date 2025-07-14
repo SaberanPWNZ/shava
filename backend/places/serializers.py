@@ -37,12 +37,19 @@ class PlaceCreateSerializer(ModelSerializer):
             "website",
             "opening_hours",
         ]
-        read_only_fields = ["created_at", "updated_at", "rating", "is_featured"]
+        read_only_fields = [
+            "created_at",
+            "updated_at",
+            "rating",
+            "is_featured",
+            "status",
+        ]
 
     def create(self, validated_data):
         # Remove rating from validated_data if present (should be calculated)
         validated_data.pop("rating", None)
         validated_data["is_featured"] = False
+        validated_data["status"] = "On_moderation"
         return Place.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
