@@ -80,6 +80,9 @@ class PlaceCreateSerializer(ModelSerializer):
 
 
 class PlaceUpdateSerializer(ModelSerializer):
+    address = serializers.CharField(required=False)
+    main_image = serializers.ImageField(required=False)
+
     class Meta:
         model = Place
         fields = [
