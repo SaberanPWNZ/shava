@@ -206,9 +206,34 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-
 # images
-
 .jpeg
 .png
 .jpg
+
+# Node.js dependencies and build artifacts for frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/dist/
+frontend/.cache/
+
+# Next.js specific
+frontend/.next/
+frontend/out/
+
+# npm debug logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Environment variables for frontend
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# TypeScript build info
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
