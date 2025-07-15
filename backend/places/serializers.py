@@ -10,7 +10,25 @@ class PlaceSerializer(ModelSerializer):
 
     class Meta:
         model = Place
-        fields = "__all__"
+        fields = [
+            "id",
+            "name",
+            "district",
+            "address",
+            "delivery",
+            "latitude",
+            "longitude",
+            "description",
+            "rating",
+            "main_image",
+            "additional_images",
+            "reviews",
+            "created_at",
+            "updated_at",
+            "website",
+            "opening_hours",
+            "is_featured",
+        ]
 
     def get_google_maps_url(self, obj):
         return obj.google_maps_url()
@@ -115,7 +133,16 @@ class PlaceRatingSerializer(serializers.ModelSerializer):
         instance.rating = validated_data.get("rating", instance.rating)
         instance.save()
 
-        # Update the place's average rating automatically
         instance.place.update_rating()
 
         return instance
+
+
+class PlaceDetailSerializer(PlaceSerializer):
+    ratings = PlaceRatingSerializer(many=True, read_only=True)
+
+    class Meta(PlaceSerializer.Meta):
+        fields = PlaceSerializer.Meta.fields + ["ratings"]
+        extra_kwargs = {
+            "ratings": {"required": False},
+        }
