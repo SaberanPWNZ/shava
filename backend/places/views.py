@@ -1,11 +1,13 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.generics import CreateAPIView, RetrieveAPIView, UpdateAPIView  # type: ignore
-from rest_framework.permissions import IsAuthenticated  # type: ignore
+from rest_framework.generics import CreateAPIView, RetrieveAPIView, UpdateAPIView
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.exceptions import ValidationError
+from moderation.models import ModeratedObject
+from moderation.helpers import automoderate
 import logging
 
 from places.models import Place, PlaceRating
@@ -13,6 +15,7 @@ from places.serializers import (
     PlaceCreateSerializer,
     PlaceRatingSerializer,
     PlaceUpdateSerializer,
+    PlaceModerationSerializer,
 )
 
 logger = logging.getLogger("places")
@@ -29,9 +32,14 @@ class PlaceCreateView(CreateAPIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def perform_create(self, serializer):
-        """Override to add custom creation logic"""
+        """Override to add custom creation logic and moderation"""
         try:
-            instance = serializer.save()
+            # Set the author to current user
+            instance = serializer.save(author=self.request.user)
+
+            # Handle moderation
+            automoderate(instance, self.request.user)
+
             logger.info(
                 f"Place created successfully: {instance.name} by user {self.request.user}"
             )
@@ -48,12 +56,17 @@ class PlaceUpdateView(UpdateAPIView, RetrieveAPIView):
     queryset = Place.objects.all()
     serializer_class = PlaceUpdateSerializer
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser, JSONParser]  # додати JSONParser
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def perform_update(self, serializer):
-        """Override to add custom update logic"""
+        """Override to add custom update logic and moderation"""
         try:
             instance = serializer.save()
+
+            # Re-moderate after update if not staff/superuser
+            if not (self.request.user.is_staff or self.request.user.is_superuser):
+                automoderate(instance, self.request.user)
+
             logger.info(
                 f"Place updated successfully: {instance.name} by user {self.request.user}"
             )
@@ -132,5 +145,71 @@ class PlaceRatingViewSet(viewsets.ModelViewSet):
             f"Rating updated: {instance.rating} for place {instance.place.name} by {self.request.user}"
         )
         return instance
-        return instance
-        return instance
+
+
+class PlaceModerationViewSet(viewsets.ViewSet):
+    """
+    ViewSet for handling place moderation actions
+    """
+
+    permission_classes = [IsAdminUser]
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        """Approve a moderated place"""
+        try:
+            moderated_obj = ModeratedObject.objects.get(
+                object_pk=pk, content_type__model="place"
+            )
+            moderated_obj.approve(
+                by=request.user, reason=request.data.get("reason", "")
+            )
+
+            logger.info(f"Place {pk} approved by {request.user}")
+            return Response({"status": "approved"}, status=status.HTTP_200_OK)
+        except ModeratedObject.DoesNotExist:
+            return Response(
+                {"error": "Moderated object not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            logger.error(f"Error approving place: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        """Reject a moderated place"""
+        try:
+            moderated_obj = ModeratedObject.objects.get(
+                object_pk=pk, content_type__model="place"
+            )
+            moderated_obj.reject(
+                by=request.user,
+                reason=request.data.get("reason", "Rejected by moderator"),
+            )
+
+            logger.info(f"Place {pk} rejected by {request.user}")
+            return Response({"status": "rejected"}, status=status.HTTP_200_OK)
+        except ModeratedObject.DoesNotExist:
+            return Response(
+                {"error": "Moderated object not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            logger.error(f"Error rejecting place: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=["get"])
+    def pending(self, request):
+        """Get list of places pending moderation"""
+        try:
+            pending_objects = ModeratedObject.objects.filter(
+                content_type__model="place",
+                moderation_status=ModeratedObject.STATUS_PENDING,
+            )
+
+            serializer = PlaceModerationSerializer(pending_objects, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error fetching pending places: {e}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

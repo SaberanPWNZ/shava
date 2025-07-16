@@ -5,8 +5,10 @@ from django.contrib.auth import get_user_model
 from django.db.models import Avg
 from django.utils import timezone
 
-from places.choices import DISTRICT_CHOICES, PLACE_STATUS_CHOICES
+
 from moderation.moderator import GenericModerator
+from moderation import moderation
+from places.choices import DISTRICT_CHOICES, PLACE_STATUS_CHOICES
 
 User = get_user_model()
 
@@ -64,12 +66,18 @@ class Place(models.Model):
     reviews = models.ManyToManyField(
         "reviews.Review", related_name="places", blank=True
     )
-    # videos #TODO add video field
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     website = models.URLField(blank=True, null=True)
     opening_hours = models.CharField(max_length=100, blank=True, null=True)
     is_featured = models.BooleanField(default=False)
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="created_places",
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = "Place"
@@ -81,7 +89,6 @@ class Place(models.Model):
 
     def calculate_average_rating(self):
         """Calculate the average rating from all related reviews."""
-        # Use review_set instead of reviews (due to ForeignKey relationship)
         avg = self.review_set.aggregate(avg_rating=Avg("score"))["avg_rating"]
         return avg if avg is not None else Decimal("0.0")
 
@@ -102,15 +109,20 @@ class PlaceModerator(GenericModerator):
     notify_user = True
     notify_moderator = True
     auto_approve_for_superusers = True
-    auto_approve_for_staff = False
-    fields_exclude = []
+    auto_approve_for_staff = True
+    auto_reject_for_anonymous = True
+    fields_exclude = ["rating", "created_at", "updated_at", "is_featured"]
+
+    def inform_user(self, content_object, user):
+        """Custom method to inform user about moderation status."""
+        # You can add custom email/notification logic here
+        pass
+
+    def inform_moderator(self, content_object, user):
+        """Custom method to inform moderator about new content."""
+        # You can add custom email/notification logic here
+        pass
 
 
-# Register the moderation
-from moderation import moderation
-
+# Register the model with moderation
 moderation.register(Place, PlaceModerator)
-    fields_exclude = []
-
-    def __str__(self):
-        return self.name

@@ -1,9 +1,16 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import PlaceCreateView, PlaceRatingViewSet, PlaceDetailView, PlaceUpdateView
+from .views import (
+    PlaceCreateView,
+    PlaceRatingViewSet,
+    PlaceDetailView,
+    PlaceUpdateView,
+    PlaceModerationViewSet,
+)
 
 router = DefaultRouter()
 router.register(r"ratings", PlaceRatingViewSet)
+router.register(r"moderation", PlaceModerationViewSet, basename="place-moderation")
 
 urlpatterns = [
     path("", include(router.urls)),
