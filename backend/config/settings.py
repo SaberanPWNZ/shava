@@ -21,7 +21,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",
-    "django.contrib.staticfiles",
     "debug_toolbar",
     "news",
     "places",
