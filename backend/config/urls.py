@@ -6,7 +6,11 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from django.urls import include, path
+from debug_toolbar.toolbar import debug_toolbar_urls
 
+
+)
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
@@ -14,4 +18,5 @@ urlpatterns = [
     path("api/users/", include("users.urls")),
     path("api/news/", include("news.urls")),
     path("api/places/", include("places.urls")),
+    +debug_toolbar_urls(),
 ]
