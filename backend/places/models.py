@@ -6,7 +6,7 @@ from django.db.models import Avg
 from django.utils import timezone
 
 from places.choices import DISTRICT_CHOICES, PLACE_STATUS_CHOICES
-
+from moderation.moderator import GenericModerator
 
 User = get_user_model()
 
@@ -94,10 +94,23 @@ class Place(models.Model):
         if self.latitude and self.longitude:
             return f"https://www.google.com/maps/search/?api=1&query={self.latitude},{self.longitude}"
         return None
-        self.rating = self.calculate_average_rating()
-        self.save(update_fields=["rating"])
 
-    def google_maps_url(self):
-        if self.latitude and self.longitude:
-            return f"https://www.google.com/maps/search/?api=1&query={self.latitude},{self.longitude}"
-        return None
+
+class PlaceModerator(GenericModerator):
+    """Moderator for Place model using django-moderation."""
+
+    notify_user = True
+    notify_moderator = True
+    auto_approve_for_superusers = True
+    auto_approve_for_staff = False
+    fields_exclude = []
+
+
+# Register the moderation
+from moderation import moderation
+
+moderation.register(Place, PlaceModerator)
+    fields_exclude = []
+
+    def __str__(self):
+        return self.name
