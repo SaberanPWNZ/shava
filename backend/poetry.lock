@@ -318,6 +318,21 @@ files = [
 Django = ">=4.2"
 
 [[package]]
+name = "django-moderation"
+version = "0.8.0"
+description = "Generic Django objects moderation application"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "django-moderation-0.8.0.tar.gz", hash = "sha256:804a8e12eea9465f6a7426c6ecb449d1a40c7287f0e4dbfbd752bc5e6e541336"},
+    {file = "django_moderation-0.8.0-py3-none-any.whl", hash = "sha256:919041b44259509ed34f1146356ae8f9bcad6fd63c34b866b621171c474c4303"},
+]
+
+[package.dependencies]
+django = ">=2.2"
+
+[[package]]
 name = "djangorestframework"
 version = "3.16.0"
 description = "Web APIs for Django, made easy."
@@ -939,4 +954,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "e4a841e2a8c6f55b7a914aae4c1673093b9c121d694c9e913f2ea30888023aa9"
+content-hash = "47b60a4d3702cd9961556c6a48b55fb7ee3f206e9ffa79da2550b83ccfc02577"
