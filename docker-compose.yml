@@ -3,8 +3,6 @@ services:
     build: ./backend
     command: >
       bash -c "python wait_for_db.py &&
-               python manage.py makemigrations users shwarma ingredients places reviews rating &&
-               python manage.py migrate &&
                python manage.py runserver 0.0.0.0:8000"
     volumes:
       - ./backend:/app

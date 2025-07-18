@@ -26,10 +26,12 @@ class PlaceCreateView(CreateAPIView):
     API endpoint that allows places to be created.
     """
 
-    queryset = Place.objects.all()
     serializer_class = PlaceCreateSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        return Place.objects.all()
 
     def perform_create(self, serializer):
         """Override to add custom creation logic and moderation"""
@@ -53,10 +55,12 @@ class PlaceCreateView(CreateAPIView):
 
 
 class PlaceUpdateView(UpdateAPIView, RetrieveAPIView):
-    queryset = Place.objects.all()
     serializer_class = PlaceUpdateSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        return Place.objects.all()
 
     def perform_update(self, serializer):
         """Override to add custom update logic and moderation"""
@@ -115,12 +119,13 @@ class PlaceDetailView(RetrieveAPIView):
 
 
 class PlaceRatingViewSet(viewsets.ModelViewSet):
-    queryset = PlaceRating.objects.all()
     serializer_class = PlaceRatingSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return PlaceRating.objects.filter(user=self.request.user)
+        if hasattr(self.request, "user"):
+            return PlaceRating.objects.filter(user=self.request.user)
+        return PlaceRating.objects.none()
 
     @action(detail=False, methods=["post"], url_path="rate-place")
     def rate_place(self, request):

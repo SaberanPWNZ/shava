@@ -38,7 +38,8 @@ USER app
 EXPOSE 8000
 
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["bash", "-c", "python wait_for_db.py && python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/admin/ || exit 1
 

@@ -9,7 +9,7 @@ from .views import (
 )
 
 router = DefaultRouter()
-router.register(r"ratings", PlaceRatingViewSet)
+router.register(r"ratings", PlaceRatingViewSet, basename="place-rating")
 router.register(r"moderation", PlaceModerationViewSet, basename="place-moderation")
 
 urlpatterns = [
