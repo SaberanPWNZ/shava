@@ -26,6 +26,7 @@ class UserCreateViewSet(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []
 
 
 class UserDetailView(generics.RetrieveAPIView):
