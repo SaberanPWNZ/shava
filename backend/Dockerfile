@@ -28,7 +28,6 @@ COPY . .
 
 RUN addgroup --system app && adduser --system --group app
 
-
 RUN mkdir -p /app/static /app/media /app/logs && \
     chown -R app:app /app && \
     chmod +x /app/wait_for_db.py
@@ -37,8 +36,15 @@ USER app
 
 EXPOSE 8000
 
-
-CMD ["bash", "-c", "python wait_for_db.py && python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+# Run migrations with explicit error handling before starting the server
+CMD bash -c "\
+    echo 'Waiting for database...' && \
+    python wait_for_db.py && \
+    echo 'Database is available, running migrations...' && \
+    python manage.py makemigrations --noinput || { echo 'Failed to make migrations!'; exit 1; } && \
+    python manage.py migrate --noinput || { echo 'Failed to apply migrations!'; exit 1; } && \
+    echo 'Migrations applied successfully!' && \
+    python manage.py runserver 0.0.0.0:8000"
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/admin/ || exit 1

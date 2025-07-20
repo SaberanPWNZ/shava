@@ -7,7 +7,6 @@ class Review(models.Model):
     place = models.ForeignKey(
         "places.Place", on_delete=models.CASCADE, related_name="review_set"
     )
-
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     SCORE_CHOICES = [(Decimal(str(i)), str(i)) for i in range(1, 11)]
 
@@ -27,4 +26,5 @@ class Review(models.Model):
     class Meta:
         verbose_name = "Review"
         verbose_name_plural = "Reviews"
+        ordering = ["-created_at"]
         ordering = ["-created_at"]

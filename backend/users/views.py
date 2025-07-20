@@ -1,6 +1,15 @@
 from users.models import User
-from rest_framework import viewsets, permissions, generics
+from rest_framework import viewsets, permissions, generics, status
 from users.serializers import UserSerializer
+from rest_framework.authentication import (
+    SessionAuthentication,
+    BasicAuthentication,
+    TokenAuthentication,
+)
+from rest_framework.response import Response
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -21,12 +30,34 @@ class UserViewSet(viewsets.ModelViewSet):
 class UserCreateViewSet(generics.CreateAPIView):
     """
     API endpoint that allows users to register without authentication.
+    This endpoint is public and should NOT require any authentication.
     """
 
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
+
+    def get_permissions(self):
+        logger.info("Getting permissions for UserCreateViewSet")
+        return [permissions.AllowAny()]
+
+    def create(self, request, *args, **kwargs):
+        logger.info("Create method called in UserCreateViewSet")
+        try:
+            response = super().create(request, *args, **kwargs)
+            logger.info(f"User creation successful: {response.data}")
+            return response
+        except Exception as e:
+            logger.error(f"Error creating user: {str(e)}", exc_info=True)
+            return Response(
+                {"detail": f"Failed to create user: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    def dispatch(self, request, *args, **kwargs):
+        logger.info(f"Request headers: {request.headers}")
+        return super().dispatch(request, *args, **kwargs)
 
 
 class UserDetailView(generics.RetrieveAPIView):
