@@ -116,12 +116,14 @@ class PlaceModerator(GenericModerator):
     def inform_user(self, content_object, user=None):
         """Custom method to inform user about moderation status."""
         if user:
-            print("your place will be moderated soon")
+            print(f"Dear {user.username}, your place will be moderated soon.")
 
     def inform_moderator(self, content_object, user=None):
         """Custom method to inform moderator about new content."""
         if user:
-            print("A new place has been submitted for moderation.")
+            print(
+                f"Dear {user.username}, a new place has been submitted for moderation."
+            )
 
 
 moderation.register(Place, PlaceModerator)
