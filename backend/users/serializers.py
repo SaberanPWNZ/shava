@@ -37,11 +37,26 @@ class UserSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
-        user = User(**validated_data)
-        user.set_password(validated_data["password"])
-        user.is_staff = False
-        user.is_superuser = False
-        user.is_active = True
-        user.is_verified = False
-        user.save()
+        email = validated_data.get("email")
+        password = validated_data.pop("password")
+
+        # Ensure username is set to email if not provided
+        if not validated_data.get("username"):
+            validated_data["username"] = email
+
+        user = User.objects.create_user(
+            email=email, password=password, **validated_data
+        )
         return user
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        if password:
+            instance.set_password(password)
+
+        instance.save()
+        return instance
