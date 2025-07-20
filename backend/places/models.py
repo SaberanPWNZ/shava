@@ -113,16 +113,15 @@ class PlaceModerator(GenericModerator):
     auto_reject_for_anonymous = True
     fields_exclude = ["rating", "created_at", "updated_at", "is_featured"]
 
-    def inform_user(self, content_object, user):
+    def inform_user(self, content_object, user=None):
         """Custom method to inform user about moderation status."""
-        # You can add custom email/notification logic here
-        pass
+        if user:
+            print("your place will be moderated soon")
 
-    def inform_moderator(self, content_object, user):
+    def inform_moderator(self, content_object, user=None):
         """Custom method to inform moderator about new content."""
-        # You can add custom email/notification logic here
-        pass
+        if user:
+            print("A new place has been submitted for moderation.")
 
 
-# Register the model with moderation
 moderation.register(Place, PlaceModerator)
