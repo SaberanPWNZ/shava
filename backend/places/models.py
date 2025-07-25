@@ -106,7 +106,7 @@ class PlaceModerator(GenericModerator):
     notify_moderator = True
     auto_approve_for_superusers = True
     auto_approve_for_staff = True
-    auto_reject_for_anonymous = False 
+    auto_reject_for_anonymous = False
     fields_exclude = ["rating", "created_at", "updated_at"]
 
     def inform_user(self, content_object, user=None):
@@ -120,10 +120,7 @@ class PlaceModerator(GenericModerator):
             print(
                 f"Dear {user.username}, a new place has been submitted for moderation."
             )
-
-
-moderation.register(Place, PlaceModerator)
-            )
+        return super().inform_moderator(content_object, user)
 
 
 moderation.register(Place, PlaceModerator)
