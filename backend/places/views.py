@@ -1,8 +1,13 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.generics import CreateAPIView, RetrieveAPIView, UpdateAPIView
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.generics import (
+    CreateAPIView,
+    RetrieveAPIView,
+    UpdateAPIView,
+    ListAPIView,
+)
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.exceptions import ValidationError
@@ -16,6 +21,7 @@ from places.serializers import (
     PlaceRatingSerializer,
     PlaceUpdateSerializer,
     PlaceModerationSerializer,
+    PlaceSerializer,  # Import the serializer for listing places
 )
 
 logger = logging.getLogger("places")
@@ -218,3 +224,14 @@ class PlaceModerationViewSet(viewsets.ViewSet):
         except Exception as e:
             logger.error(f"Error fetching pending places: {e}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PlaceListView(ListAPIView):
+    """List view for approved places only (public access)."""
+
+    serializer_class = PlaceSerializer  # Use your existing place serializer
+    permission_classes = [AllowAny]  # Public access
+
+    def get_queryset(self):
+        """Return only approved places."""
+        return Place.objects.filter(status="Approved")  # Adjust status value as needed
