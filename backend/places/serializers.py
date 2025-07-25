@@ -20,15 +20,22 @@ class PlaceSerializer(ModelSerializer):
             "latitude",
             "longitude",
             "description",
+            "status",
             "rating",
             "main_image",
             "additional_images",
-            "reviews",
             "created_at",
             "updated_at",
             "website",
             "opening_hours",
             "is_featured",
+            "author",
+            "moderated_by",
+            "moderation_reason",
+            "moderated_at",
+            "google_maps_url",
+            "average_rating",
+            "reviews_count",
         ]
 
     def get_google_maps_url(self, obj):
@@ -38,7 +45,11 @@ class PlaceSerializer(ModelSerializer):
         return obj.calculate_average_rating()
 
     def get_reviews_count(self, obj):
-        return obj.review_set.count()
+        return (
+            getattr(obj, "review_set", obj.reviews).count()
+            if hasattr(obj, "review_set") or hasattr(obj, "reviews")
+            else 0
+        )
 
 
 class PlaceCreateSerializer(ModelSerializer):
@@ -65,14 +76,12 @@ class PlaceCreateSerializer(ModelSerializer):
         ]
 
     def create(self, validated_data):
-        # Remove rating from validated_data if present (should be calculated)
         validated_data.pop("rating", None)
         validated_data["is_featured"] = False
         validated_data["status"] = "On_moderation"
         return Place.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
-        # Remove rating from validated_data (should be calculated automatically)
         validated_data.pop("rating", None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -128,7 +137,6 @@ class PlaceRatingSerializer(serializers.ModelSerializer):
             defaults={"rating": rating_value},
         )
 
-        # Update the place's average rating automatically
         place.update_rating()
 
         return place_rating

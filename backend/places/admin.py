@@ -1,21 +1,21 @@
 from django.contrib import admin
 from places.models import Place, PlaceRating
-from moderation.admin import ModerationAdmin
 
 
-class PlaceAdmin(ModerationAdmin):
+class PlaceAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "district",
         "address",
         "status",
         "author",
+        "moderated_by",
         "created_at",
         "updated_at",
     )
     search_fields = ("name", "district", "address", "author__username")
     list_filter = ("district", "status", "is_featured", "created_at", "updated_at")
-    readonly_fields = ("created_at", "updated_at", "rating")
+    readonly_fields = ("created_at", "updated_at", "rating", "moderated_at")
     date_hierarchy = "created_at"
     ordering = ("-created_at",)
     list_per_page = 20
@@ -25,6 +25,10 @@ class PlaceAdmin(ModerationAdmin):
         ("Location", {"fields": ("latitude", "longitude", "delivery")}),
         ("Content", {"fields": ("description", "main_image", "additional_images")}),
         ("Status & Rating", {"fields": ("status", "rating", "is_featured")}),
+        (
+            "Moderation",
+            {"fields": ("moderated_by", "moderation_reason", "moderated_at")},
+        ),
         ("Additional Info", {"fields": ("website", "opening_hours")}),
         (
             "Timestamps",
@@ -34,7 +38,7 @@ class PlaceAdmin(ModerationAdmin):
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
-        return queryset.select_related("author")
+        return queryset.select_related("author", "moderated_by")
 
 
 class PlaceRatingAdmin(admin.ModelAdmin):

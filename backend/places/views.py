@@ -11,8 +11,6 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.exceptions import ValidationError
-from moderation.models import ModeratedObject
-from moderation.helpers import automoderate
 import logging
 
 from places.models import Place, PlaceRating
@@ -20,8 +18,7 @@ from places.serializers import (
     PlaceCreateSerializer,
     PlaceRatingSerializer,
     PlaceUpdateSerializer,
-    PlaceModerationSerializer,
-    PlaceSerializer,  # Import the serializer for listing places
+    PlaceSerializer,  # Remove PlaceModerationSerializer
 )
 
 logger = logging.getLogger("places")
@@ -42,11 +39,7 @@ class PlaceCreateView(CreateAPIView):
     def perform_create(self, serializer):
         """Override to add custom creation logic and moderation"""
         try:
-            # Set the author to current user
             instance = serializer.save(author=self.request.user)
-
-            # Handle moderation
-            automoderate(instance, self.request.user)
 
             logger.info(
                 f"Place created successfully: {instance.name} by user {self.request.user}"
@@ -72,10 +65,9 @@ class PlaceUpdateView(UpdateAPIView, RetrieveAPIView):
         """Override to add custom update logic and moderation"""
         try:
             instance = serializer.save()
-
-            # Re-moderate after update if not staff/superuser
             if not (self.request.user.is_staff or self.request.user.is_superuser):
-                automoderate(instance, self.request.user)
+                # automoderate(instance, self.request.user)  # Removed temporary moderation
+                pass
 
             logger.info(
                 f"Place updated successfully: {instance.name} by user {self.request.user}"
@@ -160,27 +152,24 @@ class PlaceRatingViewSet(viewsets.ModelViewSet):
 
 class PlaceModerationViewSet(viewsets.ViewSet):
     """
-    ViewSet for handling place moderation actions
+    ViewSet for handling place moderation actions with custom moderation
     """
 
     permission_classes = [IsAdminUser]
 
     @action(detail=True, methods=["post"])
     def approve(self, request, pk=None):
-        """Approve a moderated place"""
+        """Approve a place"""
         try:
-            moderated_obj = ModeratedObject.objects.get(
-                object_pk=pk, content_type__model="place"
-            )
-            moderated_obj.approve(
-                by=request.user, reason=request.data.get("reason", "")
-            )
+            place = Place.objects.get(pk=pk, status="On_moderation")
+            reason = request.data.get("reason", "Approved by moderator")
+            place.approve(request.user, reason)
 
             logger.info(f"Place {pk} approved by {request.user}")
             return Response({"status": "approved"}, status=status.HTTP_200_OK)
-        except ModeratedObject.DoesNotExist:
+        except Place.DoesNotExist:
             return Response(
-                {"error": "Moderated object not found"},
+                {"error": "Place not found or not pending moderation"},
                 status=status.HTTP_404_NOT_FOUND,
             )
         except Exception as e:
@@ -189,21 +178,17 @@ class PlaceModerationViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=["post"])
     def reject(self, request, pk=None):
-        """Reject a moderated place"""
+        """Reject a place"""
         try:
-            moderated_obj = ModeratedObject.objects.get(
-                object_pk=pk, content_type__model="place"
-            )
-            moderated_obj.reject(
-                by=request.user,
-                reason=request.data.get("reason", "Rejected by moderator"),
-            )
+            place = Place.objects.get(pk=pk, status="On_moderation")
+            reason = request.data.get("reason", "Rejected by moderator")
+            place.reject(request.user, reason)
 
             logger.info(f"Place {pk} rejected by {request.user}")
             return Response({"status": "rejected"}, status=status.HTTP_200_OK)
-        except ModeratedObject.DoesNotExist:
+        except Place.DoesNotExist:
             return Response(
-                {"error": "Moderated object not found"},
+                {"error": "Place not found or not pending moderation"},
                 status=status.HTTP_404_NOT_FOUND,
             )
         except Exception as e:
@@ -214,12 +199,8 @@ class PlaceModerationViewSet(viewsets.ViewSet):
     def pending(self, request):
         """Get list of places pending moderation"""
         try:
-            pending_objects = ModeratedObject.objects.filter(
-                content_type__model="place",
-                moderation_status=ModeratedObject.STATUS_PENDING,
-            )
-
-            serializer = PlaceModerationSerializer(pending_objects, many=True)
+            pending_places = Place.objects.filter(status="On_moderation")
+            serializer = PlaceSerializer(pending_places, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Error fetching pending places: {e}")
@@ -229,9 +210,21 @@ class PlaceModerationViewSet(viewsets.ViewSet):
 class PlaceListView(ListAPIView):
     """List view for approved places only (public access)."""
 
-    serializer_class = PlaceSerializer  # Use your existing place serializer
-    permission_classes = [AllowAny]  # Public access
+    serializer_class = PlaceSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        """Return only active/approved places."""
+        return Place.objects.filter(status__in=["Active", "Approved"])
+        return Place.objects.filter(status__in=["Active", "Approved"])
+
+
+class PlaceListView(ListAPIView):
+    """List view for approved places only (public access)."""
+
+    serializer_class = PlaceSerializer
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         """Return only approved places."""
-        return Place.objects.filter(status="Approved")  # Adjust status value as needed
+        return Place.objects.filter(status="Approved")

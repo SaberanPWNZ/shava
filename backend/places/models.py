@@ -5,8 +5,9 @@ from django.contrib.auth import get_user_model
 from django.db.models import Avg
 from django.utils import timezone
 
-from moderation.moderator import GenericModerator
-from moderation import moderation
+# Temporarily comment out moderation until compatibility is fixed
+# from moderation.moderator import GenericModerator
+# from moderation import moderation
 from places.choices import DISTRICT_CHOICES, PLACE_STATUS_CHOICES
 
 User = get_user_model()
@@ -74,6 +75,15 @@ class Place(models.Model):
         null=True,
         blank=True,
     )
+    moderated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="moderated_places",
+    )
+    moderation_reason = models.TextField(blank=True, null=True)
+    moderated_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         verbose_name = "Place"
@@ -98,29 +108,46 @@ class Place(models.Model):
             return f"https://www.google.com/maps/search/?api=1&query={self.latitude},{self.longitude}"
         return None
 
+    def approve(self, moderator, reason=""):
+        """Approve the place"""
+        self.status = "Active"
+        self.moderated_by = moderator
+        self.moderation_reason = reason
+        self.moderated_at = timezone.now()
+        self.save()
 
-class PlaceModerator(GenericModerator):
-    """Moderator for Place model using django-moderation."""
-
-    notify_user = True
-    notify_moderator = True
-    auto_approve_for_superusers = True
-    auto_approve_for_staff = True
-    auto_reject_for_anonymous = False
-    fields_exclude = ["rating", "created_at", "updated_at"]
-
-    def inform_user(self, content_object, user=None):
-        """Custom method to inform user about moderation status."""
-        if user:
-            print(f"Dear {user.username}, your place will be moderated soon.")
-
-    def inform_moderator(self, content_object, user=None):
-        """Custom method to inform moderator about new content."""
-        if user:
-            print(
-                f"Dear {user.username}, a new place has been submitted for moderation."
-            )
-        return super().inform_moderator(content_object, user)
+    def reject(self, moderator, reason=""):
+        """Reject the place"""
+        self.status = "Inactive"
+        self.moderated_by = moderator
+        self.moderation_reason = reason
+        self.moderated_at = timezone.now()
+        self.save()
 
 
-moderation.register(Place, PlaceModerator)
+# Temporarily comment out moderation registration
+# class PlaceModerator(GenericModerator):
+#     """Moderator for Place model using django-moderation."""
+
+#     notify_user = True
+#     notify_moderator = True
+#     auto_approve_for_superusers = True
+#     auto_approve_for_staff = True
+#     auto_reject_for_anonymous = False
+#     fields_exclude = ["rating", "created_at", "updated_at"]
+
+#     def inform_user(self, content_object, user=None):
+#         """Custom method to inform user about moderation status."""
+#         if user:
+#             print(f"Dear {user.username}, your place will be moderated soon.")
+
+#     def inform_moderator(self, content_object, user=None):
+#         """Custom method to inform moderator about new content."""
+#         if user:
+#             print(
+#                 f"Dear {user.username}, a new place has been submitted for moderation."
+#             )
+#         return super().inform_moderator(content_object, user)
+
+
+# moderation.register(Place, PlaceModerator)

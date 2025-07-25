@@ -17,6 +17,8 @@ PLACE_STATUS_CHOICES = [
     ("Active", "Активний"),
     ("Inactive", "Неактивний"),
     ("On_moderation", "На модерації"),
+    ("Approved", "Схвалено"),  # Add this for consistency
+    ("Rejected", "Відхилено"),  # Add this for consistency
     ("Closed", "Закритий"),
     ("Archived", "Архівний"),
 ]
