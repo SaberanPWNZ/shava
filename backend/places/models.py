@@ -5,7 +5,6 @@ from django.contrib.auth import get_user_model
 from django.db.models import Avg
 from django.utils import timezone
 
-
 from moderation.moderator import GenericModerator
 from moderation import moderation
 from places.choices import DISTRICT_CHOICES, PLACE_STATUS_CHOICES
@@ -63,9 +62,6 @@ class Place(models.Model):
     additional_images = models.ImageField(
         upload_to="place_additional_images/", blank=True, null=True
     )
-    reviews = models.ManyToManyField(
-        "reviews.Review", related_name="places", blank=True
-    )
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     website = models.URLField(blank=True, null=True)
@@ -88,12 +84,12 @@ class Place(models.Model):
         return self.name
 
     def calculate_average_rating(self):
-        """Calculate the average rating from all related reviews."""
-        avg = self.review_set.aggregate(avg_rating=Avg("score"))["avg_rating"]
+        """Calculate the average rating from PlaceRating objects."""
+        avg = self.ratings.aggregate(avg_rating=Avg("rating"))["avg_rating"]
         return avg if avg is not None else Decimal("0.0")
 
     def update_rating(self):
-        """Update the rating field with the calculated average from reviews."""
+        """Update the rating field with the calculated average from PlaceRating objects."""
         self.rating = self.calculate_average_rating()
         self.save(update_fields=["rating"])
 
@@ -110,8 +106,8 @@ class PlaceModerator(GenericModerator):
     notify_moderator = True
     auto_approve_for_superusers = True
     auto_approve_for_staff = True
-    auto_reject_for_anonymous = True
-    fields_exclude = ["rating", "created_at", "updated_at", "is_featured"]
+    auto_reject_for_anonymous = False 
+    fields_exclude = ["rating", "created_at", "updated_at"]
 
     def inform_user(self, content_object, user=None):
         """Custom method to inform user about moderation status."""
@@ -123,6 +119,10 @@ class PlaceModerator(GenericModerator):
         if user:
             print(
                 f"Dear {user.username}, a new place has been submitted for moderation."
+            )
+
+
+moderation.register(Place, PlaceModerator)
             )
 
 
