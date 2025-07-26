@@ -4,6 +4,7 @@ from places.models import Place, PlaceRating
 
 class PlaceAdmin(admin.ModelAdmin):
     list_display = (
+        "id",
         "name",
         "district",
         "address",
