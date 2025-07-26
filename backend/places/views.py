@@ -138,7 +138,7 @@ class PlaceListView(ListAPIView):
     """List view for approved places only (public access)."""
 
     serializer_class = PlaceSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         """Return only approved places."""

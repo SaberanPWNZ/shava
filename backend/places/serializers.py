@@ -45,8 +45,8 @@ class PlaceSerializer(ModelSerializer):
 
     def get_reviews_count(self, obj):
         return (
-            getattr(obj, "review_set", obj.reviews).count()
-            if hasattr(obj, "review_set") or hasattr(obj, "reviews")
+            getattr(obj, "review_set", obj.reviews_count).count()
+            if hasattr(obj, "review_set") or hasattr(obj, "reviews_count")
             else 0
         )
 
