@@ -5,9 +5,6 @@ from django.contrib.auth import get_user_model
 from django.db.models import Avg
 from django.utils import timezone
 
-# Temporarily comment out moderation until compatibility is fixed
-# from moderation.moderator import GenericModerator
-# from moderation import moderation
 from places.choices import DISTRICT_CHOICES, PLACE_STATUS_CHOICES
 
 User = get_user_model()
@@ -123,31 +120,9 @@ class Place(models.Model):
         self.moderation_reason = reason
         self.moderated_at = timezone.now()
         self.save()
-
-
-# Temporarily comment out moderation registration
-# class PlaceModerator(GenericModerator):
-#     """Moderator for Place model using django-moderation."""
-
-#     notify_user = True
-#     notify_moderator = True
-#     auto_approve_for_superusers = True
-#     auto_approve_for_staff = True
-#     auto_reject_for_anonymous = False
-#     fields_exclude = ["rating", "created_at", "updated_at"]
-
-#     def inform_user(self, content_object, user=None):
-#         """Custom method to inform user about moderation status."""
-#         if user:
-#             print(f"Dear {user.username}, your place will be moderated soon.")
-
-#     def inform_moderator(self, content_object, user=None):
-#         """Custom method to inform moderator about new content."""
-#         if user:
-#             print(
-#                 f"Dear {user.username}, a new place has been submitted for moderation."
-#             )
-#         return super().inform_moderator(content_object, user)
-
-
-# moderation.register(Place, PlaceModerator)
+        """Reject the place"""
+        self.status = "Inactive"
+        self.moderated_by = moderator
+        self.moderation_reason = reason
+        self.moderated_at = timezone.now()
+        self.save()

@@ -16,5 +16,5 @@ Pillow>=10.0.0,<11.0.0
 python-json-logger>=2.0.7,<3.0.0
 django-filter==25.1
 django-debug-toolbar==5.2.0
-django-moderation==0.8.1
+django-model-utils>=4.3.1,<5.0.0
 django-model-utils>=4.3.1,<5.0.0

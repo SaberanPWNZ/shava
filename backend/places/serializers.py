@@ -1,7 +1,6 @@
 from places.models import Place, PlaceRating
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
-from moderation.models import ModeratedObject
 
 
 class PlaceSerializer(ModelSerializer):
@@ -158,42 +157,4 @@ class PlaceDetailSerializer(PlaceSerializer):
         extra_kwargs = {
             "ratings": {"required": False},
         }
-
-
-class PlaceModerationSerializer(serializers.ModelSerializer):
-    """Serializer for moderated places"""
-
-    object_data = serializers.SerializerMethodField()
-    content_object = serializers.SerializerMethodField()
-
-    class Meta:
-        model = ModeratedObject
-        fields = [
-            "id",
-            "object_pk",
-            "moderation_status",
-            "moderated_by",
-            "moderation_date",
-            "moderation_reason",
-            "date_created",
-            "object_data",
-            "content_object",
-        ]
-
-    def get_object_data(self, obj):
-        """Get the actual place data"""
-        if obj.content_object:
-            return PlaceCreateSerializer(obj.content_object).data
-        return None
-
-    def get_content_object(self, obj):
-        """Get basic info about the content object"""
-        if obj.content_object:
-            return {
-                "name": obj.content_object.name,
-                "address": obj.content_object.address,
-                "author": obj.content_object.author.username
-                if obj.content_object.author
-                else None,
-            }
-        return None
+        read_only_fields = ["id", "created_at", "updated_at", "ratings"]
