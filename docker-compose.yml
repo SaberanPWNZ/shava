@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   web:
     build: ./backend
@@ -45,6 +47,19 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - web
+    restart: unless-stopped
 
 volumes:
   postgres_data:
