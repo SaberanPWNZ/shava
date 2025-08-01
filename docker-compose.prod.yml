@@ -25,6 +25,18 @@ services:
              python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000"
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+    restart: unless-stopped
+
   db:
     image: postgres:15-alpine
     volumes:
@@ -46,6 +58,7 @@ services:
       - media_volume:/media
     depends_on:
       - web
+      - frontend
     restart: unless-stopped
 
 volumes:
