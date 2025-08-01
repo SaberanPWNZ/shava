@@ -61,9 +61,6 @@ Thumbs.db
 Dockerfile
 .dockerignore
 
-# Poetry
-poetry.lock
-
 # Test coverage
 htmlcov/
 .tox/
@@ -78,3 +75,6 @@ coverage.xml
 
 # Documentation
 docs/
+
+# Requirements backup
+requirements*.txt.bak

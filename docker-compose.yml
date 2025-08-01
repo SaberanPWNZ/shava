@@ -1,13 +1,20 @@
+version: '3.8'
+
 services:
   web:
     build: ./backend
     command: >
-      bash -c "python wait_for_db.py &&
-               python manage.py makemigrations users shwarma ingredients places reviews rating &&
-               python manage.py migrate &&
-               python manage.py runserver 0.0.0.0:8000"
+      bash -c "
+        python wait_for_db.py &&
+        echo 'Skipping makemigrations to avoid permission errors...' &&
+        echo 'Running migrations...' &&
+        python manage.py migrate --noinput &&
+        echo 'Migrations applied successfully!' &&
+        python manage.py runserver 0.0.0.0:8000
+      "
     volumes:
       - ./backend:/app
+      - /app/migrations/
       - static_volume:/app/static
       - media_volume:/app/media
     ports:
@@ -15,8 +22,12 @@ services:
     env_file:
       - ./.env
     depends_on:
-      - db
+      db:
+        condition: service_started
     restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DJANGO_DEBUG=True
 
   frontend:
     build: ./frontend
@@ -41,6 +52,24 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     ports:
       - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - web
     restart: unless-stopped
 
 volumes:

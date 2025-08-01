@@ -7,7 +7,6 @@ from django.utils import timezone
 
 from places.choices import DISTRICT_CHOICES, PLACE_STATUS_CHOICES
 
-
 User = get_user_model()
 
 
@@ -46,6 +45,7 @@ class Place(models.Model):
     longitude = models.DecimalField(
         max_digits=9, decimal_places=6, blank=True, null=True
     )
+    reviews_count = models.PositiveIntegerField(default=0)
     description = models.TextField(blank=True, null=True)
     status = models.CharField(
         max_length=50, choices=PLACE_STATUS_CHOICES, default="On_moderation"
@@ -61,15 +61,27 @@ class Place(models.Model):
     additional_images = models.ImageField(
         upload_to="place_additional_images/", blank=True, null=True
     )
-    reviews = models.ManyToManyField(
-        "reviews.Review", related_name="places", blank=True
-    )
-    # videos #TODO add video field
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     website = models.URLField(blank=True, null=True)
     opening_hours = models.CharField(max_length=100, blank=True, null=True)
     is_featured = models.BooleanField(default=False)
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="created_places",
+        null=True,
+        blank=True,
+    )
+    moderated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="moderated_places",
+    )
+    moderation_reason = models.TextField(blank=True, null=True)
+    moderated_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         verbose_name = "Place"
@@ -80,13 +92,12 @@ class Place(models.Model):
         return self.name
 
     def calculate_average_rating(self):
-        """Calculate the average rating from all related reviews."""
-        # Use review_set instead of reviews (due to ForeignKey relationship)
-        avg = self.review_set.aggregate(avg_rating=Avg("score"))["avg_rating"]
+        """Calculate the average rating from PlaceRating objects."""
+        avg = self.ratings.aggregate(avg_rating=Avg("rating"))["avg_rating"]
         return avg if avg is not None else Decimal("0.0")
 
     def update_rating(self):
-        """Update the rating field with the calculated average from reviews."""
+        """Update the rating field with the calculated average from PlaceRating objects."""
         self.rating = self.calculate_average_rating()
         self.save(update_fields=["rating"])
 
@@ -94,10 +105,25 @@ class Place(models.Model):
         if self.latitude and self.longitude:
             return f"https://www.google.com/maps/search/?api=1&query={self.latitude},{self.longitude}"
         return None
-        self.rating = self.calculate_average_rating()
-        self.save(update_fields=["rating"])
 
-    def google_maps_url(self):
-        if self.latitude and self.longitude:
-            return f"https://www.google.com/maps/search/?api=1&query={self.latitude},{self.longitude}"
-        return None
+    def approve(self, moderator, reason=""):
+        """Approve the place"""
+        self.status = "Active"
+        self.moderated_by = moderator
+        self.moderation_reason = reason
+        self.moderated_at = timezone.now()
+        self.save()
+
+    def reject(self, moderator, reason=""):
+        """Reject the place"""
+        self.status = "Inactive"
+        self.moderated_by = moderator
+        self.moderation_reason = reason
+        self.moderated_at = timezone.now()
+        self.save()
+        """Reject the place"""
+        self.status = "Inactive"
+        self.moderated_by = moderator
+        self.moderation_reason = reason
+        self.moderated_at = timezone.now()
+        self.save()

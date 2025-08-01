@@ -1,11 +1,10 @@
 from django.urls import path
 from rest_framework import routers
-
+from .views import NewsViewSet
 
 router = routers.DefaultRouter()
 urlpatterns = router.urls
 
-# Add any additional URL patterns if needed
-# urlpatterns += [
-#     path('featured/', views.FeaturedNewsView.as_view(), name='featured-news'),
-# ]
+urlpatterns += [
+    path("news/", NewsViewSet.as_view({"get": "list", "post": "create"}), name="news"),
+]

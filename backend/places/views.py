@@ -1,8 +1,13 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.generics import CreateAPIView, RetrieveAPIView, UpdateAPIView  # type: ignore
-from rest_framework.permissions import IsAuthenticated  # type: ignore
+from rest_framework.generics import (
+    CreateAPIView,
+    RetrieveAPIView,
+    UpdateAPIView,
+    ListAPIView,
+)
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.exceptions import ValidationError
@@ -13,6 +18,7 @@ from places.serializers import (
     PlaceCreateSerializer,
     PlaceRatingSerializer,
     PlaceUpdateSerializer,
+    PlaceSerializer,
 )
 
 logger = logging.getLogger("places")
@@ -23,15 +29,18 @@ class PlaceCreateView(CreateAPIView):
     API endpoint that allows places to be created.
     """
 
-    queryset = Place.objects.all()
     serializer_class = PlaceCreateSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
+    def get_queryset(self):
+        return Place.objects.all()
+
     def perform_create(self, serializer):
-        """Override to add custom creation logic"""
+        """Override to add custom creation logic and moderation"""
         try:
-            instance = serializer.save()
+            instance = serializer.save(author=self.request.user)
+
             logger.info(
                 f"Place created successfully: {instance.name} by user {self.request.user}"
             )
@@ -45,22 +54,12 @@ class PlaceCreateView(CreateAPIView):
 
 
 class PlaceUpdateView(UpdateAPIView, RetrieveAPIView):
-    queryset = Place.objects.all()
     serializer_class = PlaceUpdateSerializer
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser, JSONParser]  # додати JSONParser
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
-    def perform_update(self, serializer):
-        """Override to add custom update logic"""
-        try:
-            instance = serializer.save()
-            logger.info(
-                f"Place updated successfully: {instance.name} by user {self.request.user}"
-            )
-            return instance
-        except ValidationError as e:
-            logger.error(f"Validation error updating place: {e}")
-            raise DRFValidationError({"detail": str(e)})
+    def get_queryset(self):
+        return Place.objects.all()
 
 
 class PlaceDetailView(RetrieveAPIView):
@@ -102,12 +101,13 @@ class PlaceDetailView(RetrieveAPIView):
 
 
 class PlaceRatingViewSet(viewsets.ModelViewSet):
-    queryset = PlaceRating.objects.all()
     serializer_class = PlaceRatingSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return PlaceRating.objects.filter(user=self.request.user)
+        if hasattr(self.request, "user"):
+            return PlaceRating.objects.filter(user=self.request.user)
+        return PlaceRating.objects.none()
 
     @action(detail=False, methods=["post"], url_path="rate-place")
     def rate_place(self, request):
@@ -132,5 +132,14 @@ class PlaceRatingViewSet(viewsets.ModelViewSet):
             f"Rating updated: {instance.rating} for place {instance.place.name} by {self.request.user}"
         )
         return instance
-        return instance
-        return instance
+
+
+class PlaceListView(ListAPIView):
+    """List view for approved places only (public access)."""
+
+    serializer_class = PlaceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Return only approved places."""
+        return Place.objects.filter(status="Approved")

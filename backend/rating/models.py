@@ -91,3 +91,4 @@ class UserAchievement(models.Model):
 
     def __str__(self):
         return f"{self.user.username} earned {self.achievement.name}"
+
