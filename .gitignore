@@ -215,3 +215,7 @@ __marimo__/
 .jpeg
 .png
 .jpg
+
+/environment
+.exe
+.environment
