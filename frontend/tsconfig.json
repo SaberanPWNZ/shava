@@ -1,5 +1,4 @@
 {
-
 	"extends": "./.svelte-kit/tsconfig.json",
 	"compilerOptions": {
 		"allowJs": true,
@@ -12,3 +11,4 @@
 		"strict": true,
 		"moduleResolution": "bundler"
 	}
+}
