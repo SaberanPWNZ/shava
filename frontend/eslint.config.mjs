@@ -10,7 +10,25 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...compat.extends("eslint:recommended"),
+  {
+    files: ["**/*.svelte"],
+    plugins: {
+      svelte: import("eslint-plugin-svelte"),
+    },
+    languageOptions: {
+      parser: import("svelte-eslint-parser"),
+      parserOptions: {
+        parser: {
+          ts: import("@typescript-eslint/parser"),
+          js: import("espree"),
+        },
+      },
+    },
+    rules: {
+      // Svelte rules go here
+    },
+  },
 ];
 
 export default eslintConfig;
