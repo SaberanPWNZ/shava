@@ -5,9 +5,6 @@ ENV NODE_ENV=development
 
 WORKDIR /app
 
-# Install dependencies
-RUN apk add --no-cache curl
-
 # Copy package files
 COPY package*.json ./
 
