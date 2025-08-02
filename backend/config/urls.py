@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from debug_toolbar.toolbar import debug_toolbar_urls
+from django.conf import settings
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -14,3 +14,9 @@ urlpatterns = [
     path("api/news/", include("news.urls")),
     path("api/places/", include("places.urls")),
 ]
+
+if settings.DEBUG:
+    import debug_toolbar
+    urlpatterns += [
+        path("__debug__/", include(debug_toolbar.urls)),
+    ]

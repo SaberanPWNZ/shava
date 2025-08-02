@@ -30,12 +30,14 @@ services:
       - DJANGO_DEBUG=True
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: dev
     volumes:
       - ./frontend:/app
       - /app/node_modules
     ports:
-      - "3000:3000"
+      - "5173:5173"
     environment:
       - NODE_ENV=development
     restart: unless-stopped
