@@ -1,3 +1,8 @@
+<script>
+	
+	// Remove the CSS import - it should be in +layout.svelte or app.html
+</script>
+
 <div class="min-h-screen bg-gray-50">
 	<!-- Header -->
 	<header class="bg-white shadow-sm border-b">
