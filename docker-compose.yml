@@ -29,19 +29,6 @@ services:
       - PYTHONUNBUFFERED=1
       - DJANGO_DEBUG=True
 
-  frontend:
-    build:
-      context: ./frontend
-      target: dev
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    ports:
-      - "5173:5173"
-    environment:
-      - NODE_ENV=development
-    restart: unless-stopped
-
   db:
     image: postgres:15-alpine
     volumes:
@@ -61,7 +48,15 @@ services:
       timeout: 5s
       retries: 5
 
-
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
 volumes:
   postgres_data:
