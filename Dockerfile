@@ -1,13 +1,10 @@
-
-FROM node:20-slim AS base
+FROM node:latest AS base
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install --no-optional
-
-RUN npm install -g vite
+RUN npm install --no-optional --no-fund --no-audit
 
 COPY . .
 
