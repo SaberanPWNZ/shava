@@ -5,7 +5,7 @@ info:
   description: 'Public REST API for the Shava project: places, reviews, ratings, users
     (JWT auth), articles, gamification.'
 paths:
-  /api/articles/:
+  /api/v1/articles/:
     get:
       operationId: articles_list
       description: Articles are publicly readable (when published); admin-only for
@@ -68,7 +68,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ArticleDetail'
           description: ''
-  /api/articles/{slug}/:
+  /api/v1/articles/{slug}/:
     get:
       operationId: articles_retrieve
       description: Articles are publicly readable (when published); admin-only for
@@ -173,7 +173,7 @@ paths:
       responses:
         '204':
           description: No response body
-  /api/gamification/badges/:
+  /api/v1/gamification/badges/:
     get:
       operationId: gamification_badges_list
       description: '`GET /api/gamification/badges/` — full catalogue (public).'
@@ -204,7 +204,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Badge'
           description: ''
-  /api/gamification/leaderboard/:
+  /api/v1/gamification/leaderboard/:
     get:
       operationId: gamification_leaderboard_retrieve
       description: '`GET /api/gamification/leaderboard/?period=week|month|all`.'
@@ -216,7 +216,7 @@ paths:
       responses:
         '200':
           description: No response body
-  /api/gamification/me/:
+  /api/v1/gamification/me/:
     get:
       operationId: gamification_me_retrieve
       description: '`GET /api/gamification/me/` — current user''s points/level/badges.'
@@ -227,7 +227,7 @@ paths:
       responses:
         '200':
           description: No response body
-  /api/gamification/users/{id}/public/:
+  /api/v1/gamification/users/{id}/public/:
     get:
       operationId: gamification_users_public_retrieve
       description: '`GET /api/gamification/users/<id>/public/`.'
@@ -245,7 +245,7 @@ paths:
       responses:
         '200':
           description: No response body
-  /api/places/:
+  /api/v1/places/:
     get:
       operationId: places_list
       description: Public list of approved/active places, with filters.
@@ -280,7 +280,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedPlaceList'
           description: ''
-  /api/places/{id}/:
+  /api/v1/places/{id}/:
     get:
       operationId: places_retrieve
       description: Author or admin can edit a place.
@@ -363,7 +363,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PlaceUpdate'
           description: ''
-  /api/places/{id}/{action_name}/:
+  /api/v1/places/{id}/{action_name}/:
     patch:
       operationId: places_partial_update_2
       description: Admin endpoint to approve/reject a place. Action is taken from
@@ -403,7 +403,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Place'
           description: ''
-  /api/places/{id}/rate/:
+  /api/v1/places/{id}/rate/:
     post:
       operationId: places_rate_create
       description: 'Star-rating endpoint: accepts {rating: 1..5}, stored on 0-10 scale.'
@@ -436,7 +436,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PlaceRating'
           description: ''
-  /api/places/{place_pk}/menu/:
+  /api/v1/places/{place_pk}/menu/:
     get:
       operationId: places_menu_list
       description: 'Menu items for a specific place. URL kwarg: place_pk.'
@@ -507,7 +507,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/MenuItem'
           description: ''
-  /api/places/{place_pk}/menu/{id}/:
+  /api/v1/places/{place_pk}/menu/{id}/:
     get:
       operationId: places_menu_retrieve
       description: 'Menu items for a specific place. URL kwarg: place_pk.'
@@ -631,7 +631,7 @@ paths:
       responses:
         '204':
           description: No response body
-  /api/places/{place_pk}/reviews/:
+  /api/v1/places/{place_pk}/reviews/:
     get:
       operationId: places_reviews_list
       description: List approved reviews for a place; create a new (pending) review.
@@ -703,7 +703,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReviewCreate'
           description: ''
-  /api/places/create-place/:
+  /api/v1/places/create-place/:
     post:
       operationId: places_create_place_create
       description: Authenticated users submit a new place; always created on moderation.
@@ -730,7 +730,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PlaceCreate'
           description: ''
-  /api/places/moderation/:
+  /api/v1/places/moderation/:
     get:
       operationId: places_moderation_list
       description: Admin-only list of places pending moderation.
@@ -764,7 +764,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedPlaceList'
           description: ''
-  /api/places/place/{id}/:
+  /api/v1/places/place/{id}/:
     get:
       operationId: places_place_retrieve
       description: Public detail view; non-public statuses only visible to author
@@ -787,7 +787,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PlaceDetail'
           description: ''
-  /api/places/ratings/:
+  /api/v1/places/ratings/:
     get:
       operationId: places_ratings_list
       description: A user's own ratings (for management UI).
@@ -847,7 +847,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PlaceRating'
           description: ''
-  /api/places/ratings/{id}/:
+  /api/v1/places/ratings/{id}/:
     get:
       operationId: places_ratings_retrieve
       description: A user's own ratings (for management UI).
@@ -951,7 +951,7 @@ paths:
       responses:
         '204':
           description: No response body
-  /api/places/ratings/rate-place/:
+  /api/v1/places/ratings/rate-place/:
     post:
       operationId: places_ratings_rate_place_create
       description: A user's own ratings (for management UI).
@@ -978,7 +978,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PlaceRating'
           description: ''
-  /api/places/submit-place/:
+  /api/v1/places/submit-place/:
     post:
       operationId: places_submit_place_create
       description: Authenticated users submit a new place; always created on moderation.
@@ -1005,7 +1005,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PlaceCreate'
           description: ''
-  /api/reviews/{id}/{action_name}/:
+  /api/v1/reviews/{id}/{action_name}/:
     patch:
       operationId: reviews_partial_update
       description: Admin endpoint to approve/reject a review (action_name from URL).
@@ -1044,7 +1044,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Review'
           description: ''
-  /api/reviews/{id}/helpful/:
+  /api/v1/reviews/{id}/helpful/:
     post:
       operationId: reviews_helpful_create
       description: Idempotent on repeat calls. Combine with ``DELETE`` to toggle.
@@ -1106,7 +1106,7 @@ paths:
           description: Authentication required.
         '404':
           description: Review not found.
-  /api/reviews/moderation/:
+  /api/v1/reviews/moderation/:
     get:
       operationId: reviews_moderation_list
       description: Admin-only list of reviews pending moderation.
@@ -1140,7 +1140,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedReviewList'
           description: ''
-  /api/reviews/my-reviews/:
+  /api/v1/reviews/my-reviews/:
     get:
       operationId: reviews_my_reviews_list
       description: A user's own reviews.
@@ -1200,7 +1200,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReviewCreate'
           description: ''
-  /api/reviews/my-reviews/{id}/:
+  /api/v1/reviews/my-reviews/{id}/:
     get:
       operationId: reviews_my_reviews_retrieve
       description: A user's own reviews.
@@ -1300,7 +1300,7 @@ paths:
       responses:
         '204':
           description: No response body
-  /api/reviews/reviews/{place_pk}/:
+  /api/v1/reviews/reviews/{place_pk}/:
     get:
       operationId: reviews_reviews_list
       description: List approved reviews for a place; create a new (pending) review.
@@ -1372,7 +1372,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReviewCreate'
           description: ''
-  /api/reviews/reviews/create/:
+  /api/v1/reviews/reviews/create/:
     post:
       operationId: reviews_reviews_create_create
       description: Create a new review for a place via /reviews/create/<place_id>/.
@@ -1399,7 +1399,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReviewCreate'
           description: ''
-  /api/reviews/reviews/create/{place_pk}/:
+  /api/v1/reviews/reviews/create/{place_pk}/:
     post:
       operationId: reviews_reviews_create_create_2
       description: Create a new review for a place via /reviews/create/<place_id>/.
@@ -1432,7 +1432,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReviewCreate'
           description: ''
-  /api/token/:
+  /api/v1/token/:
     post:
       operationId: token_create
       description: Login endpoint with rate-limiting (``auth`` scope).
@@ -1453,7 +1453,7 @@ paths:
       responses:
         '200':
           description: No response body
-  /api/token/refresh/:
+  /api/v1/token/refresh/:
     post:
       operationId: token_refresh_create
       description: |-
@@ -1480,7 +1480,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TokenRefresh'
           description: ''
-  /api/users/{id}/:
+  /api/v1/users/{id}/:
     get:
       operationId: users_retrieve
       description: |-
@@ -1596,7 +1596,7 @@ paths:
       responses:
         '204':
           description: No response body
-  /api/users/{id}/ban/:
+  /api/v1/users/{id}/ban/:
     post:
       operationId: users_ban_create
       description: |-
@@ -1619,7 +1619,7 @@ paths:
       responses:
         '200':
           description: No response body
-  /api/users/{id}/unban/:
+  /api/v1/users/{id}/unban/:
     post:
       operationId: users_unban_create
       description: |-
@@ -1642,7 +1642,7 @@ paths:
       responses:
         '200':
           description: No response body
-  /api/users/create/:
+  /api/v1/users/create/:
     post:
       operationId: users_create_create
       description: |-
@@ -1673,7 +1673,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Register'
           description: ''
-  /api/users/list/:
+  /api/v1/users/list/:
     get:
       operationId: users_list_list
       description: |-
@@ -1711,7 +1711,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedUserPublicList'
           description: ''
-  /api/users/login/:
+  /api/v1/users/login/:
     post:
       operationId: users_login_create
       description: Login endpoint with rate-limiting (``auth`` scope).
@@ -1732,7 +1732,7 @@ paths:
       responses:
         '200':
           description: No response body
-  /api/users/logout/:
+  /api/v1/users/logout/:
     post:
       operationId: users_logout_create
       description: Blacklist the supplied refresh token to log the user out.
@@ -1743,7 +1743,7 @@ paths:
       responses:
         '200':
           description: No response body
-  /api/users/me/:
+  /api/v1/users/me/:
     get:
       operationId: users_me_retrieve
       description: '``/me/`` — get or partially update the current user''s profile.'
@@ -1764,7 +1764,7 @@ paths:
       responses:
         '200':
           description: No response body
-  /api/users/me/change-password/:
+  /api/v1/users/me/change-password/:
     post:
       operationId: users_me_change_password_create
       description: Change the password of the authenticated user.
@@ -1775,7 +1775,7 @@ paths:
       responses:
         '200':
           description: No response body
-  /api/users/password-reset/confirm/:
+  /api/v1/users/password-reset/confirm/:
     post:
       operationId: users_password_reset_confirm_create
       description: Public — completes a password reset using a signed token.
@@ -1805,7 +1805,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/PasswordResetConfirmError'
           description: Invalid token or password validation failed.
-  /api/users/password-reset/request/:
+  /api/v1/users/password-reset/request/:
     post:
       operationId: users_password_reset_request_create
       description: |-
@@ -1834,7 +1834,7 @@ paths:
         '204':
           description: Always 204 regardless of whether the address exists, so the
             endpoint cannot be used for user enumeration.
-  /api/users/register/:
+  /api/v1/users/register/:
     post:
       operationId: users_register_create
       description: |-
@@ -1865,7 +1865,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Register'
           description: ''
-  /api/users/token/refresh/:
+  /api/v1/users/token/refresh/:
     post:
       operationId: users_token_refresh_create
       description: |-
@@ -1892,7 +1892,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TokenRefresh'
           description: ''
-  /api/users/verify-email/confirm/:
+  /api/v1/users/verify-email/confirm/:
     post:
       operationId: users_verify_email_confirm_create
       description: Public — confirms an email using a signed token.
@@ -1922,7 +1922,7 @@ paths:
           description: ''
         '400':
           description: Invalid or expired token.
-  /api/users/verify-email/request/:
+  /api/v1/users/verify-email/request/:
     post:
       operationId: users_verify_email_request_create
       description: |-

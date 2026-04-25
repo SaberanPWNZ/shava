@@ -160,7 +160,12 @@ See `.env.example`. Notable ones:
 - `CORS_ALLOWED_ORIGINS` — comma-separated frontend origins.
 - `THROTTLE_AUTH`, `THROTTLE_REGISTER`, `THROTTLE_EMAIL_VERIFY`,
   `THROTTLE_PASSWORD_RESET` — DRF rate strings.
-- `VITE_API_BASE_URL` — backend URL exposed to the browser.
+- `VITE_API_BASE_URL` — backend URL exposed to the browser. Defaults to
+  `/api/v1` (versioned mount). The unversioned `/api/` URLs still resolve
+  for one release window; responses carry `Deprecation: true`,
+  `Sunset` and `Link: <…>; rel="successor-version"` headers so consumers
+  get a machine-readable nudge to migrate. Override the sunset date with
+  `API_LEGACY_SUNSET_DATE` on the backend.
 - `EMAIL_BACKEND` (default `django.core.mail.backends.console.EmailBackend`),
   `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`,
   `EMAIL_USE_TLS`, `EMAIL_USE_SSL`, `DEFAULT_FROM_EMAIL` — outgoing email for
@@ -199,20 +204,14 @@ See `.env.example`. Notable ones:
 
 ## Suggested follow-up improvements (out of scope)
 
-### Security
-- `SECURE_*` settings + HSTS in prod; HTTPS-only cookies.
-- `django-axes` against brute-force on login.
-- Email verification (signed token) and password reset flow.
-- Optional 2FA via `django-otp`.
-- Sentry for error tracking (frontend + backend).
+See `ROADMAP.md` for the canonical list of in-flight and queued
+improvements with acceptance criteria. The buckets below are the ones
+still open at the time of writing.
 
-### Code quality
-- `vitest` for frontend unit tests of services/stores.
-- GitHub Actions CI matrix (lint → test → build → e2e).
+### Security
+- Optional 2FA via `django-otp`.
 
 ### Architecture
-- `drf-spectacular` (OpenAPI) → generate TS types with `openapi-typescript`.
-- API versioning under `/api/v1/`.
 - Move uploads to S3/MinIO via `django-storages`.
 
 ### Performance
@@ -223,7 +222,6 @@ See `.env.example`. Notable ones:
 ### DevEx / Infra
 - Multi-stage prod Dockerfile for the frontend (build → nginx).
 - `docker-compose.dev.yml` with hot-reload + healthchecks.
-- `Makefile` / `just` for common commands.
 
 ### UX
 - Skeleton loaders, optimistic updates, toast notifications.

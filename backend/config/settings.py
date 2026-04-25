@@ -86,12 +86,22 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Stamp Deprecation / Sunset / Link headers on legacy /api/ responses
+    # so API consumers see the nudge to migrate to /api/v1/. Cheap, runs
+    # last on the response so it sees the final status code regardless.
+    "config.middleware.LegacyApiDeprecationMiddleware",
     # AxesMiddleware must be the *last* entry so that the request reaches
     # auth views first; it then increments the failure counter on
     # ``user_login_failed`` and serves a 403 Forbidden lockout response
     # once the configured threshold is exceeded.
     "axes.middleware.AxesMiddleware",
 ]
+
+# Sunset date advertised on legacy /api/ responses (RFC 8594). Override via
+# env if you want to push the deadline; ``None`` omits the header.
+API_LEGACY_SUNSET_DATE = os.getenv(
+    "API_LEGACY_SUNSET_DATE", "Wed, 01 Oct 2026 00:00:00 GMT"
+) or None
 
 # django-axes — brute-force protection. Layered on top of the existing DRF
 # ScopedRateThrottle (which limits *rate*) by tracking *failures* per
@@ -309,7 +319,11 @@ SPECTACULAR_SETTINGS = {
     "VERSION": os.getenv("API_VERSION", "1.0.0"),
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
-    "SCHEMA_PATH_PREFIX": r"/api/",
+    "SCHEMA_PATH_PREFIX": r"/api/v1/",
+    # Drop the legacy unversioned ``/api/...`` mount from the emitted
+    # schema — runtime keeps it as an alias with a deprecation header,
+    # but generated clients should target ``/api/v1/`` only.
+    "PREPROCESSING_HOOKS": ["config.spectacular_hooks.only_versioned_paths"],
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
         "persistAuthorization": True,

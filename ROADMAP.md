@@ -69,19 +69,19 @@ Suggested closing comment template:
 **Labels:** `backend`, `security`, `P1`
 
 **Acceptance criteria.**
-- [ ] `SECURE_SSL_REDIRECT`, `SECURE_HSTS_SECONDS`, `SECURE_HSTS_INCLUDE_SUBDOMAINS`,
+- [x] `SECURE_SSL_REDIRECT`, `SECURE_HSTS_SECONDS`, `SECURE_HSTS_INCLUDE_SUBDOMAINS`,
       `SECURE_HSTS_PRELOAD`, `SECURE_PROXY_SSL_HEADER` set when `DEBUG=False`.
-- [ ] `SESSION_COOKIE_SECURE = True`, `CSRF_COOKIE_SECURE = True`,
+- [x] `SESSION_COOKIE_SECURE = True`, `CSRF_COOKIE_SECURE = True`,
       `SESSION_COOKIE_HTTPONLY = True`.
-- [ ] `manage.py check --deploy` reports zero warnings.
+- [x] `manage.py check --deploy` reports zero warnings.
 
 #### 1.3 Brute-force protection on login (`django-axes`)
 **Labels:** `backend`, `security`, `P2`
 
 **Acceptance criteria.**
-- [ ] `django-axes` installed and configured (lockout after N failed
+- [x] `django-axes` installed and configured (lockout after N failed
       attempts within window, configurable via env).
-- [ ] Throttling stacks with existing DRF throttles; no regression on
+- [x] Throttling stacks with existing DRF throttles; no regression on
       `users` tests.
 
 #### 1.4 Email verification + password reset
@@ -160,9 +160,11 @@ Suggested closing comment template:
 **Labels:** `backend`, `breaking`, `P3`
 
 **Acceptance criteria.**
-- [ ] All current routes mounted under `/api/v1/`; legacy `/api/`
-      redirects with deprecation header for one release.
-- [ ] Frontend `VITE_API_BASE_URL` updated; tests green.
+- [x] All current routes mounted under `/api/v1/`; legacy `/api/`
+      kept for one release with `Deprecation` / `Sunset` / `Link`
+      response headers (RFC 9745 / 8594 / 8631) — header-based rather
+      than HTTP 308 so existing SPA POSTs and tests keep working.
+- [x] Frontend `VITE_API_BASE_URL` updated; tests green.
 
 #### 3.3 Object storage for uploads (`django-storages` + S3/MinIO)
 **Labels:** `backend`, `infra`, `P3`
@@ -221,8 +223,8 @@ Suggested closing comment template:
 **Labels:** `dx`, `P3`
 
 **Acceptance criteria.**
-- [ ] Targets: `up`, `down`, `migrate`, `test`, `lint`, `fmt`, `seed`.
-- [ ] Documented in `README.md`.
+- [x] Targets: `up`, `down`, `migrate`, `test`, `lint`, `fmt`, `seed`.
+- [x] Documented in `README.md`.
 
 #### 5.4 Production deployment (closes #31)
 **Labels:** `infra`, `P1`

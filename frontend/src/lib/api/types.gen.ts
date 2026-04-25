@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/articles/": {
+    "/api/v1/articles/": {
         parameters: {
             query?: never;
             header?: never;
@@ -22,7 +22,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/articles/{slug}/": {
+    "/api/v1/articles/{slug}/": {
         parameters: {
             query?: never;
             header?: never;
@@ -42,7 +42,7 @@ export interface paths {
         patch: operations["articles_partial_update"];
         trace?: never;
     };
-    "/api/gamification/badges/": {
+    "/api/v1/gamification/badges/": {
         parameters: {
             query?: never;
             header?: never;
@@ -59,7 +59,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/gamification/leaderboard/": {
+    "/api/v1/gamification/leaderboard/": {
         parameters: {
             query?: never;
             header?: never;
@@ -76,7 +76,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/gamification/me/": {
+    "/api/v1/gamification/me/": {
         parameters: {
             query?: never;
             header?: never;
@@ -93,7 +93,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/gamification/users/{id}/public/": {
+    "/api/v1/gamification/users/{id}/public/": {
         parameters: {
             query?: never;
             header?: never;
@@ -110,7 +110,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/places/": {
+    "/api/v1/places/": {
         parameters: {
             query?: never;
             header?: never;
@@ -127,7 +127,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/places/{id}/": {
+    "/api/v1/places/{id}/": {
         parameters: {
             query?: never;
             header?: never;
@@ -146,7 +146,7 @@ export interface paths {
         patch: operations["places_partial_update"];
         trace?: never;
     };
-    "/api/places/{id}/{action_name}/": {
+    "/api/v1/places/{id}/{action_name}/": {
         parameters: {
             query?: never;
             header?: never;
@@ -163,7 +163,7 @@ export interface paths {
         patch: operations["places_partial_update_2"];
         trace?: never;
     };
-    "/api/places/{id}/rate/": {
+    "/api/v1/places/{id}/rate/": {
         parameters: {
             query?: never;
             header?: never;
@@ -180,7 +180,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/places/{place_pk}/menu/": {
+    "/api/v1/places/{place_pk}/menu/": {
         parameters: {
             query?: never;
             header?: never;
@@ -198,7 +198,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/places/{place_pk}/menu/{id}/": {
+    "/api/v1/places/{place_pk}/menu/{id}/": {
         parameters: {
             query?: never;
             header?: never;
@@ -218,7 +218,7 @@ export interface paths {
         patch: operations["places_menu_partial_update"];
         trace?: never;
     };
-    "/api/places/{place_pk}/reviews/": {
+    "/api/v1/places/{place_pk}/reviews/": {
         parameters: {
             query?: never;
             header?: never;
@@ -236,7 +236,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/places/create-place/": {
+    "/api/v1/places/create-place/": {
         parameters: {
             query?: never;
             header?: never;
@@ -253,7 +253,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/places/moderation/": {
+    "/api/v1/places/moderation/": {
         parameters: {
             query?: never;
             header?: never;
@@ -270,7 +270,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/places/place/{id}/": {
+    "/api/v1/places/place/{id}/": {
         parameters: {
             query?: never;
             header?: never;
@@ -287,7 +287,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/places/ratings/": {
+    "/api/v1/places/ratings/": {
         parameters: {
             query?: never;
             header?: never;
@@ -305,7 +305,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/places/ratings/{id}/": {
+    "/api/v1/places/ratings/{id}/": {
         parameters: {
             query?: never;
             header?: never;
@@ -325,7 +325,7 @@ export interface paths {
         patch: operations["places_ratings_partial_update"];
         trace?: never;
     };
-    "/api/places/ratings/rate-place/": {
+    "/api/v1/places/ratings/rate-place/": {
         parameters: {
             query?: never;
             header?: never;
@@ -342,7 +342,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/places/submit-place/": {
+    "/api/v1/places/submit-place/": {
         parameters: {
             query?: never;
             header?: never;
@@ -359,7 +359,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/reviews/{id}/{action_name}/": {
+    "/api/v1/reviews/{id}/{action_name}/": {
         parameters: {
             query?: never;
             header?: never;
@@ -376,7 +376,7 @@ export interface paths {
         patch: operations["reviews_partial_update"];
         trace?: never;
     };
-    "/api/reviews/{id}/helpful/": {
+    "/api/v1/reviews/{id}/helpful/": {
         parameters: {
             query?: never;
             header?: never;
@@ -400,7 +400,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/reviews/moderation/": {
+    "/api/v1/reviews/moderation/": {
         parameters: {
             query?: never;
             header?: never;
@@ -417,7 +417,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/reviews/my-reviews/": {
+    "/api/v1/reviews/my-reviews/": {
         parameters: {
             query?: never;
             header?: never;
@@ -435,7 +435,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/reviews/my-reviews/{id}/": {
+    "/api/v1/reviews/my-reviews/{id}/": {
         parameters: {
             query?: never;
             header?: never;
@@ -455,7 +455,7 @@ export interface paths {
         patch: operations["reviews_my_reviews_partial_update"];
         trace?: never;
     };
-    "/api/reviews/reviews/{place_pk}/": {
+    "/api/v1/reviews/reviews/{place_pk}/": {
         parameters: {
             query?: never;
             header?: never;
@@ -473,7 +473,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/reviews/reviews/create/": {
+    "/api/v1/reviews/reviews/create/": {
         parameters: {
             query?: never;
             header?: never;
@@ -490,7 +490,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/reviews/reviews/create/{place_pk}/": {
+    "/api/v1/reviews/reviews/create/{place_pk}/": {
         parameters: {
             query?: never;
             header?: never;
@@ -507,7 +507,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/token/": {
+    "/api/v1/token/": {
         parameters: {
             query?: never;
             header?: never;
@@ -524,7 +524,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/token/refresh/": {
+    "/api/v1/token/refresh/": {
         parameters: {
             query?: never;
             header?: never;
@@ -544,7 +544,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/{id}/": {
+    "/api/v1/users/{id}/": {
         parameters: {
             query?: never;
             header?: never;
@@ -584,7 +584,7 @@ export interface paths {
         patch: operations["users_partial_update"];
         trace?: never;
     };
-    "/api/users/{id}/ban/": {
+    "/api/v1/users/{id}/ban/": {
         parameters: {
             query?: never;
             header?: never;
@@ -608,7 +608,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/{id}/unban/": {
+    "/api/v1/users/{id}/unban/": {
         parameters: {
             query?: never;
             header?: never;
@@ -632,7 +632,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/create/": {
+    "/api/v1/users/create/": {
         parameters: {
             query?: never;
             header?: never;
@@ -654,7 +654,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/list/": {
+    "/api/v1/users/list/": {
         parameters: {
             query?: never;
             header?: never;
@@ -676,7 +676,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/login/": {
+    "/api/v1/users/login/": {
         parameters: {
             query?: never;
             header?: never;
@@ -693,7 +693,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/logout/": {
+    "/api/v1/users/logout/": {
         parameters: {
             query?: never;
             header?: never;
@@ -710,7 +710,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/me/": {
+    "/api/v1/users/me/": {
         parameters: {
             query?: never;
             header?: never;
@@ -728,7 +728,7 @@ export interface paths {
         patch: operations["users_me_partial_update"];
         trace?: never;
     };
-    "/api/users/me/change-password/": {
+    "/api/v1/users/me/change-password/": {
         parameters: {
             query?: never;
             header?: never;
@@ -745,7 +745,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/password-reset/confirm/": {
+    "/api/v1/users/password-reset/confirm/": {
         parameters: {
             query?: never;
             header?: never;
@@ -765,7 +765,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/password-reset/request/": {
+    "/api/v1/users/password-reset/request/": {
         parameters: {
             query?: never;
             header?: never;
@@ -788,7 +788,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/register/": {
+    "/api/v1/users/register/": {
         parameters: {
             query?: never;
             header?: never;
@@ -810,7 +810,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/token/refresh/": {
+    "/api/v1/users/token/refresh/": {
         parameters: {
             query?: never;
             header?: never;
@@ -830,7 +830,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/verify-email/confirm/": {
+    "/api/v1/users/verify-email/confirm/": {
         parameters: {
             query?: never;
             header?: never;
@@ -850,7 +850,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/verify-email/request/": {
+    "/api/v1/users/verify-email/request/": {
         parameters: {
             query?: never;
             header?: never;

@@ -18,7 +18,10 @@ function resolveApiBase(): string {
 		const fromWindow = (window as unknown as { __API_BASE?: string }).__API_BASE;
 		if (fromWindow) return fromWindow;
 	}
-	return '/api';
+	// Versioned prefix — see ROADMAP 3.2. The legacy unversioned ``/api``
+	// mount is still served by Django for one release window with a
+	// ``Deprecation`` header but new clients target ``/api/v1`` directly.
+	return '/api/v1';
 }
 
 export const API_BASE: string = resolveApiBase();
