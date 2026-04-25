@@ -144,7 +144,10 @@ class PlaceCreateView(CreateAPIView):
             return instance
         except ValidationError as e:
             logger.error("Validation error creating place: %s", e)
-            raise DRFValidationError({"detail": str(e)}) from e
+            # Surface only the user-facing messages produced by model validators
+            # (a list of plain strings). Avoid `str(e)`, which leaks the
+            # internal repr of the exception (CodeQL py/stack-trace-exposure).
+            raise DRFValidationError({"detail": e.messages}) from e
 
 
 class PlaceDetailView(RetrieveAPIView):
