@@ -16,6 +16,7 @@ class PlaceSerializer(ModelSerializer):
             "id",
             "name",
             "city",
+            "city_ref",
             "district",
             "address",
             "delivery",
@@ -46,9 +47,15 @@ class PlaceSerializer(ModelSerializer):
         return obj.google_maps_url()
 
     def get_average_rating(self, obj):
+        annotated = getattr(obj, "_avg_rating", None)
+        if annotated is not None:
+            return annotated
         return obj.calculate_average_rating()
 
     def get_reviews_count(self, obj):
+        annotated = getattr(obj, "_reviews_count", None)
+        if annotated is not None:
+            return annotated
         try:
             return obj.review_set.filter(is_moderated=True, is_deleted=False).count()
         except Exception:
@@ -58,6 +65,9 @@ class PlaceSerializer(ModelSerializer):
         return obj.stars
 
     def get_ratings_count(self, obj):
+        annotated = getattr(obj, "_ratings_count", None)
+        if annotated is not None:
+            return annotated
         return obj.ratings_count
 
 

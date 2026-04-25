@@ -2,12 +2,36 @@ from decimal import Decimal
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth import get_user_model
-from django.db.models import Avg
+from django.db.models import Avg, Count, Q
 from django.utils import timezone
 
 from places.choices import DISTRICT_CHOICES, PLACE_STATUS_CHOICES
 
 User = get_user_model()
+
+
+class City(models.Model):
+    """A reference catalog of cities a `Place` can belong to.
+
+    Existing places carry a free-text ``Place.city`` value; the new
+    :class:`Place.city_ref` FK points to a row in this table when known
+    so we can filter on a clean primary key (``?city=<slug-or-id>``)
+    without losing the original string for legacy rows.
+    """
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=120, unique=True)
+    region = models.CharField(max_length=100, blank=True, default="")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "City"
+        verbose_name_plural = "Cities"
+        ordering = ["name"]
+
+    def __str__(self) -> str:  # pragma: no cover - cosmetic
+        return self.name
 
 
 class PlaceRating(models.Model):
@@ -32,9 +56,45 @@ class PlaceRating(models.Model):
         return f"{self.place.name} - {self.rating}"
 
 
+class PlaceQuerySet(models.QuerySet):
+    """Custom queryset with helpers for the public list endpoint.
+
+    The serializer needs the average rating, ratings count and approved-
+    reviews count for every Place. Computing them lazily through the
+    instance properties causes one extra query per row (an N+1 storm on
+    paginated lists). :meth:`with_list_annotations` rolls them into the
+    main SELECT so list endpoints stay at a constant ~3 queries
+    regardless of page size.
+    """
+
+    def with_list_annotations(self):
+        return self.annotate(
+            _avg_rating=Avg("ratings__rating"),
+            _ratings_count=Count("ratings", distinct=True),
+            _reviews_count=Count(
+                "review_set",
+                filter=Q(
+                    review_set__is_moderated=True, review_set__is_deleted=False
+                ),
+                distinct=True,
+            ),
+        )
+
+
 class Place(models.Model):
     name = models.CharField(max_length=200, default="Unnamed Place")
     city = models.CharField(max_length=100, default="Київ")
+    city_ref = models.ForeignKey(
+        "City",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="places",
+        help_text=(
+            "Optional reference to the canonical City row. The free-text "
+            "`city` field above is preserved for legacy/back-compat reads."
+        ),
+    )
     district = models.CharField(
         max_length=100, choices=DISTRICT_CHOICES, default="Unknown"
     )
@@ -83,6 +143,8 @@ class Place(models.Model):
     )
     moderation_reason = models.TextField(blank=True, null=True)
     moderated_at = models.DateTimeField(blank=True, null=True)
+
+    objects = PlaceQuerySet.as_manager()
 
     class Meta:
         verbose_name = "Place"

@@ -13,3 +13,6 @@ class NewsViewSet(viewsets.ViewSet):
     queryset = News.objects.filter(is_published=True)
     serializer_class = NewsSerializer
     permission_classes = [IsAuthenticated]
+    # The endpoint is wired to `list` / `create` actions that aren't yet
+    # implemented; exclude it from the OpenAPI schema until it is.
+    schema = None

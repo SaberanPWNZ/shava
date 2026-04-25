@@ -1,5 +1,14 @@
 from django.contrib import admin
-from places.models import Place, PlaceRating
+from places.models import City, Place, PlaceRating
+
+
+@admin.register(City)
+class CityAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "slug", "region", "is_active", "created_at")
+    list_filter = ("is_active", "region")
+    search_fields = ("name", "slug", "region")
+    ordering = ("name",)
+    prepopulated_fields = {"slug": ("name",)}
 
 
 class PlaceAdmin(admin.ModelAdmin):
@@ -23,7 +32,7 @@ class PlaceAdmin(admin.ModelAdmin):
     list_per_page = 20
 
     fieldsets = (
-        (None, {"fields": ("name", "city", "district", "address", "author")}),
+        (None, {"fields": ("name", "city", "city_ref", "district", "address", "author")}),
         ("Location", {"fields": ("latitude", "longitude", "delivery")}),
         ("Content", {"fields": ("description", "main_image", "additional_images")}),
         ("Status & Rating", {"fields": ("status", "rating", "is_featured")}),

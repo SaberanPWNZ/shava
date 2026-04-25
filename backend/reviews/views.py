@@ -22,9 +22,11 @@ class ReviewViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # `place` and `author` are both rendered by the serializer →
+        # join them in a single query to avoid N+1 on /reviews/.
         return Review.objects.filter(
             author=self.request.user, is_deleted=False
-        ).select_related("place")
+        ).select_related("place", "author")
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -63,7 +65,11 @@ class PlaceReviewsListCreateView(ListCreateAPIView):
 
     def get_queryset(self):
         place_id = self.kwargs.get("place_pk") or self.kwargs.get("place_id")
-        qs = Review.objects.filter(place_id=place_id, is_deleted=False)
+        # `author` is rendered via `author_username`; `place` via
+        # `place_name`. Pull both in a single JOIN to avoid N+1.
+        qs = Review.objects.filter(
+            place_id=place_id, is_deleted=False
+        ).select_related("author", "place")
         user = self.request.user
         if user.is_authenticated and user.is_staff:
             return qs

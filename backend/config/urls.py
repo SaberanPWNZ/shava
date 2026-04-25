@@ -2,6 +2,11 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.conf import settings
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 
 from users.jwt_views import EmailTokenObtainPairView
 
@@ -15,6 +20,18 @@ urlpatterns = [
     path("api/reviews/", include("reviews.urls")),
     path("api/articles/", include("articles.urls")),
     path("api/gamification/", include("gamification.urls")),
+    # OpenAPI schema + UIs (drf-spectacular)
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
+    path(
+        "api/redoc/",
+        SpectacularRedocView.as_view(url_name="schema"),
+        name="redoc",
+    ),
 ]
 
 if settings.DEBUG:

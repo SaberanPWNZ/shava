@@ -2,6 +2,7 @@ from decimal import Decimal, InvalidOperation
 import logging
 
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -34,6 +35,17 @@ PUBLIC_VISIBLE_STATUSES = ("Active", "Approved")
 
 def _apply_place_filters(queryset, params):
     """Apply user-supplied query-param filters to a Place queryset."""
+    city = params.get("city")
+    if city:
+        # Accept either a numeric City PK, a slug, or a free-text name and
+        # match against both the FK and the legacy CharField for back-compat.
+        cond = Q(city__iexact=city) | Q(city_ref__slug__iexact=city) | Q(
+            city_ref__name__iexact=city
+        )
+        if str(city).isdigit():
+            cond |= Q(city_ref_id=int(city))
+        queryset = queryset.filter(cond)
+
     district = params.get("district")
     if district:
         queryset = queryset.filter(district=district)
@@ -70,8 +82,6 @@ def _apply_place_filters(queryset, params):
 
     search = params.get("search")
     if search:
-        from django.db.models import Q
-
         queryset = queryset.filter(
             Q(name__icontains=search) | Q(description__icontains=search)
         )
@@ -105,6 +115,10 @@ class PlaceListView(ListAPIView):
             qs = Place.objects.filter(status=status_filter)
         else:
             qs = Place.objects.filter(status__in=PUBLIC_VISIBLE_STATUSES)
+        # Annotate aggregate columns the serializer would otherwise compute
+        # one-place-at-a-time. Keeps the list endpoint at constant query
+        # count regardless of page size.
+        qs = qs.with_list_annotations().select_related("city_ref", "author")
         return _apply_place_filters(qs, params)
 
 
@@ -174,7 +188,12 @@ class PlaceModerationListView(ListAPIView):
     permission_classes = [IsAdminUser]
 
     def get_queryset(self):
-        return Place.objects.filter(status="On_moderation").order_by("-created_at")
+        return (
+            Place.objects.filter(status="On_moderation")
+            .with_list_annotations()
+            .select_related("city_ref", "author")
+            .order_by("-created_at")
+        )
 
 
 class PlaceModerationActionView(UpdateAPIView):
