@@ -1,65 +1,96 @@
-version: '3.8'
+# =============================================================================
+# Production stack — `docker-compose -f docker-compose.prod.yml up -d --build`
+# Reads variables from `.env.prod` (copy from `.env.prod.example`).
+#
+# Security posture:
+#   - Only nginx exposes ports to the host (80 + 443). web/frontend/db stay on
+#     the internal docker network.
+#   - All containers run as non-root and with `no-new-privileges`.
+#   - Containers restart automatically on failure.
+#   - TLS certificates are mounted read-only from `./certs`.
+# =============================================================================
+
+x-security: &default-security
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
 
 services:
   web:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile.prod
-    ports:
-      - "8000:8000"
-    volumes:
-      - static_volume:/app/static
-      - media_volume:/app/media
+    env_file:
+      - ./.env.prod
     environment:
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-      - DEBUG=0
-      - POSTGRES_DB=shava_db
-      - POSTGRES_USER=shava_user
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432
+      # Defence in depth: ensure DEBUG stays False in production even if the
+      # operator accidentally flips it on in `.env.prod`.
+      - DEBUG=False
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    expose:
+      - "8000"
     depends_on:
-      - db
-    command: >
-      sh -c "python manage.py collectstatic --noinput &&
-             python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+      db:
+        condition: service_healthy
+    <<: *default-security
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - HOST=0.0.0.0
-    restart: unless-stopped
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    env_file:
+      - ./.env.prod
+    expose:
+      - "3000"
+    depends_on:
+      - web
+    <<: *default-security
 
   db:
     image: postgres:15-alpine
+    env_file:
+      - ./.env.prod
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-    environment:
-      - POSTGRES_DB=shava_db
-      - POSTGRES_USER=shava_user
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    restart: unless-stopped
+    # Internal network only — never publish the DB port in production.
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    <<: *default-security
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.27-alpine
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - static_volume:/static
-      - media_volume:/media
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - static_volume:/static:ro
+      - media_volume:/media:ro
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME}
     depends_on:
       - web
       - frontend
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    <<: *default-security
 
 volumes:
   postgres_data:

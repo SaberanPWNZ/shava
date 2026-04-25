@@ -1,156 +1,158 @@
-# Docker Setup for Shava Project
+# Docker deployment guide
 
-This document describes how to run the Shava project using Docker.
+This project ships with two ready-to-use Docker stacks:
 
-## Prerequisites
+| Environment | Compose file              | Env file template      |
+|-------------|---------------------------|------------------------|
+| Development | `docker-compose.yml`      | `.env.dev.example`     |
+| Production  | `docker-compose.prod.yml` | `.env.prod.example`    |
 
-- Docker Desktop installed and running
-- Docker Compose installed (usually comes with Docker Desktop)
+Both stacks contain a Django + DRF backend (`web`), a SvelteKit frontend
+(`frontend`) and PostgreSQL (`db`). The production stack adds an `nginx`
+reverse proxy that terminates TLS and serves static / media files.
 
-## Files Structure
+---
 
-```
-├── backend/
-│   ├── Dockerfile              # Development Dockerfile
-│   ├── Dockerfile.prod         # Production Dockerfile
-│   ├── .dockerignore          # Docker ignore file
-│   └── ... (Django project files)
-├── docker-compose.yml          # Development compose file
-├── docker-compose.prod.yml     # Production compose file
-├── nginx.conf                  # Nginx configuration
-└── .env                       # Environment variables
-```
-
-## Environment Variables
-
-Create a `.env` file in the root directory:
-
-```env
-DJANGO_SECRET_KEY=your-very-secure-secret-key-here
-POSTGRES_PASSWORD=your-secure-postgres-password
-```
-
-## Development Setup
-
-### 1. Build and run the development environment:
+## 1. Development
 
 ```bash
-docker-compose up --build
+cp .env.dev.example .env.dev
+# edit .env.dev as needed (DJANGO_SECRET_KEY, DB credentials, …)
+docker compose up --build
 ```
 
-### 2. Access the application:
+Services and ports (bound to `127.0.0.1` only — never exposed to the LAN):
 
-- Django app: http://localhost:8000
-- PostgreSQL: localhost:5432
+- Django backend: <http://127.0.0.1:8000>
+- SvelteKit frontend: <http://127.0.0.1:5173>
+- PostgreSQL: `127.0.0.1:5432`
 
-### 3. Run Django commands:
+Useful commands:
 
 ```bash
-# Create migrations
-docker-compose exec web poetry run python manage.py makemigrations
-
-# Apply migrations
-docker-compose exec web poetry run python manage.py migrate
-
-# Create superuser
-docker-compose exec web poetry run python manage.py createsuperuser
-
-# Access Django shell
-docker-compose exec web poetry run python manage.py shell
+docker compose exec web python manage.py createsuperuser
+docker compose exec web python manage.py shell
+docker compose exec db psql -U "$POSTGRES_USER" "$POSTGRES_DB"
+docker compose logs -f web
+docker compose down            # stop
+docker compose down -v         # stop and DROP the database
 ```
 
-## Production Setup
+---
 
-### 1. Build and run the production environment:
+## 2. Production
+
+### 2.1 Prepare the host
+
+1. Install Docker Engine and Docker Compose v2.
+2. Open ports **80** and **443** in your firewall. Do **not** open 5432 or 8000
+   to the public internet.
+3. Obtain TLS certificates (Let's Encrypt is recommended) and place them at:
+
+   ```
+   ./certs/fullchain.pem
+   ./certs/privkey.pem
+   ```
+
+### 2.2 Configure secrets
 
 ```bash
-docker-compose -f docker-compose.prod.yml up --build
+cp .env.prod.example .env.prod
+# Edit .env.prod and fill in:
+#   - DJANGO_SECRET_KEY (long random string)
+#   - POSTGRES_PASSWORD
+#   - ALLOWED_HOSTS / CSRF_TRUSTED_ORIGINS / CORS_ALLOWED_ORIGINS for your domain
+#   - DOMAIN_NAME and VITE_API_BASE_URL
 ```
 
-### 2. Access the application:
+> ⚠️ **Never commit `.env.prod`.** It is excluded by `.gitignore`.
+>
+> Generate a secret key:
+>
+> ```bash
+> python -c "import secrets; print(secrets.token_urlsafe(64))"
+> ```
 
-- Application: http://localhost (via Nginx)
-- Direct Django: http://localhost:8000
+### 2.3 Launch
 
-## Useful Commands
-
-### Stop all services:
 ```bash
-docker-compose down
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs -f
 ```
 
-### Stop and remove volumes (⚠️ This will delete your database):
+Migrations and `collectstatic` run automatically on container start.
+
+To create the first admin user:
+
 ```bash
-docker-compose down -v
+docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
 ```
 
-### View logs:
+### 2.4 Updating
+
 ```bash
-# All services
-docker-compose logs
-
-# Specific service
-docker-compose logs web
+git pull
+docker compose -f docker-compose.prod.yml pull        # base images
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-### Execute commands in containers:
+### 2.5 Backups
+
 ```bash
-# Access Django shell
-docker-compose exec web poetry run python manage.py shell
-
-# Access PostgreSQL
-docker-compose exec db psql -U shava_user -d shava_db
+docker compose -f docker-compose.prod.yml exec db \
+    pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" \
+    | gzip > backup-$(date +%F).sql.gz
 ```
 
-### Build only (without starting):
-```bash
-docker-compose build
-```
+---
 
-### Rebuild without cache:
-```bash
-docker-compose build --no-cache
-```
+## 3. Security checklist
 
-## Troubleshooting
+The configuration in this repository already enforces the following:
 
-### 1. Port already in use:
-```bash
-# Stop other services using port 8000
-docker-compose down
-# Or change the port in docker-compose.yml
-```
+- [x] **No public Postgres port.** In dev it binds to `127.0.0.1`; in prod it
+      stays inside the docker network.
+- [x] **No public web/frontend ports in prod.** Only nginx (80 + 443) is
+      exposed.
+- [x] **Containers run as non-root.** Backend, frontend, and nginx all use
+      unprivileged users; `no-new-privileges` is set in `docker-compose.prod.yml`.
+- [x] **`DEBUG=False` is enforced in prod**, both via `.env.prod` and a
+      hard override in `docker-compose.prod.yml`.
+- [x] **`SECRET_KEY` is required** when `DEBUG=False` — the app fails to start
+      without it.
+- [x] **`debug_toolbar`** is loaded only when `DEBUG=True`.
+- [x] **HTTPS hardening** when `DEBUG=False`: `SECURE_SSL_REDIRECT`, HSTS,
+      `Secure`/`HttpOnly` cookies, `SECURE_PROXY_SSL_HEADER`, `Referrer-Policy`,
+      `X-Frame-Options=DENY`, `nosniff`.
+- [x] **CSRF trusted origins** are read from `CSRF_TRUSTED_ORIGINS`.
+- [x] **CORS origins are explicit** — no wildcards.
+- [x] **DRF throttling** for auth, registration, and helpful-vote endpoints.
+- [x] **Edge rate limiting** in nginx for `/api/`, `/api/token/*`,
+      `/api/users/(login|register|password)`, and `/admin/` (defence in depth).
+- [x] **HTTP → HTTPS redirect**, modern TLS only (TLS 1.2 + 1.3), no session
+      tickets, server-preferred ciphers.
+- [x] **Strict response headers** in nginx: HSTS (1 year, preload),
+      strict CSP, `X-Content-Type-Options=nosniff`, `Permissions-Policy`,
+      `Cross-Origin-Opener-Policy=same-origin`, `X-Frame-Options=DENY`.
+      `X-XSS-Protection` is intentionally omitted (deprecated).
+- [x] **Hidden file access blocked** in nginx (e.g. `.git`, `.env`).
+- [x] **Body / header timeouts and `client_max_body_size`** set to limit
+      slow-loris and large-upload DoS.
+- [x] **gzip enabled** for safe MIME types.
+- [x] **Healthchecks** on all services.
+- [x] **Multi-stage Python image** keeps build tools out of the final
+      production image and reduces the attack surface.
+- [x] **Pinned Docker base images** (`python:3.12-slim`, `node:20-alpine`,
+      `postgres:15-alpine`, `nginx:1.27-alpine`).
 
-### 2. Database connection issues:
-```bash
-# Check if database is running
-docker-compose ps
+### Things to do per environment
 
-# Check database logs
-docker-compose logs db
-```
-
-### 3. Permission issues:
-```bash
-# Reset file permissions
-sudo chown -R $USER:$USER .
-```
-
-### 4. Clear Docker cache:
-```bash
-docker system prune -a
-```
-
-## Security Notes
-
-- Never commit your `.env` file
-- Use strong passwords for production
-- Consider using Docker secrets for production deployments
-- Regularly update base images for security patches
-
-## Performance Tips
-
-- Use `.dockerignore` to exclude unnecessary files
-- Multi-stage builds for production (already implemented)
-- Use Docker BuildKit for faster builds
-- Consider using Docker volumes for development hot-reloading
+- Rotate `DJANGO_SECRET_KEY` and `POSTGRES_PASSWORD` on a schedule.
+- Restrict access to `/admin/` (e.g., IP allowlist via nginx `allow`/`deny`,
+  VPN, or basic auth) if it does not need to be public.
+- Run `docker scout cves` (or `trivy image …`) periodically against built
+  images.
+- Keep base images updated (`docker compose pull && up -d --build`).
+- Configure off-host log shipping and monitoring.
+- Configure automated database backups and test restores.
