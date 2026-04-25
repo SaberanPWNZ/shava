@@ -65,7 +65,9 @@ in the Django `.env`.
 - `npm run preview` — preview the production build
 - `npm run check` — `svelte-check` type checking
 - `npm run lint` — Prettier + ESLint
-- `npm run test` — Playwright e2e
+- `npm run test:unit` — Vitest unit tests (happy-dom)
+- `npm run test:e2e` — Playwright e2e
+- `npm run test` — runs `test:unit` then `test:e2e`
 
 ### Available commands (backend)
 
@@ -118,6 +120,7 @@ the `main` branch:
 | `frontend-lint`  | `npm run lint` (Prettier + ESLint, Node 20) |
 | `frontend-check` | `npm run check` (svelte-check)              |
 | `frontend-build` | `npm run build` (production build)          |
+| `frontend-unit`  | `npm run test:unit` (Vitest + happy-dom)    |
 | `e2e`            | Playwright e2e (depends on `frontend-build`)|
 
 ## Environment variables
