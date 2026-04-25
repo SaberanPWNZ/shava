@@ -5,6 +5,7 @@ custom permissions in :mod:`users.permissions`. Business logic lives in
 :mod:`users.services` (SRP) and token operations go through the
 ``TokenIssuer`` abstraction in :mod:`users.token_issuer` (DIP).
 """
+
 from rest_framework import generics, status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -48,9 +49,7 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response(
-            UserPublicSerializer(user).data, status=status.HTTP_201_CREATED
-        )
+        return Response(UserPublicSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
 class MeView(APIView):
@@ -63,9 +62,7 @@ class MeView(APIView):
         return Response(UserPublicSerializer(request.user).data)
 
     def patch(self, request):
-        serializer = MeUpdateSerializer(
-            request.user, data=request.data, partial=True
-        )
+        serializer = MeUpdateSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(UserPublicSerializer(request.user).data)

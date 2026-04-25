@@ -6,11 +6,12 @@ contains. They are the executable contract behind the annotations and
 ``select_related`` calls in :mod:`places.views`, :mod:`reviews.views`
 and :mod:`articles.views`.
 """
+
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.test.utils import CaptureQueriesContext
 from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -155,7 +156,9 @@ class ReviewListQueryCountTests(APITestCase):
             resp = self.client.get(url)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         body = resp.json()
-        items = body["results"] if isinstance(body, dict) and "results" in body else body
+        items = (
+            body["results"] if isinstance(body, dict) and "results" in body else body
+        )
         self.assertEqual(len(items), 5)
         self.assertLessEqual(
             len(ctx.captured_queries),

@@ -1,6 +1,5 @@
 from django.db import models
 
-
 MENU_CATEGORY_CHOICES = [
     ("shawarma", "Shawarma"),
     ("drinks", "Drinks"),

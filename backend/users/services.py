@@ -4,6 +4,7 @@ Keeps business logic out of serializers/views (SRP) and provides a clear
 seam for testing and future extension (e.g. sending verification emails,
 emitting domain events).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

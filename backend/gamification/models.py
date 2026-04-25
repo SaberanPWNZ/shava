@@ -136,9 +136,7 @@ class UserBadge(models.Model):
         verbose_name_plural = "User badges"
         ordering = ["-awarded_at"]
         constraints = [
-            models.UniqueConstraint(
-                fields=["user", "badge"], name="uniq_user_badge"
-            )
+            models.UniqueConstraint(fields=["user", "badge"], name="uniq_user_badge")
         ]
 
     def __str__(self) -> str:  # pragma: no cover - cosmetic

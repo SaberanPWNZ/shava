@@ -19,7 +19,6 @@ from django.core.management.base import BaseCommand, CommandError
 
 from places.models import City
 
-
 DEFAULT_CSV = Path(__file__).resolve().parent.parent.parent / "data" / "cities.csv"
 
 
@@ -50,7 +49,9 @@ class Command(BaseCommand):
 
         with path.open(encoding="utf-8", newline="") as fh:
             reader = csv.DictReader(fh)
-            missing = {col for col in ("name", "slug") if col not in (reader.fieldnames or [])}
+            missing = {
+                col for col in ("name", "slug") if col not in (reader.fieldnames or [])
+            }
             if missing:
                 raise CommandError(
                     f"CSV is missing required columns: {', '.join(sorted(missing))}"

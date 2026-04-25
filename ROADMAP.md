@@ -112,9 +112,9 @@ Suggested closing comment template:
 **Labels:** `backend`, `tooling`, `P2`
 
 **Acceptance criteria.**
-- [ ] `ruff` config in `pyproject.toml`, `.flake8` removed.
-- [ ] `mypy` config + `django-stubs`; CI fails on new errors.
-- [ ] `pre-commit` hook runs ruff + mypy + prettier + eslint.
+- [x] `ruff` config in `pyproject.toml`, `.flake8` removed.
+- [x] `mypy` config + `django-stubs`; CI fails on new errors.
+- [x] `pre-commit` hook runs ruff + mypy + prettier + eslint.
 
 #### 2.2 Frontend unit tests with `vitest`
 **Labels:** `frontend`, `testing`, `P2`

@@ -13,6 +13,7 @@ The serializers are intentionally split by responsibility (SRP/ISP):
 * :class:`UserAdminSerializer` — full set of fields, used **only** by
   admin-only endpoints.
 """
+
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
@@ -38,15 +39,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_email(self, value: str) -> str:
         value = value.strip().lower()
         if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError(
-                "A user with this email already exists."
-            )
+            raise serializers.ValidationError("A user with this email already exists.")
         return value
 
     def create(self, validated_data):
-        service: UserRegistrationService = self.context.get(
-            "registration_service"
-        ) or UserRegistrationService()
+        service: UserRegistrationService = (
+            self.context.get("registration_service") or UserRegistrationService()
+        )
         return service.register(
             RegistrationData(
                 email=validated_data["email"],

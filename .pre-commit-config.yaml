@@ -1,0 +1,54 @@
+# =============================================================================
+# Local dev hooks. Install once with:
+#   pip install pre-commit && pre-commit install
+#
+# Hooks run only on staged files; CI re-runs the same checks repo-wide.
+# =============================================================================
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
+  # ---------- Backend (Python) ----------
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.12
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (backend)
+        language: system
+        entry: bash -c 'cd backend && DJANGO_SECRET_KEY=test mypy .'
+        files: ^backend/.*\.py$
+        pass_filenames: false
+
+  # ---------- Frontend (JS / TS / Svelte) ----------
+  # Run prettier + eslint via the local frontend toolchain so versions stay in
+  # lockstep with `frontend/package.json`. `pre-commit` invokes them only when
+  # frontend files are staged.
+  - repo: local
+    hooks:
+      - id: frontend-prettier
+        name: prettier (frontend)
+        language: system
+        entry: bash -c 'cd frontend && npx --no-install prettier --check "$@"' --
+        files: ^frontend/.*\.(js|ts|svelte|json|css|md)$
+        pass_filenames: true
+      - id: frontend-eslint
+        name: eslint (frontend)
+        language: system
+        entry: bash -c 'cd frontend && npx --no-install eslint "$@"' --
+        files: ^frontend/.*\.(js|ts|svelte)$
+        pass_filenames: true

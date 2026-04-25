@@ -1,6 +1,7 @@
-from places.models import Place, PlaceRating
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
+
+from places.models import Place, PlaceRating
 
 
 class PlaceSerializer(ModelSerializer):

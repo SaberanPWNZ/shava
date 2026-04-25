@@ -98,10 +98,9 @@ def _on_review_pre_save(sender, instance, **kwargs):
     except sender.DoesNotExist:
         instance._was_just_verified = False
         return
-    instance._was_just_verified = (
-        bool(getattr(instance, "is_verified", False))
-        and not bool(previous.is_verified)
-    )
+    instance._was_just_verified = bool(
+        getattr(instance, "is_verified", False)
+    ) and not bool(previous.is_verified)
 
 
 # ---------------------------------------------------------------------------

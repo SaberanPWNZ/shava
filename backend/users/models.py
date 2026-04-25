@@ -1,5 +1,5 @@
-from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.db import models
 
 
 class UserManager(BaseUserManager):
@@ -35,8 +35,8 @@ class UserManager(BaseUserManager):
 
 class User(AbstractUser):
     email = models.EmailField(unique=True, max_length=100, blank=False, null=False)
-    first_name = models.CharField(max_length=50, blank=True, null=True)
-    last_name = models.CharField(max_length=50, blank=True, null=True)
+    first_name = models.CharField(max_length=50, blank=True, null=True)  # type: ignore[assignment]
+    last_name = models.CharField(max_length=50, blank=True, null=True)  # type: ignore[assignment]
     telegram_id = models.CharField(max_length=50, blank=True, null=True)
     avatar = models.ImageField(
         upload_to="user_avatars/",
@@ -52,12 +52,12 @@ class User(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    objects = UserManager()
+    objects = UserManager()  # type: ignore[assignment,misc]
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
-    user_permissions = models.ManyToManyField(
+    user_permissions = models.ManyToManyField(  # type: ignore[assignment]
         "auth.Permission",
         related_name="custom_user_set",
         blank=True,

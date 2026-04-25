@@ -24,7 +24,9 @@ class ArticleListSerializer(serializers.ModelSerializer):
     def get_author_name(self, obj):
         if not obj.author_id:
             return None
-        return getattr(obj.author, "username", None) or getattr(obj.author, "email", None)
+        return getattr(obj.author, "username", None) or getattr(
+            obj.author, "email", None
+        )
 
 
 class ArticleDetailSerializer(serializers.ModelSerializer):
@@ -52,4 +54,6 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
     def get_author_name(self, obj):
         if not obj.author_id:
             return None
-        return getattr(obj.author, "username", None) or getattr(obj.author, "email", None)
+        return getattr(obj.author, "username", None) or getattr(
+            obj.author, "email", None
+        )

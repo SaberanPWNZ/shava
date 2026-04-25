@@ -4,7 +4,6 @@ Script to wait for database to be available.
 """
 
 import os
-import time
 import socket
 from time import sleep
 

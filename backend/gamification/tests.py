@@ -5,7 +5,6 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.test import TestCase, override_settings
-from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -26,7 +25,6 @@ from gamification.services import PointsService
 from places.models import Place
 from reviews.models import Review, ReviewHelpfulVote
 from users.models import User
-
 
 NO_THROTTLE = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -103,9 +101,7 @@ class PointsServiceTests(TestCase):
         )
         self.assertFalse(second.created)
         self.assertEqual(PointsTransaction.objects.count(), 1)
-        self.assertEqual(
-            UserPointsBalance.objects.get(user=self.user).total, 10
-        )
+        self.assertEqual(UserPointsBalance.objects.get(user=self.user).total, 10)
 
     def test_award_updates_level(self):
         # Need 50 points to reach Foodie. 5 distinct refs × 10 pts.
@@ -127,9 +123,7 @@ class PointsServiceTests(TestCase):
             ref_type="penalty",
             ref_id=1,
         )
-        self.assertEqual(
-            UserPointsBalance.objects.get(user=self.user).total, 0
-        )
+        self.assertEqual(UserPointsBalance.objects.get(user=self.user).total, 0)
 
 
 class ReviewSignalTests(TestCase):
@@ -161,12 +155,8 @@ class ReviewSignalTests(TestCase):
         other = User.objects.create_user(
             email="c@example.com", password="StrongPass!234"
         )
-        Review.objects.create(
-            place=self.place, author=self.user, score=Decimal("8.0")
-        )
-        Review.objects.create(
-            place=self.place, author=other, score=Decimal("9.0")
-        )
+        Review.objects.create(place=self.place, author=self.user, score=Decimal("8.0"))
+        Review.objects.create(place=self.place, author=other, score=Decimal("9.0"))
         other_reasons = set(
             PointsTransaction.objects.filter(user=other).values_list(
                 "reason", flat=True
@@ -221,9 +211,7 @@ class BadgeServiceTests(TestCase):
         self.place = _make_place()
 
     def test_first_review_badge_awarded_once(self):
-        Review.objects.create(
-            place=self.place, author=self.user, score=Decimal("8.0")
-        )
+        Review.objects.create(place=self.place, author=self.user, score=Decimal("8.0"))
         self.assertTrue(
             UserBadge.objects.filter(
                 user=self.user, badge__code="first_review"
@@ -231,9 +219,7 @@ class BadgeServiceTests(TestCase):
         )
         # Creating a second review should not duplicate the badge.
         other = _make_place(name="Other")
-        Review.objects.create(
-            place=other, author=self.user, score=Decimal("9.0")
-        )
+        Review.objects.create(place=other, author=self.user, score=Decimal("9.0"))
         self.assertEqual(
             UserBadge.objects.filter(
                 user=self.user, badge__code="first_review"
@@ -276,9 +262,7 @@ class GamificationApiTests(APITestCase):
         self.assertIn("recent_transactions", resp.data)
 
     def test_public_profile_is_open(self):
-        resp = self.client.get(
-            f"/api/gamification/users/{self.user.id}/public/"
-        )
+        resp = self.client.get(f"/api/gamification/users/{self.user.id}/public/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data["user_id"], self.user.id)
         self.assertEqual(resp.data["points"], 0)
@@ -297,9 +281,7 @@ class GamificationApiTests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_leaderboard_returns_ranked_users(self):
-        Review.objects.create(
-            place=self.place, author=self.user, score=Decimal("8.0")
-        )
+        Review.objects.create(place=self.place, author=self.user, score=Decimal("8.0"))
         resp = self.client.get("/api/gamification/leaderboard/?period=all")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data["period"], "all")
@@ -343,19 +325,15 @@ class HelpfulVoteApiTests(APITestCase):
 
     def test_helpful_vote_awards_author(self):
         self._login_as("voter@example.com")
-        before = (
-            PointsTransaction.objects.filter(
-                user=self.author, reason=REVIEW_HELPFUL_VOTE
-            ).count()
-        )
+        before = PointsTransaction.objects.filter(
+            user=self.author, reason=REVIEW_HELPFUL_VOTE
+        ).count()
         resp = self.client.post(f"/api/reviews/{self.review.id}/helpful/")
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         self.assertEqual(resp.data["helpful_count"], 1)
-        after = (
-            PointsTransaction.objects.filter(
-                user=self.author, reason=REVIEW_HELPFUL_VOTE
-            ).count()
-        )
+        after = PointsTransaction.objects.filter(
+            user=self.author, reason=REVIEW_HELPFUL_VOTE
+        ).count()
         self.assertEqual(after, before + 1)
 
     def test_helpful_vote_is_idempotent(self):
@@ -376,9 +354,7 @@ class HelpfulVoteApiTests(APITestCase):
     def test_helpful_unvote(self):
         self._login_as("voter@example.com")
         self.client.post(f"/api/reviews/{self.review.id}/helpful/")
-        resp = self.client.delete(
-            f"/api/reviews/{self.review.id}/helpful/"
-        )
+        resp = self.client.delete(f"/api/reviews/{self.review.id}/helpful/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.review.refresh_from_db()
         self.assertEqual(self.review.helpful_count, 0)

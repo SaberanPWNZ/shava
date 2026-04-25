@@ -56,6 +56,8 @@ def level_for(points: int) -> LevelInfo:
         span = max(1, nxt - current)
         progress = int(((points - current) / span) * 100)
         progress = max(0, min(100, progress))
-        return LevelInfo(level=level, title=title, next_threshold=nxt, progress_pct=progress)
+        return LevelInfo(
+            level=level, title=title, next_threshold=nxt, progress_pct=progress
+        )
 
     return LevelInfo(level=level, title=title, next_threshold=None, progress_pct=100)

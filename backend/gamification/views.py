@@ -162,6 +162,4 @@ class ReviewHelpfulView(views.APIView):
                     helpful_count=F("helpful_count") - 1
                 )
         review.refresh_from_db(fields=["helpful_count"])
-        return Response(
-            {"helpful_count": review.helpful_count, "voted": False}
-        )
+        return Response({"helpful_count": review.helpful_count, "voted": False})

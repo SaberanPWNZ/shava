@@ -85,7 +85,9 @@ the full list. Notable targets:
 - `make up` / `make down` — start / stop the docker compose dev stack
 - `make migrate` — apply migrations inside the running backend container
 - `make test` — run backend (Django) and frontend (Playwright) tests
-- `make lint` / `make fmt` — flake8 + ESLint/Prettier / black + isort + Prettier
+- `make lint` / `make fmt` — ruff (check + format check) + ESLint/Prettier / ruff format + ESLint --fix + Prettier
+- `make typecheck` — mypy with `django-stubs` over the backend
+- `pre-commit install` — wire the repo-root [`.pre-commit-config.yaml`](.pre-commit-config.yaml) so `ruff` (backend) and `prettier` + `eslint` (frontend) run on every commit
 
 ## API documentation
 
@@ -113,15 +115,16 @@ CI runs on every push and pull request via
 in parallel and are intended to be configured as required status checks on
 the `main` branch:
 
-| Job              | What it does                                |
-| ---------------- | ------------------------------------------- |
-| `backend-lint`   | `flake8` (Python 3.12, pip cache)           |
-| `backend-test`   | `python manage.py test` (Django, sqlite)    |
-| `frontend-lint`  | `npm run lint` (Prettier + ESLint, Node 20) |
-| `frontend-check` | `npm run check` (svelte-check)              |
-| `frontend-build` | `npm run build` (production build)          |
-| `frontend-unit`  | `npm run test:unit` (Vitest + happy-dom)    |
-| `e2e`            | Playwright e2e (depends on `frontend-build`)|
+| Job                 | What it does                                |
+| ------------------- | ------------------------------------------- |
+| `backend-lint`      | `ruff check` + `ruff format --check` (Python 3.12, pip cache) |
+| `backend-typecheck` | `mypy` + `django-stubs` (Python 3.12)       |
+| `backend-test`      | `python manage.py test` (Django, sqlite)    |
+| `frontend-lint`     | `npm run lint` (Prettier + ESLint, Node 20) |
+| `frontend-check`    | `npm run check` (svelte-check)              |
+| `frontend-build`    | `npm run build` (production build)          |
+| `frontend-unit`     | `npm run test:unit` (Vitest + happy-dom)    |
+| `e2e`               | Playwright e2e (depends on `frontend-build`)|
 
 ## Environment variables
 
@@ -162,7 +165,6 @@ See `.env.example`. Notable ones:
 - Sentry for error tracking (frontend + backend).
 
 ### Code quality
-- `ruff` instead of `flake8`; `mypy` + `django-stubs`; `pre-commit`.
 - `vitest` for frontend unit tests of services/stores.
 - GitHub Actions CI matrix (lint → test → build → e2e).
 

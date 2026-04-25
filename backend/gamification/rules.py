@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 # Reason codes (kept as plain strings — used as DB choices and as keys).
 REVIEW_CREATED = "REVIEW_CREATED"
 REVIEW_FIRST_FOR_PLACE = "REVIEW_FIRST_FOR_PLACE"

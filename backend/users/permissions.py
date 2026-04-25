@@ -4,6 +4,7 @@ These permissions are deliberately small and single-purpose (SRP/OCP) so that
 new authorization rules can be added by composing or subclassing them rather
 than by editing existing call sites.
 """
+
 from rest_framework import permissions
 
 

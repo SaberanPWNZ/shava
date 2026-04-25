@@ -1,7 +1,8 @@
 import os
 import sys
-from pathlib import Path
 from datetime import timedelta
+from pathlib import Path
+
 from dotenv import load_dotenv  # type: ignore
 
 load_dotenv()
@@ -96,7 +97,9 @@ AXES_FAILURE_LIMIT = int(os.getenv("AXES_FAILURE_LIMIT", "5"))
 # a ``timedelta`` (django-axes also accepts plain hours, but the explicit
 # type avoids any ambiguity for floats / sub-hour windows).
 _axes_cooloff_hours = float(os.getenv("AXES_COOLOFF_TIME_HOURS", "1"))
-AXES_COOLOFF_TIME = timedelta(hours=_axes_cooloff_hours) if _axes_cooloff_hours > 0 else None
+AXES_COOLOFF_TIME = (
+    timedelta(hours=_axes_cooloff_hours) if _axes_cooloff_hours > 0 else None
+)
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_PARAMETERS = ["username", "ip_address"]
 # Trust the standard X-Forwarded-For chain (single proxy = nginx).
@@ -133,9 +136,7 @@ if not DEBUG and not _RUNNING_TESTS:
     SESSION_COOKIE_SAMESITE = "Lax"
     CSRF_COOKIE_SAMESITE = "Lax"
     SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000"))
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool(
-        "SECURE_HSTS_INCLUDE_SUBDOMAINS", True
-    )
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", True)
     SECURE_HSTS_PRELOAD = _env_bool("SECURE_HSTS_PRELOAD", True)
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
@@ -167,9 +168,9 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Use SQLite for testing
 if _RUNNING_TESTS:
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:',
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
         }
     }
 else:

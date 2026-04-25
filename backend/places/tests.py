@@ -1,13 +1,15 @@
+import io
+from decimal import Decimal
+
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from PIL import Image
+
 from places.models import Place
 from places_menu.models import Menu
 from shwarma.models import Shwarma
-from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
-from PIL import Image
-import io
-from django.core.exceptions import ValidationError
-from decimal import Decimal
 
 
 class PlaceModelTest(TestCase):

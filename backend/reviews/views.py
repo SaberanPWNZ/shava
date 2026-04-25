@@ -2,7 +2,6 @@ import logging
 
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status, viewsets
-from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import ListAPIView, ListCreateAPIView, UpdateAPIView
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
@@ -67,9 +66,9 @@ class PlaceReviewsListCreateView(ListCreateAPIView):
         place_id = self.kwargs.get("place_pk") or self.kwargs.get("place_id")
         # `author` is rendered via `author_username`; `place` via
         # `place_name`. Pull both in a single JOIN to avoid N+1.
-        qs = Review.objects.filter(
-            place_id=place_id, is_deleted=False
-        ).select_related("author", "place")
+        qs = Review.objects.filter(place_id=place_id, is_deleted=False).select_related(
+            "author", "place"
+        )
         user = self.request.user
         if user.is_authenticated and user.is_staff:
             return qs
@@ -135,9 +134,7 @@ class ReviewModerationActionView(UpdateAPIView):
                 {"detail": "Unknown moderation action."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        logger.info(
-            "Review %s %sd by %s", review.id, action_name, request.user
-        )
+        logger.info("Review %s %sd by %s", review.id, action_name, request.user)
         return Response(self.get_serializer(review).data)
 
 

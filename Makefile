@@ -6,7 +6,7 @@
 # invocation. Run `make help` to see the full list.
 # =============================================================================
 
-.PHONY: help up down migrate test test-backend test-frontend lint lint-backend lint-frontend fmt fmt-backend fmt-frontend seed
+.PHONY: help up down migrate test test-backend test-frontend lint lint-backend lint-frontend typecheck typecheck-backend fmt fmt-backend fmt-frontend seed
 
 # Use docker compose v2 if available, fall back to legacy docker-compose.
 COMPOSE ?= $(shell command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
@@ -33,16 +33,21 @@ test-frontend: ## Run frontend Playwright e2e tests.
 
 lint: lint-backend lint-frontend ## Run all linters.
 
-lint-backend: ## flake8 over the backend.
-	cd backend && flake8 .
+lint-backend: ## ruff (lint + format check) over the backend.
+	cd backend && ruff check . && ruff format --check .
 
 lint-frontend: ## Prettier + ESLint over the frontend.
 	cd frontend && npm run lint
 
+typecheck: typecheck-backend ## Run all type checkers.
+
+typecheck-backend: ## mypy + django-stubs over the backend.
+	cd backend && DJANGO_SECRET_KEY=test mypy .
+
 fmt: fmt-backend fmt-frontend ## Format backend and frontend.
 
-fmt-backend: ## black + isort over the backend.
-	cd backend && black . && isort .
+fmt-backend: ## ruff format + ruff check --fix over the backend.
+	cd backend && ruff format . && ruff check --fix .
 
 fmt-frontend: ## prettier --write over the frontend.
 	cd frontend && npm run format

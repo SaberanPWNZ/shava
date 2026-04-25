@@ -1,8 +1,10 @@
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
 from django.db.models import Avg
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
+
 from reviews.models import Review
-from .models import UserRating, Achievement, UserAchievement
+
+from .models import Achievement, UserAchievement, UserRating
 
 
 @receiver(post_save, sender=Review)
@@ -19,7 +21,7 @@ def update_user_rating_on_review_create(sender, instance, created, **kwargs):
         user_rating.total_reviews = user_reviews.count()
 
         # Calculate average score given by user
-        avg_score = user_reviews.aggregate(avg_score=Avg('score'))['avg_score']
+        avg_score = user_reviews.aggregate(avg_score=Avg("score"))["avg_score"]
         user_rating.average_score_given = avg_score or 0.0
 
         # Update experience points (simple system: 10 points per review)
@@ -48,7 +50,7 @@ def update_user_rating_on_review_delete(sender, instance, **kwargs):
         user_rating.total_reviews = user_reviews.count()
 
         # Calculate average score given by user
-        avg_score = user_reviews.aggregate(avg_score=Avg('score'))['avg_score']
+        avg_score = user_reviews.aggregate(avg_score=Avg("score"))["avg_score"]
         user_rating.average_score_given = avg_score or 0.0
 
         # Update experience points
@@ -71,18 +73,15 @@ def check_and_award_achievements(user):
         return
 
     # Get all active achievements that user doesn't have yet
-    existing_achievements = UserAchievement.objects.filter(
-        user=user
-    ).values_list('achievement_id', flat=True)
-    available_achievements = Achievement.objects.filter(
-        is_active=True
-    ).exclude(id__in=existing_achievements)
+    existing_achievements = UserAchievement.objects.filter(user=user).values_list(
+        "achievement_id", flat=True
+    )
+    available_achievements = Achievement.objects.filter(is_active=True).exclude(
+        id__in=existing_achievements
+    )
 
     # Check each achievement
     for achievement in available_achievements:
         if user_rating.total_reviews >= achievement.reviews_required:
             # Award the achievement
-            UserAchievement.objects.create(
-                user=user,
-                achievement=achievement
-            )
+            UserAchievement.objects.create(user=user, achievement=achievement)
