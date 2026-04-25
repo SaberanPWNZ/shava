@@ -301,10 +301,16 @@ Suggested closing comment template:
 **Labels:** `backend`, `data`, `P2`
 
 **Acceptance criteria.**
-- [ ] `City` model + migration; FK from `Place`.
-- [ ] Management command `seed_cities` reading from CSV.
-- [ ] Filter on `GET /places/?city=`.
-- [ ] Closes #9, #23.
+- [x] `City` model + migration; FK from `Place` (`city_ref`, `SET_NULL`)
+      while preserving the legacy free-text `city` CharField for back-compat.
+- [x] Management command `seed_cities` reading from CSV (default
+      `backend/places/data/cities.csv`, 22 Ukrainian cities); idempotent
+      via `update_or_create(slug=...)`; supports `--file` and
+      `--deactivate-missing`.
+- [x] Filter on `GET /places/?city=` accepts numeric PK, slug, or
+      free-text name (matched against both the FK and the legacy
+      CharField).
+- [x] Closes #9, #23.
 
 #### 8.2 Review helpfulness — already partly implemented; expose API
 **Labels:** `backend`, `gamification`, `P3`
