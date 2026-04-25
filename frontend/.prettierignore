@@ -7,3 +7,6 @@ bun.lockb
 
 # Miscellaneous
 /static/
+
+# Auto-generated files (do not format — run ``npm run generate:api`` to refresh).
+src/lib/api/types.gen.ts

@@ -9,6 +9,7 @@ custom permissions in :mod:`users.permissions`. Business logic lives in
 import logging
 
 from django.contrib.auth.password_validation import validate_password
+from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import generics, status, viewsets
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -214,6 +215,15 @@ class VerifyEmailRequestView(APIView):
 
     email_service = EmailService()
 
+    @extend_schema(
+        tags=["users"],
+        summary="Resend verification email to the current user",
+        request=None,
+        responses={
+            204: OpenApiResponse(description="Verification email sent (or already verified)."),
+            503: OpenApiResponse(description="Email transport failure."),
+        },
+    )
     def post(self, request):
         user = request.user
         if user.is_verified:
@@ -238,6 +248,15 @@ class VerifyEmailConfirmView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "email_verify"
 
+    @extend_schema(
+        tags=["users"],
+        summary="Confirm an email-verification token",
+        request=VerifyEmailConfirmSerializer,
+        responses={
+            200: UserPublicSerializer,
+            400: OpenApiResponse(description="Invalid or expired token."),
+        },
+    )
     def post(self, request):
         serializer = VerifyEmailConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -266,6 +285,19 @@ class PasswordResetRequestView(APIView):
 
     email_service = EmailService()
 
+    @extend_schema(
+        tags=["users"],
+        summary="Request a password-reset email",
+        request=PasswordResetRequestSerializer,
+        responses={
+            204: OpenApiResponse(
+                description=(
+                    "Always 204 regardless of whether the address exists, "
+                    "so the endpoint cannot be used for user enumeration."
+                ),
+            ),
+        },
+    )
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -292,6 +324,26 @@ class PasswordResetConfirmView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "password_reset"
 
+    @extend_schema(
+        tags=["users"],
+        summary="Confirm a password-reset token and set a new password",
+        request=PasswordResetConfirmSerializer,
+        responses={
+            204: OpenApiResponse(description="Password updated."),
+            400: OpenApiResponse(
+                response=inline_serializer(
+                    name="PasswordResetConfirmError",
+                    fields={
+                        "detail": drf_serializers.CharField(required=False),
+                        "new_password": drf_serializers.ListField(
+                            child=drf_serializers.CharField(), required=False
+                        ),
+                    },
+                ),
+                description="Invalid token or password validation failed.",
+            ),
+        },
+    )
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

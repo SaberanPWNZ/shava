@@ -16,7 +16,8 @@
 		"test:unit": "svelte-kit sync && vitest run",
 		"test:unit:watch": "svelte-kit sync && vitest",
 		"test": "npm run test:unit && npm run test:e2e",
-		"generate:api": "openapi-typescript ${OPENAPI_SCHEMA_URL:-http://localhost:8000/api/schema/} --output src/lib/api/types.gen.ts"
+		"generate:api": "openapi-typescript ${OPENAPI_SCHEMA_URL:-http://localhost:8000/api/schema/} --output src/lib/api/types.gen.ts",
+		"generate:api:offline": "openapi-typescript ../backend/openapi-schema.yaml --output src/lib/api/types.gen.ts"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",

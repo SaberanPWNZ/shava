@@ -1,0 +1,3 @@
+# Mark generated artefacts so they don't pollute diffs / reviews on GitHub.
+frontend/src/lib/api/types.gen.ts linguist-generated=true
+backend/openapi-schema.yaml linguist-generated=true

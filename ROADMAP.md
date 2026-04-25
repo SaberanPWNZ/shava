@@ -143,11 +143,18 @@ Suggested closing comment template:
 **Labels:** `backend`, `frontend`, `dx`, `P2`
 
 **Acceptance criteria.**
-- [ ] `drf-spectacular` exposing `/api/schema/` and `/api/docs/`.
+- [x] `drf-spectacular` exposing `/api/schema/` and `/api/docs/`.
 - [ ] All public endpoints documented (tags, request/response examples).
-- [ ] `npm run generate:api` calls `openapi-typescript` and writes
-      `frontend/src/lib/api/types.gen.ts`; checked-in and used by
-      `ApiClient`.
+      Partial: `users` email-flow endpoints annotated; the auth extension
+      now resolves bearer auth on every operation. Remaining APIView-based
+      endpoints (`MeView`, `LogoutView`, `UserBanView`, …) still need
+      `@extend_schema` decorators — tracked separately.
+- [x] `npm run generate:api` calls `openapi-typescript` and writes
+      `frontend/src/lib/api/types.gen.ts`; checked-in and re-exported
+      via `$lib/api/client` (`paths`, `components`, `operations`,
+      `Schemas`). Offline regen via `npm run generate:api:offline`;
+      a CI job (`api-types-fresh`) regenerates and `git diff --exit-code`s
+      to fail PRs that ship stale types.
 
 #### 3.2 API versioning under `/api/v1/`
 **Labels:** `backend`, `breaking`, `P3`

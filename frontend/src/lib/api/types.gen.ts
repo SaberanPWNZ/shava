@@ -748,7 +748,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Public — completes a password reset using a signed token. */
+        /**
+         * Confirm a password-reset token and set a new password
+         * @description Public — completes a password reset using a signed token.
+         */
         post: operations["users_password_reset_confirm_create"];
         delete?: never;
         options?: never;
@@ -766,6 +769,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
+         * Request a password-reset email
          * @description Public — emails a password-reset link if the address is registered.
          *
          *     The response is identical regardless of whether the address exists, so
@@ -829,7 +833,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Public — confirms an email using a signed token. */
+        /**
+         * Confirm an email-verification token
+         * @description Public — confirms an email using a signed token.
+         */
         post: operations["users_verify_email_confirm_create"];
         delete?: never;
         options?: never;
@@ -847,6 +854,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
+         * Resend verification email to the current user
          * @description Re-send the verification email to the *currently authenticated* user.
          *
          *     Throttled — must not be abused as a free email-sending oracle.
@@ -1070,6 +1078,25 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["UserPublic"][];
+        };
+        PasswordResetConfirmError: {
+            detail?: string;
+            new_password?: string[];
+        };
+        /** @description Public — completes a password reset using a signed token. */
+        PasswordResetConfirmRequest: {
+            token: string;
+            new_password: string;
+        };
+        /**
+         * @description Public — requests a password-reset link by email.
+         *
+         *     Validation here is *deliberately* lenient: the view never reveals
+         *     whether the address is registered, so we only check the format.
+         */
+        PasswordResetRequestRequest: {
+            /** Format: email */
+            email: string;
         };
         PatchedArticleDetailRequest: {
             title?: string;
@@ -1548,6 +1575,10 @@ export interface components {
             /** Format: uri */
             readonly avatar: string | null;
             readonly is_verified: boolean;
+        };
+        /** @description Public — accepts a signed token and marks the user as verified. */
+        VerifyEmailConfirmRequest: {
+            token: string;
         };
     };
     responses: never;
@@ -3110,14 +3141,29 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetConfirmRequest"];
+                "multipart/form-data": components["schemas"]["PasswordResetConfirmRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PasswordResetConfirmRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
-            200: {
+            /** @description Password updated. */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Invalid token or password validation failed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasswordResetConfirmError"];
+                };
             };
         };
     };
@@ -3128,10 +3174,16 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetRequestRequest"];
+                "multipart/form-data": components["schemas"]["PasswordResetRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PasswordResetRequestRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
-            200: {
+            /** @description Always 204 regardless of whether the address exists, so the endpoint cannot be used for user enumeration. */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3196,10 +3248,24 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmailConfirmRequest"];
+                "multipart/form-data": components["schemas"]["VerifyEmailConfirmRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["VerifyEmailConfirmRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserPublic"];
+                };
+            };
+            /** @description Invalid or expired token. */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3216,8 +3282,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
-            200: {
+            /** @description Verification email sent (or already verified). */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Email transport failure. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

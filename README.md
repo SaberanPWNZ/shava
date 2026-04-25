@@ -108,6 +108,29 @@ OPENAPI_SCHEMA_URL=http://localhost:8000/api/schema/ npm run generate:api
 # writes frontend/src/lib/api/types.gen.ts
 ```
 
+…or **offline** (no running server) by using the schema committed at
+`backend/openapi-schema.yaml`:
+
+```bash
+# 1. Refresh the schema from the Python sources:
+cd backend && DJANGO_SECRET_KEY=test python manage.py spectacular \
+    --file openapi-schema.yaml
+
+# 2. Regenerate TS types:
+cd ../frontend && npm run generate:api:offline
+```
+
+`backend/openapi-schema.yaml` and `frontend/src/lib/api/types.gen.ts` are
+checked into the repo and a dedicated CI job (`api-types-fresh`) runs both
+commands and fails the build with `git diff --exit-code` if either artefact
+is stale. Schema-derived types are re-exported from `$lib/api/client`:
+
+```ts
+import type { Schemas, paths, operations } from '$lib/api/client';
+
+type PlaceDto = Schemas['Place'];
+```
+
 ## Continuous integration
 
 CI runs on every push and pull request via
