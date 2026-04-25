@@ -16,7 +16,7 @@ class PlaceRating(models.Model):
     )
     place = models.ForeignKey("Place", on_delete=models.CASCADE, related_name="ratings")
     rating = models.DecimalField(
-        max_digits=3,
+        max_digits=4,
         decimal_places=2,
         validators=[MinValueValidator(0.0), MaxValueValidator(10.0)],
     )
@@ -51,7 +51,7 @@ class Place(models.Model):
         max_length=50, choices=PLACE_STATUS_CHOICES, default="On_moderation"
     )
     rating = models.DecimalField(
-        max_digits=3,
+        max_digits=4,
         decimal_places=2,
         default=Decimal(0.0),
         validators=[MinValueValidator(0.0), MaxValueValidator(10.0)],
@@ -101,6 +101,22 @@ class Place(models.Model):
         self.rating = self.calculate_average_rating()
         self.save(update_fields=["rating"])
 
+    def recalculate_rating_from_reviews(self):
+        """Recompute the rating from approved (moderated, not deleted) reviews.
+
+        Uses the lazy import to avoid circular imports at module load time.
+        Reviews use a 1-10 score, matching the place rating scale.
+        """
+        from reviews.models import Review
+        from django.db.models import Avg
+
+        avg = Review.objects.filter(
+            place=self, is_moderated=True, is_deleted=False
+        ).aggregate(avg=Avg("score"))["avg"]
+        self.rating = avg if avg is not None else Decimal("0.0")
+        self.save(update_fields=["rating"])
+        return self.rating
+
     def google_maps_url(self):
         if self.latitude and self.longitude:
             return f"https://www.google.com/maps/search/?api=1&query={self.latitude},{self.longitude}"
@@ -121,9 +137,15 @@ class Place(models.Model):
         self.moderation_reason = reason
         self.moderated_at = timezone.now()
         self.save()
-        """Reject the place"""
-        self.status = "Inactive"
-        self.moderated_by = moderator
-        self.moderation_reason = reason
-        self.moderated_at = timezone.now()
-        self.save()
+
+    @property
+    def stars(self):
+        """0-5 star representation derived from the 0-10 stored rating."""
+        try:
+            return round(float(self.rating) / 2.0, 1)
+        except (TypeError, ValueError):
+            return 0.0
+
+    @property
+    def ratings_count(self):
+        return self.ratings.count()

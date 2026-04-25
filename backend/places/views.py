@@ -1,111 +1,253 @@
-from rest_framework import viewsets, permissions, status
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from rest_framework.generics import (
-    CreateAPIView,
-    RetrieveAPIView,
-    UpdateAPIView,
-    ListAPIView,
-)
-from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework.exceptions import ValidationError as DRFValidationError
-from django.core.exceptions import ValidationError
+from decimal import Decimal, InvalidOperation
 import logging
 
+from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
+from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from rest_framework.generics import (
+    CreateAPIView,
+    ListAPIView,
+    RetrieveAPIView,
+    UpdateAPIView,
+)
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
+
 from places.models import Place, PlaceRating
+from places.permissions import IsAuthorOrAdminOrReadOnly
 from places.serializers import (
     PlaceCreateSerializer,
+    PlaceDetailSerializer,
     PlaceRatingSerializer,
-    PlaceUpdateSerializer,
     PlaceSerializer,
+    PlaceUpdateSerializer,
 )
 
 logger = logging.getLogger("places")
 
 
+PUBLIC_VISIBLE_STATUSES = ("Active", "Approved")
+
+
+def _apply_place_filters(queryset, params):
+    """Apply user-supplied query-param filters to a Place queryset."""
+    district = params.get("district")
+    if district:
+        queryset = queryset.filter(district=district)
+
+    delivery = params.get("delivery")
+    if delivery is not None and delivery != "":
+        queryset = queryset.filter(delivery=str(delivery).lower() in ("1", "true", "yes"))
+
+    is_featured = params.get("is_featured")
+    if is_featured is not None and is_featured != "":
+        queryset = queryset.filter(
+            is_featured=str(is_featured).lower() in ("1", "true", "yes")
+        )
+
+    min_rating = params.get("min_rating")
+    if min_rating not in (None, ""):
+        try:
+            queryset = queryset.filter(rating__gte=Decimal(str(min_rating)))
+        except (InvalidOperation, ValueError):
+            pass
+
+    min_stars = params.get("min_stars")
+    if min_stars not in (None, ""):
+        try:
+            # Stars are stored at half-scale; multiply by 2 to compare to rating field.
+            queryset = queryset.filter(rating__gte=Decimal(str(min_stars)) * 2)
+        except (InvalidOperation, ValueError):
+            pass
+
+    has_menu = params.get("has_menu")
+    if has_menu is not None and has_menu != "":
+        if str(has_menu).lower() in ("1", "true", "yes"):
+            queryset = queryset.filter(menus__isnull=False).distinct()
+
+    search = params.get("search")
+    if search:
+        from django.db.models import Q
+
+        queryset = queryset.filter(
+            Q(name__icontains=search) | Q(description__icontains=search)
+        )
+
+    ordering = params.get("ordering")
+    allowed_ordering = {
+        "rating",
+        "-rating",
+        "created_at",
+        "-created_at",
+        "name",
+        "-name",
+    }
+    if ordering in allowed_ordering:
+        queryset = queryset.order_by(ordering)
+    return queryset
+
+
+class PlaceListView(ListAPIView):
+    """Public list of approved/active places, with filters."""
+
+    serializer_class = PlaceSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        params = self.request.query_params
+        user = self.request.user
+        # Staff can request any status via ?status=
+        status_filter = params.get("status")
+        if status_filter and user.is_authenticated and user.is_staff:
+            qs = Place.objects.filter(status=status_filter)
+        else:
+            qs = Place.objects.filter(status__in=PUBLIC_VISIBLE_STATUSES)
+        return _apply_place_filters(qs, params)
+
+
 class PlaceCreateView(CreateAPIView):
-    """
-    API endpoint that allows places to be created.
-    """
+    """Authenticated users submit a new place; always created on moderation."""
 
     serializer_class = PlaceCreateSerializer
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
-
-    def get_queryset(self):
-        return Place.objects.all()
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def perform_create(self, serializer):
-        """Override to add custom creation logic and moderation"""
         try:
             instance = serializer.save(author=self.request.user)
-
+            # Force moderation regardless of payload.
+            if instance.status not in ("On_moderation",):
+                instance.status = "On_moderation"
+                instance.save(update_fields=["status"])
             logger.info(
-                f"Place created successfully: {instance.name} by user {self.request.user}"
+                "Place submitted: %s by %s", instance.name, self.request.user
             )
             return instance
         except ValidationError as e:
-            logger.error(f"Validation error creating place: {e}")
+            logger.error("Validation error creating place: %s", e)
             raise DRFValidationError({"detail": str(e)})
-        except Exception as e:
-            logger.error(f"Unexpected error creating place: {e}", exc_info=True)
-            raise DRFValidationError({"detail": "Failed to create place"})
+
+
+class PlaceDetailView(RetrieveAPIView):
+    """Public detail view; non-public statuses only visible to author or staff."""
+
+    serializer_class = PlaceDetailSerializer
+    permission_classes = [AllowAny]
+    lookup_field = "pk"
+
+    def get_queryset(self):
+        return Place.objects.select_related("author").prefetch_related(
+            "ratings", "review_set", "menus"
+        )
+
+    def get_object(self):
+        obj = super().get_object()
+        if obj.status not in PUBLIC_VISIBLE_STATUSES:
+            user = self.request.user
+            # Authenticated users can view any place (e.g. their own pending
+            # submissions); anonymous users only see public statuses.
+            if not user.is_authenticated:
+                from django.http import Http404
+
+                raise Http404("Place not found.")
+        return obj
 
 
 class PlaceUpdateView(UpdateAPIView, RetrieveAPIView):
+    """Author or admin can edit a place."""
+
     serializer_class = PlaceUpdateSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthorOrAdminOrReadOnly]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
         return Place.objects.all()
 
 
-class PlaceDetailView(RetrieveAPIView):
-    """
-    API endpoint that allows a place to be viewed by id.
-    """
+class PlaceModerationListView(ListAPIView):
+    """Admin-only list of places pending moderation."""
 
-    serializer_class = PlaceCreateSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
-    lookup_field = "pk"
+    serializer_class = PlaceSerializer
+    permission_classes = [IsAdminUser]
 
     def get_queryset(self):
-        """Optimize queryset with select_related/prefetch_related"""
-        return Place.objects.select_related().prefetch_related("ratings", "review_set")
+        return Place.objects.filter(status="On_moderation").order_by("-created_at")
 
-    def get(self, request, *args, **kwargs):
+
+class PlaceModerationActionView(UpdateAPIView):
+    """Admin endpoint to approve/reject a place. Action is taken from URL kwargs."""
+
+    permission_classes = [IsAdminUser]
+    serializer_class = PlaceSerializer
+    queryset = Place.objects.all()
+    http_method_names = ["patch", "post"]
+
+    def update(self, request, *args, **kwargs):
+        place = self.get_object()
+        action_name = self.kwargs.get("action_name")
+        reason = request.data.get("reason", "") if hasattr(request, "data") else ""
+        if action_name == "approve":
+            place.approve(request.user, reason=reason)
+        elif action_name == "reject":
+            place.reject(request.user, reason=reason)
+        else:
+            return Response(
+                {"detail": "Unknown moderation action."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        logger.info(
+            "Place %s %sd by %s", place.id, action_name, request.user
+        )
+        return Response(self.get_serializer(place).data)
+
+
+class PlaceRateView(CreateAPIView):
+    """Star-rating endpoint: accepts {rating: 1..5}, stored on 0-10 scale."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = PlaceRatingSerializer
+
+    def create(self, request, *args, **kwargs):
+        place = get_object_or_404(Place, pk=self.kwargs.get("pk"))
+        raw = request.data.get("rating")
+        if raw is None:
+            return Response(
+                {"rating": ["This field is required."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         try:
-            place = self.get_object()
-            serializer = self.get_serializer(place)
-            logger.info(f"Place detail viewed: {place.name} by user {request.user}")
-            return Response(serializer.data)
-        except (Place.DoesNotExist, Exception) as e:
-            if "No Place matches the given query" in str(e) or "does not exist" in str(
-                e
-            ):
-                logger.warning(f"Place with pk={kwargs.get('pk')} not found")
-                return Response(
-                    {"detail": "Place not found."}, status=status.HTTP_404_NOT_FOUND
-                )
-            else:
-                logger.error(
-                    f"Unexpected error in PlaceDetailView.get: {e}", exc_info=True
-                )
-                return Response(
-                    {"detail": "Internal server error"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+            stars = Decimal(str(raw))
+        except (InvalidOperation, ValueError):
+            return Response(
+                {"rating": ["Must be a number between 1 and 5."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if stars < 1 or stars > 5:
+            return Response(
+                {"rating": ["Must be between 1 and 5."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        stored = stars * 2  # 1-5 stars -> 2-10 internal scale
+        rating_obj, _ = PlaceRating.objects.update_or_create(
+            user=request.user, place=place, defaults={"rating": stored}
+        )
+        place.update_rating()
+        return Response(
+            PlaceRatingSerializer(rating_obj).data, status=status.HTTP_201_CREATED
+        )
 
 
 class PlaceRatingViewSet(viewsets.ModelViewSet):
+    """A user's own ratings (for management UI)."""
+
     serializer_class = PlaceRatingSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        if hasattr(self.request, "user"):
+        if hasattr(self.request, "user") and self.request.user.is_authenticated:
             return PlaceRating.objects.filter(user=self.request.user)
         return PlaceRating.objects.none()
 
@@ -116,30 +258,3 @@ class PlaceRatingViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def perform_create(self, serializer):
-        """Override to add logging"""
-        instance = serializer.save()
-        logger.info(
-            f"Rating created: {instance.rating} for place {instance.place.name} by {self.request.user}"
-        )
-        return instance
-
-    def perform_update(self, serializer):
-        """Override to add logging"""
-        instance = serializer.save()
-        logger.info(
-            f"Rating updated: {instance.rating} for place {instance.place.name} by {self.request.user}"
-        )
-        return instance
-
-
-class PlaceListView(ListAPIView):
-    """List view for approved places only (public access)."""
-
-    serializer_class = PlaceSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        """Return only approved places."""
-        return Place.objects.filter(status="Approved")

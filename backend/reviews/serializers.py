@@ -13,7 +13,9 @@ class ReviewSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "place",
+            "place_name",
             "author",
+            "author_username",
             "score",
             "comment",
             "created_at",
@@ -30,6 +32,11 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
             "score",
             "comment",
         ]
+        extra_kwargs = {
+            # When the place is supplied via URL kwargs (nested route), the
+            # client may omit the `place` field in the body.
+            "place": {"required": False},
+        }
 
     def validate_score(self, value):
         """Validate that score is within allowed choices"""

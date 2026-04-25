@@ -7,6 +7,8 @@ class PlaceSerializer(ModelSerializer):
     google_maps_url = serializers.SerializerMethodField()
     average_rating = serializers.SerializerMethodField()
     reviews_count = serializers.SerializerMethodField()
+    stars = serializers.SerializerMethodField()
+    ratings_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Place
@@ -21,6 +23,8 @@ class PlaceSerializer(ModelSerializer):
             "description",
             "status",
             "rating",
+            "stars",
+            "ratings_count",
             "main_image",
             "additional_images",
             "created_at",
@@ -44,11 +48,16 @@ class PlaceSerializer(ModelSerializer):
         return obj.calculate_average_rating()
 
     def get_reviews_count(self, obj):
-        return (
-            getattr(obj, "review_set", obj.reviews_count).count()
-            if hasattr(obj, "review_set") or hasattr(obj, "reviews_count")
-            else 0
-        )
+        try:
+            return obj.review_set.filter(is_moderated=True, is_deleted=False).count()
+        except Exception:
+            return 0
+
+    def get_stars(self, obj):
+        return obj.stars
+
+    def get_ratings_count(self, obj):
+        return obj.ratings_count
 
 
 class PlaceCreateSerializer(ModelSerializer):
@@ -151,10 +160,18 @@ class PlaceRatingSerializer(serializers.ModelSerializer):
 
 class PlaceDetailSerializer(PlaceSerializer):
     ratings = PlaceRatingSerializer(many=True, read_only=True)
+    menu = serializers.SerializerMethodField()
 
     class Meta(PlaceSerializer.Meta):
-        fields = PlaceSerializer.Meta.fields + ["ratings"]
+        fields = PlaceSerializer.Meta.fields + ["ratings", "menu"]
         extra_kwargs = {
             "ratings": {"required": False},
         }
-        read_only_fields = ["id", "created_at", "updated_at", "ratings"]
+        read_only_fields = ["id", "created_at", "updated_at", "ratings", "menu"]
+
+    def get_menu(self, obj):
+        # Lazy import to avoid circular dependency at module load.
+        from places_menu.serializers import MenuItemSerializer
+
+        items = obj.menus.filter(is_available=True).order_by("category", "name")
+        return MenuItemSerializer(items, many=True, context=self.context).data

@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "shwarma",
     "ingredients",
     "places_menu",
+    "articles",
 ]
 
 MIDDLEWARE = [
