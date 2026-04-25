@@ -1,58 +1,134 @@
 # Shava
 
-A full-stack web application with Django backend and Next.js frontend.
+Full-stack application: Django REST API + SvelteKit (Svelte 5, Tailwind 4) frontend.
 
 ## Project Structure
 
-- `/backend` - Django REST API backend
-- `/frontend` - Next.js frontend application with Tailwind CSS
+- `/backend` — Django + DRF + SimpleJWT API
+- `/frontend` — SvelteKit application (Node adapter)
 
-## Frontend Setup
+## Authentication
 
-The frontend is a modern Next.js application with the following features:
+JWT-based, with refresh-token rotation, blacklist on rotation, and
+per-endpoint rate-limiting.
 
-- ✅ **Next.js 15** with App Router for file-based routing
-- ✅ **Tailwind CSS** for rapid UI development and styling
-- ✅ **TypeScript** support for type safety
-- ✅ **ESLint** for code quality
-- ✅ **Responsive design** out of the box
+| Endpoint                              | Method | Auth     | Description                         |
+| ------------------------------------- | ------ | -------- | ----------------------------------- |
+| `/api/users/register/`                | POST   | public   | Create a regular user (rate-limited)|
+| `/api/users/login/`                   | POST   | public   | Obtain access + refresh tokens      |
+| `/api/users/token/refresh/`           | POST   | public   | Rotate access (and refresh) tokens  |
+| `/api/users/logout/`                  | POST   | required | Blacklist the supplied refresh token|
+| `/api/users/me/`                      | GET    | required | Current user's safe profile         |
+| `/api/users/me/`                      | PATCH  | required | Update first/last name and avatar   |
+| `/api/users/me/change-password/`      | POST   | required | Change password (old + new)         |
+| `/api/users/list/` `/api/users/<id>/` | —      | admin    | Admin CRUD                          |
 
-### Getting Started with Frontend
+Privileged flags (`is_staff`, `is_superuser`, `is_admin`, `is_moderator`,
+`is_verified`) **cannot** be set through any public endpoint.
 
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
+## Frontend
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+- **SvelteKit 2** + **Svelte 5 runes** + **Tailwind 4**
+- `src/lib/api/` — HTTP client + auth API (interceptor: 401 → refresh → retry)
+- `src/lib/services/` — `auth.service.ts`, `token.storage.ts` (DIP)
+- `src/lib/stores/auth.svelte.ts` — reactive `$state` store
+- `src/lib/guards/requireAuth.ts` — route guard for protected pages
+- `src/lib/components/{ui,forms,layout}/` — atomic, reusable UI
+- `src/lib/schemas/` — zod validation, single source of truth
+- Routes: `/`, `/login`, `/register`, `(app)/profile` (protected)
+- Dark/light theme toggle; responsive header
 
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
+### Getting started
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+```bash
+# Backend
+cd backend
+pip install -r requirements-dev.txt
+cp ../.env.example ../.env
+DJANGO_SECRET_KEY=dev python manage.py migrate
+DJANGO_SECRET_KEY=dev python manage.py runserver
 
-### Available Scripts
+# Frontend (in another shell)
+cd frontend
+npm install
+npm run dev
+```
 
-- `npm run dev` - Start development server with hot reloading
-- `npm run build` - Build the application for production
-- `npm run start` - Start the production server
-- `npm run lint` - Run ESLint to check code quality
+The frontend defaults to `http://localhost:8000` for the API; override with
+`VITE_API_BASE_URL`. CORS origins are controlled by `CORS_ALLOWED_ORIGINS`
+in the Django `.env`.
 
-### Routing Demo
+### Available scripts (frontend)
 
-The application includes three main routes to demonstrate Next.js routing:
+- `npm run dev` — dev server
+- `npm run build` — production build (`@sveltejs/adapter-node`)
+- `npm run preview` — preview the production build
+- `npm run check` — `svelte-check` type checking
+- `npm run lint` — Prettier + ESLint
+- `npm run test` — Playwright e2e
 
-- `/` - Home page with project overview
-- `/about` - About page with project details
-- `/contact` - Contact page with a sample form
+### Available commands (backend)
 
-Each page is styled with Tailwind CSS and includes navigation between routes.
+- `python manage.py migrate` — apply migrations (incl. `token_blacklist`)
+- `python manage.py test` — run unit tests
+- `python manage.py runserver`
 
-## Backend Setup
+## Environment variables
 
-See the backend directory for Django setup instructions.
+See `.env.example`. Notable ones:
+
+- `DJANGO_SECRET_KEY` — required in production.
+- `CORS_ALLOWED_ORIGINS` — comma-separated frontend origins.
+- `THROTTLE_AUTH`, `THROTTLE_REGISTER` — DRF rate strings.
+- `VITE_API_BASE_URL` — backend URL exposed to the browser.
+
+## SOLID notes
+
+- **SRP** — `serializers` (split by purpose), `services.UserRegistrationService`,
+  `TokenStorage`, `ApiClient`, `AuthService`, `AuthStore` each have a single
+  responsibility.
+- **OCP** — DRF permissions live in `users/permissions.py` and compose; new
+  rules are added without touching views.
+- **LSP** — `MemoryTokenStorage` and `LocalStorageTokenStorage` are
+  interchangeable; the same applies to any future `TokenIssuer`.
+- **ISP** — narrow serializers/DTOs (`RegisterSerializer`, `MeUpdateSerializer`,
+  `UserPublicSerializer`, `UserAdminSerializer`).
+- **DIP** — views depend on `TokenIssuer` (Protocol), the SPA depends on
+  `TokenStorage` and `AuthApi`/`AuthService` interfaces, not on `localStorage`
+  or `fetch` directly.
+
+## Suggested follow-up improvements (out of scope)
+
+### Security
+- Make `DJANGO_SECRET_KEY` mandatory (currently empty default).
+- `SECURE_*` settings + HSTS in prod; HTTPS-only cookies.
+- `django-axes` against brute-force on login.
+- Email verification (signed token) and password reset flow.
+- Optional 2FA via `django-otp`.
+- Sentry for error tracking (frontend + backend).
+
+### Code quality
+- `ruff` instead of `flake8`; `mypy` + `django-stubs`; `pre-commit`.
+- `vitest` for frontend unit tests of services/stores.
+- GitHub Actions CI matrix (lint → test → build → e2e).
+
+### Architecture
+- `drf-spectacular` (OpenAPI) → generate TS types with `openapi-typescript`.
+- API versioning under `/api/v1/`.
+- Move uploads to S3/MinIO via `django-storages`.
+
+### Performance
+- Redis for cache + Celery broker; async tasks (email, image processing).
+- `select_related` / `prefetch_related` audit.
+- Thumbnail generation (`easy-thumbnails`).
+
+### DevEx / Infra
+- Multi-stage prod Dockerfile for the frontend (build → nginx).
+- `docker-compose.dev.yml` with hot-reload + healthchecks.
+- `Makefile` / `just` for common commands.
+
+### UX
+- Skeleton loaders, optimistic updates, toast notifications.
+- a11y polish (`eslint-plugin-svelte` rules).
+- i18n (`paraglide` or `svelte-i18n`).
+- PWA via `@vite-pwa/sveltekit`.

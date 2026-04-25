@@ -1,11 +1,114 @@
-from rest_framework import serializers
-from users.models import User
+"""Serializers for the users app.
+
+The serializers are intentionally split by responsibility (SRP/ISP):
+
+* :class:`RegisterSerializer` — public registration input. Accepts only fields
+  the client may legitimately set; privileged flags can never be assigned via
+  this serializer.
+* :class:`UserPublicSerializer` — read-only representation safe to expose to
+  any authenticated user (their own profile or a public listing).
+* :class:`MeUpdateSerializer` — the limited subset a user can change about
+  themselves.
+* :class:`ChangePasswordSerializer` — old/new password with strong validation.
+* :class:`UserAdminSerializer` — full set of fields, used **only** by
+  admin-only endpoints.
+"""
 from django.contrib.auth.password_validation import validate_password
+from rest_framework import serializers
+
+from users.models import User
+from users.services import RegistrationData, UserRegistrationService
 
 
-class UserSerializer(serializers.ModelSerializer):
+class RegisterSerializer(serializers.ModelSerializer):
+    """Public registration input. Whitelists fields explicitly."""
+
     password = serializers.CharField(
-        write_only=True, required=True, validators=[validate_password]
+        write_only=True,
+        required=True,
+        style={"input_type": "password"},
+        validators=[validate_password],
+    )
+    email = serializers.EmailField(required=True)
+
+    class Meta:
+        model = User
+        fields = ["email", "password", "first_name", "last_name"]
+
+    def validate_email(self, value: str) -> str:
+        value = value.strip().lower()
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                "A user with this email already exists."
+            )
+        return value
+
+    def create(self, validated_data):
+        service: UserRegistrationService = self.context.get(
+            "registration_service"
+        ) or UserRegistrationService()
+        return service.register(
+            RegistrationData(
+                email=validated_data["email"],
+                password=validated_data["password"],
+                first_name=validated_data.get("first_name") or "",
+                last_name=validated_data.get("last_name") or "",
+            )
+        )
+
+
+class UserPublicSerializer(serializers.ModelSerializer):
+    """Safe, read-only view of a user."""
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "avatar",
+            "is_verified",
+        ]
+        read_only_fields = fields
+
+
+class MeUpdateSerializer(serializers.ModelSerializer):
+    """Fields a user is allowed to change about themselves."""
+
+    class Meta:
+        model = User
+        fields = ["first_name", "last_name", "avatar"]
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True, required=True)
+    new_password = serializers.CharField(write_only=True, required=True)
+
+    def validate_new_password(self, value: str) -> str:
+        validate_password(value, user=self.context.get("user"))
+        return value
+
+    def validate(self, attrs):
+        user = self.context.get("user")
+        if user is None or not user.check_password(attrs["old_password"]):
+            raise serializers.ValidationError(
+                {"old_password": "Current password is incorrect."}
+            )
+        if attrs["old_password"] == attrs["new_password"]:
+            raise serializers.ValidationError(
+                {"new_password": "New password must differ from the old one."}
+            )
+        return attrs
+
+
+class UserAdminSerializer(serializers.ModelSerializer):
+    """Full serializer; admin-only endpoints."""
+
+    password = serializers.CharField(
+        write_only=True,
+        required=False,
+        validators=[validate_password],
     )
 
     class Meta:
@@ -27,36 +130,13 @@ class UserSerializer(serializers.ModelSerializer):
             "is_admin",
             "password",
         ]
-        read_only_fields = [
-            "id",
-            "is_active",
-            "is_staff",
-            "is_superuser",
-            "created_at",
-            "updated_at",
-        ]
-
-    def create(self, validated_data):
-        email = validated_data.get("email")
-        password = validated_data.pop("password")
-
-        # Ensure username is set to email if not provided
-        if not validated_data.get("username"):
-            validated_data["username"] = email
-
-        user = User.objects.create_user(
-            email=email, password=password, **validated_data
-        )
-        return user
+        read_only_fields = ["id"]
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)
-
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-
         if password:
             instance.set_password(password)
-
         instance.save()
         return instance
