@@ -500,3 +500,12 @@ INTERNAL_IPS = [
     "127.0.0.1",
     # ...
 ]
+
+
+# ----- Sentry ----------------------------------------------------------------
+# Initialised at the *very end* of settings so any prior import-time errors
+# fail loudly during local development. When ``SENTRY_DSN`` is unset (the
+# default for dev / test / CI) this call is a complete no-op.
+from config.sentry import init_sentry  # noqa: E402
+
+SENTRY_ENABLED = init_sentry()

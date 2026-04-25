@@ -98,11 +98,11 @@ Suggested closing comment template:
 **Labels:** `backend`, `frontend`, `observability`, `P2`
 
 **Acceptance criteria.**
-- [ ] `sentry-sdk[django]` initialized when `SENTRY_DSN` is set.
-- [ ] `@sentry/sveltekit` initialized in frontend `hooks.{server,client}.ts`.
-- [ ] Releases tagged with git SHA in CI.
-- [ ] PII scrubbed (`send_default_pii=False`).
-- [ ] Closes #35.
+- [x] `sentry-sdk[django]` initialized when `SENTRY_DSN` is set.
+- [x] `@sentry/sveltekit` initialized in frontend `hooks.{server,client}.ts`.
+- [x] Releases tagged with git SHA in CI.
+- [x] PII scrubbed (`send_default_pii=False`).
+- [x] Closes #35.
 
 ---
 

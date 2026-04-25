@@ -145,6 +145,12 @@ See `.env.example`. Notable ones:
   this to the same host as the backend.
 - `EMAIL_VERIFY_TOKEN_MAX_AGE`, `PASSWORD_RESET_TOKEN_MAX_AGE` — TTL (in
   seconds) for the signed email tokens. Default `86400` (24 h).
+- `SENTRY_DSN` (backend) / `PUBLIC_SENTRY_DSN` (frontend) — when set, both
+  bundles report unhandled exceptions to Sentry with `send_default_pii=False`.
+  Leave empty to disable. `GIT_SHA` / `PUBLIC_GIT_SHA` tag releases (CI sets
+  these to the commit SHA). `SENTRY_TRACES_SAMPLE_RATE`,
+  `SENTRY_PROFILES_SAMPLE_RATE`, `PUBLIC_SENTRY_TRACES_SAMPLE_RATE` opt into
+  performance / profiling and default to `0.0`.
 - `AXES_ENABLED` (default: on outside tests), `AXES_FAILURE_LIMIT` (default `5`),
   `AXES_COOLOFF_TIME_HOURS` (default `1`), `AXES_PROXY_COUNT` (default `1`) —
   brute-force protection on login (`django-axes`). Lockouts are tracked per

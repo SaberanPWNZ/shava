@@ -66,6 +66,7 @@ jobs:
         working-directory: backend
     env:
       DJANGO_SECRET_KEY: test
+      GIT_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -120,6 +121,8 @@ jobs:
     defaults:
       run:
         working-directory: frontend
+    env:
+      PUBLIC_GIT_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
