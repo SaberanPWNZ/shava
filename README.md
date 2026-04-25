@@ -72,6 +72,8 @@ in the Django `.env`.
 - `python manage.py migrate` — apply migrations (incl. `token_blacklist`)
 - `python manage.py test` — run unit tests
 - `python manage.py runserver`
+- `python manage.py seed_cities` — seed the `places.City` catalogue from
+  `backend/places/data/cities.csv` (idempotent; pass `--file` to override).
 
 ### Make targets
 

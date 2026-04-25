@@ -16,6 +16,7 @@ class PlaceSerializer(ModelSerializer):
             "id",
             "name",
             "city",
+            "city_ref",
             "district",
             "address",
             "delivery",
