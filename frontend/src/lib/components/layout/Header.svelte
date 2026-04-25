@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { authService } from '$lib/services/auth.service';
+	import PointsBadge from '$lib/components/gamification/PointsBadge.svelte';
 
 	async function logout() {
 		await authService.logout('/');
@@ -16,6 +17,7 @@
 			<a href="/places" class="text-zinc-700 hover:text-orange-600 dark:text-zinc-200">Places</a>
 			<a href="/articles" class="text-zinc-700 hover:text-orange-600 dark:text-zinc-200">Articles</a>
 			{#if authStore.isAuthenticated}
+				<PointsBadge />
 				<a href="/places/new" class="text-zinc-700 hover:text-orange-600 dark:text-zinc-200">
 					Submit place
 				</a>
