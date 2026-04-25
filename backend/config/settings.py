@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "articles",
     "gamification",
     "drf_spectacular",
+    "axes",
 ]
 
 MIDDLEWARE = [
@@ -71,7 +72,36 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # AxesMiddleware must be the *last* entry so that the request reaches
+    # auth views first; it then increments the failure counter on
+    # ``user_login_failed`` and serves a 429-equivalent lockout response
+    # once the configured threshold is exceeded.
+    "axes.middleware.AxesMiddleware",
 ]
+
+# django-axes — brute-force protection. Layered on top of the existing DRF
+# ScopedRateThrottle (which limits *rate*) by tracking *failures* per
+# (username, ip) tuple. Disabled inside the test runner so unrelated tests
+# don't hit the lockout state; enable explicitly with ``override_settings``
+# in the dedicated lockout test.
+AUTHENTICATION_BACKENDS = [
+    # AxesStandaloneBackend must come before any other backend so it can
+    # short-circuit authentication once the user is locked out.
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+AXES_ENABLED = _env_bool("AXES_ENABLED", default=not _RUNNING_TESTS)
+AXES_FAILURE_LIMIT = int(os.getenv("AXES_FAILURE_LIMIT", "5"))
+# Cooloff window after which the lockout is automatically lifted. Express as
+# a ``timedelta`` (django-axes also accepts plain hours, but the explicit
+# type avoids any ambiguity for floats / sub-hour windows).
+_axes_cooloff_hours = float(os.getenv("AXES_COOLOFF_TIME_HOURS", "1"))
+AXES_COOLOFF_TIME = timedelta(hours=_axes_cooloff_hours) if _axes_cooloff_hours > 0 else None
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_PARAMETERS = ["username", "ip_address"]
+# Trust the standard X-Forwarded-For chain (single proxy = nginx).
+AXES_IPWARE_PROXY_COUNT = int(os.getenv("AXES_PROXY_COUNT", "1"))
+AXES_LOCKOUT_TEMPLATE = None  # JSON 403 from the API is fine.
 
 # debug_toolbar is only enabled when DEBUG is True. It must never be active in
 # production because it can leak settings, SQL, and request data.

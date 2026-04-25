@@ -128,6 +128,10 @@ See `.env.example`. Notable ones:
 - `CORS_ALLOWED_ORIGINS` — comma-separated frontend origins.
 - `THROTTLE_AUTH`, `THROTTLE_REGISTER` — DRF rate strings.
 - `VITE_API_BASE_URL` — backend URL exposed to the browser.
+- `AXES_ENABLED` (default: on outside tests), `AXES_FAILURE_LIMIT` (default `5`),
+  `AXES_COOLOFF_TIME_HOURS` (default `1`), `AXES_PROXY_COUNT` (default `1`) —
+  brute-force protection on login (`django-axes`). Lockouts are tracked per
+  `(username, ip_address)`.
 
 ## SOLID notes
 
