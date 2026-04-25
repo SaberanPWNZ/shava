@@ -6,6 +6,7 @@ class PlaceAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "name",
+        "city",
         "district",
         "address",
         "status",
@@ -14,15 +15,15 @@ class PlaceAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    search_fields = ("name", "district", "address", "author__username")
-    list_filter = ("district", "status", "is_featured", "created_at", "updated_at")
+    search_fields = ("name", "city", "district", "address", "author__username")
+    list_filter = ("city", "district", "status", "is_featured", "created_at", "updated_at")
     readonly_fields = ("created_at", "updated_at", "rating", "moderated_at")
     date_hierarchy = "created_at"
     ordering = ("-created_at",)
     list_per_page = 20
 
     fieldsets = (
-        (None, {"fields": ("name", "district", "address", "author")}),
+        (None, {"fields": ("name", "city", "district", "address", "author")}),
         ("Location", {"fields": ("latitude", "longitude", "delivery")}),
         ("Content", {"fields": ("description", "main_image", "additional_images")}),
         ("Status & Rating", {"fields": ("status", "rating", "is_featured")}),

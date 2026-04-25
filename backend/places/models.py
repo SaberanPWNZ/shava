@@ -34,6 +34,7 @@ class PlaceRating(models.Model):
 
 class Place(models.Model):
     name = models.CharField(max_length=200, default="Unnamed Place")
+    city = models.CharField(max_length=100, default="Київ")
     district = models.CharField(
         max_length=100, choices=DISTRICT_CHOICES, default="Unknown"
     )

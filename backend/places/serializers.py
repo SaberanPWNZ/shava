@@ -15,6 +15,7 @@ class PlaceSerializer(ModelSerializer):
         fields = [
             "id",
             "name",
+            "city",
             "district",
             "address",
             "delivery",
@@ -61,10 +62,31 @@ class PlaceSerializer(ModelSerializer):
 
 
 class PlaceCreateSerializer(ModelSerializer):
+    # Coordinates and city are mandatory at creation time so each new place
+    # has a city and a map point per product spec.
+    city = serializers.CharField(required=True, allow_blank=False, max_length=100)
+    latitude = serializers.DecimalField(
+        required=True,
+        allow_null=False,
+        max_digits=9,
+        decimal_places=6,
+        min_value=-90,
+        max_value=90,
+    )
+    longitude = serializers.DecimalField(
+        required=True,
+        allow_null=False,
+        max_digits=9,
+        decimal_places=6,
+        min_value=-180,
+        max_value=180,
+    )
+
     class Meta:
         model = Place
         fields = [
             "name",
+            "city",
             "address",
             "delivery",
             "latitude",
@@ -105,6 +127,7 @@ class PlaceUpdateSerializer(ModelSerializer):
         model = Place
         fields = [
             "name",
+            "city",
             "district",
             "address",
             "delivery",

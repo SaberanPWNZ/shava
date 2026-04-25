@@ -1,6 +1,7 @@
 export interface Place {
 	id: number;
 	name: string;
+	city?: string;
 	district: string;
 	address: string;
 	delivery: boolean;

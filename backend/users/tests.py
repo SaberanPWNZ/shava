@@ -245,3 +245,93 @@ class ThrottlingTests(APITestCase):
             format="json",
         )
         self.assertEqual(third.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+
+@override_settings(REST_FRAMEWORK={
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "users.authentication.BanAwareJWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "auth": "1000/min",
+        "register": "1000/min",
+    },
+})
+class UserBanTests(APITestCase):
+    """Ban/unban admin endpoints and authentication guard."""
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.admin = User.objects.create_user(
+            email="admin@example.com",
+            password="AdminPass!234",
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.target = User.objects.create_user(
+            email="target@example.com", password="TargetPass!234"
+        )
+        self.regular = User.objects.create_user(
+            email="regular@example.com", password="RegularPass!234"
+        )
+
+    def _login(self, email, password):
+        resp = self.client.post(
+            "/api/users/login/", {"email": email, "password": password}, format="json"
+        )
+        self.assertEqual(resp.status_code, 200, resp.data)
+        return resp.data["access"]
+
+    def _auth(self, token):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    def test_ban_endpoint_requires_admin(self):
+        token = self._login("regular@example.com", "RegularPass!234")
+        self._auth(token)
+        resp = self.client.post(f"/api/users/{self.target.pk}/ban/")
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_can_ban_and_unban_user(self):
+        token = self._login("admin@example.com", "AdminPass!234")
+        self._auth(token)
+
+        resp = self.client.post(f"/api/users/{self.target.pk}/ban/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        self.target.refresh_from_db()
+        self.assertTrue(self.target.is_banned)
+
+        resp = self.client.post(f"/api/users/{self.target.pk}/unban/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.target.refresh_from_db()
+        self.assertFalse(self.target.is_banned)
+
+    def test_admin_cannot_ban_self(self):
+        token = self._login("admin@example.com", "AdminPass!234")
+        self._auth(token)
+        resp = self.client.post(f"/api/users/{self.admin.pk}/ban/")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_banned_user_cannot_login(self):
+        self.target.is_banned = True
+        self.target.save(update_fields=["is_banned"])
+        resp = self.client.post(
+            "/api/users/login/",
+            {"email": "target@example.com", "password": "TargetPass!234"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_banned_user_existing_token_is_rejected(self):
+        token = self._login("target@example.com", "TargetPass!234")
+        self.target.is_banned = True
+        self.target.save(update_fields=["is_banned"])
+        self._auth(token)
+        resp = self.client.get("/api/users/me/")
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
