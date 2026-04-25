@@ -1,3 +1,7 @@
+# syntax=docker/dockerfile:1.7
+# ----- Backend (production) -----
+# Multi-stage build. Stage 1 compiles wheels; the final image only carries
+# runtime libs and runs gunicorn as an unprivileged user.
 
 FROM python:3.12-slim AS builder
 
@@ -16,42 +20,60 @@ RUN apt-get update && \
         zlib1g-dev && \
     rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-
+WORKDIR /build
 COPY requirements.txt ./
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip wheel --wheel-dir=/build/wheels -r requirements.txt
+
 
 FROM python:3.12-slim AS production
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/home/app/.local/bin:$PATH"
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DJANGO_SETTINGS_MODULE=config.settings \
+    GUNICORN_WORKERS=3 \
+    GUNICORN_TIMEOUT=60
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libpq5 \
         curl \
         libjpeg62-turbo \
-        zlib1g && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN addgroup --system app && adduser --system --group app
+        zlib1g \
+        tini && \
+    rm -rf /var/lib/apt/lists/* && \
+    addgroup --system app && adduser --system --group app
 
 WORKDIR /app
 
-
-COPY --from=builder /root/.local /home/app/.local
+COPY --from=builder /build/wheels /wheels
+COPY requirements.txt ./
+RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt && \
+    rm -rf /wheels
 
 COPY --chown=app:app . .
 
-RUN mkdir -p /app/static /app/media /app/logs && \
-    chown -R app:app /app
+RUN mkdir -p /app/static /app/media /app/logs /app/staticfiles && \
+    chown -R app:app /app && \
+    chmod +x /app/wait_for_db.py
 
 USER app
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/admin/ || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD curl -fsS http://localhost:8000/admin/login/ >/dev/null || exit 1
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# tini handles PID 1 / signal forwarding; entrypoint waits for the DB,
+# applies migrations, collects static, then hands off to gunicorn.
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["sh", "-c", "python wait_for_db.py && \
+        python manage.py migrate --noinput && \
+        python manage.py collectstatic --noinput && \
+        exec gunicorn config.wsgi:application \
+            --bind 0.0.0.0:8000 \
+            --workers ${GUNICORN_WORKERS:-3} \
+            --timeout ${GUNICORN_TIMEOUT:-60} \
+            --access-logfile - \
+            --error-logfile -"]

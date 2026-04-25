@@ -1,0 +1,42 @@
+# syntax=docker/dockerfile:1.7
+# ----- Frontend (production) -----
+# Multi-stage build for SvelteKit (adapter-node). The final stage only ships
+# `build/`, production node_modules and the package manifest, running as the
+# unprivileged "node" user.
+
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --no-audit --no-fund
+
+
+FROM node:20-alpine AS builder
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+# Allow the public API base URL to be baked into the build at image-build time.
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+RUN npm run build && npm prune --omit=dev
+
+
+FROM node:20-alpine AS production
+WORKDIR /app
+ENV NODE_ENV=production \
+    PORT=3000 \
+    HOST=0.0.0.0
+
+# Drop root.
+USER node
+
+COPY --chown=node:node --from=builder /app/build ./build
+COPY --chown=node:node --from=builder /app/node_modules ./node_modules
+COPY --chown=node:node --from=builder /app/package.json ./package.json
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:3000/ >/dev/null 2>&1 || exit 1
+
+CMD ["node", "build/index.js"]

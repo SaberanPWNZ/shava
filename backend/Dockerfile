@@ -1,5 +1,8 @@
-FROM python:3.12-slim
-
+# syntax=docker/dockerfile:1.7
+# ----- Backend (development) -----
+# Hot-reloadable image with development tools (debug-toolbar, linters, etc).
+# Use `Dockerfile.prod` for production images.
+FROM python:3.12-slim AS dev
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -19,34 +22,22 @@ RUN apt-get update && \
         zlib1g-dev && \
     rm -rf /var/lib/apt/lists/*
 
-
 COPY requirements.txt requirements-dev.txt ./
-
 RUN pip install --no-cache-dir -r requirements-dev.txt
 
 COPY . .
 
-RUN addgroup --system app && adduser --system --group app
-
-RUN mkdir -p /app/static /app/media /app/logs && \
+# Run as a non-root system user.
+RUN addgroup --system app && adduser --system --group app && \
+    mkdir -p /app/static /app/media /app/logs && \
     chown -R app:app /app && \
-    chmod +x /app/wait_for_db.py
+    chmod +x /app/wait_for_db.py /app/entrypoint.sh
 
 USER app
 
 EXPOSE 8000
 
-# Run migrations with explicit error handling before starting the server
-CMD bash -c "\
-    echo 'Waiting for database...' && \
-    python wait_for_db.py && \
-    echo 'Database is available, running migrations...' && \
-    python manage.py makemigrations --noinput || { echo 'Failed to make migrations!'; exit 1; } && \
-    python manage.py migrate --noinput || { echo 'Failed to apply migrations!'; exit 1; } && \
-    echo 'Migrations applied successfully!' && \
-    python manage.py runserver 0.0.0.0:8000"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -fsS http://localhost:8000/admin/login/ >/dev/null || exit 1
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/admin/ || exit 1
-
-
+CMD ["bash", "-c", "python wait_for_db.py && python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"]

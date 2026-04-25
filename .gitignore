@@ -141,7 +141,15 @@ celerybeat.pid
 
 # Environments
 .env
+.env.dev
+.env.prod
+.env.local
+.env.*.local
 .envrc
+# TLS material is mounted into the production stack and must never be committed.
+certs/
+!.env.dev.example
+!.env.prod.example
 .venv
 env/
 venv/
