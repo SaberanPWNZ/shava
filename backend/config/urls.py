@@ -14,6 +14,7 @@ urlpatterns = [
     path("api/places/", include("places.urls")),
     path("api/reviews/", include("reviews.urls")),
     path("api/articles/", include("articles.urls")),
+    path("api/gamification/", include("gamification.urls")),
 ]
 
 if settings.DEBUG:
