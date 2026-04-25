@@ -73,6 +73,32 @@ in the Django `.env`.
 - `python manage.py test` — run unit tests
 - `python manage.py runserver`
 
+### Make targets
+
+A top-level `Makefile` wraps the most common workflows. Run `make help` for
+the full list. Notable targets:
+
+- `make up` / `make down` — start / stop the docker compose dev stack
+- `make migrate` — apply migrations inside the running backend container
+- `make test` — run backend (Django) and frontend (Playwright) tests
+- `make lint` / `make fmt` — flake8 + ESLint/Prettier / black + isort + Prettier
+
+## Continuous integration
+
+CI runs on every push and pull request via
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml). The following jobs run
+in parallel and are intended to be configured as required status checks on
+the `main` branch:
+
+| Job              | What it does                                |
+| ---------------- | ------------------------------------------- |
+| `backend-lint`   | `flake8` (Python 3.12, pip cache)           |
+| `backend-test`   | `python manage.py test` (Django, sqlite)    |
+| `frontend-lint`  | `npm run lint` (Prettier + ESLint, Node 20) |
+| `frontend-check` | `npm run check` (svelte-check)              |
+| `frontend-build` | `npm run build` (production build)          |
+| `e2e`            | Playwright e2e (depends on `frontend-build`)|
+
 ## Environment variables
 
 See `.env.example`. Notable ones:
