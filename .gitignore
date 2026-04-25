@@ -219,4 +219,5 @@ __marimo__/
 /environment
 .exe
 .environment
-/node_modulesbackend/media/
+/node_modules
+backend/media/

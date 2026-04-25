@@ -4,10 +4,18 @@ import { ApiError, type FieldErrors } from '$lib/types/auth';
 const ACCESS_KEY = 'shava.access';
 const REFRESH_KEY = 'shava.refresh';
 
-export const API_BASE: string =
-	(browser
-		? (window as unknown as { __API_BASE?: string }).__API_BASE
-		: undefined) || (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_API_BASE_URL || '/api';
+function resolveApiBase(): string {
+	const env = (import.meta as unknown as { env?: Record<string, string> }).env;
+	const fromEnv = env?.VITE_API_BASE_URL;
+	if (fromEnv) return fromEnv;
+	if (browser) {
+		const fromWindow = (window as unknown as { __API_BASE?: string }).__API_BASE;
+		if (fromWindow) return fromWindow;
+	}
+	return '/api';
+}
+
+export const API_BASE: string = resolveApiBase();
 
 export const tokenStorage = {
 	getAccess(): string | null {
