@@ -6,9 +6,13 @@ from .views import (
     ChangePasswordView,
     LogoutView,
     MeView,
+    PasswordResetConfirmView,
+    PasswordResetRequestView,
     RegisterView,
     UserBanView,
     UserViewSet,
+    VerifyEmailConfirmView,
+    VerifyEmailRequestView,
 )
 
 urlpatterns = [
@@ -23,6 +27,28 @@ urlpatterns = [
         "me/change-password/",
         ChangePasswordView.as_view(),
         name="user-change-password",
+    ),
+    # Email verification
+    path(
+        "verify-email/request/",
+        VerifyEmailRequestView.as_view(),
+        name="user-verify-email-request",
+    ),
+    path(
+        "verify-email/confirm/",
+        VerifyEmailConfirmView.as_view(),
+        name="user-verify-email-confirm",
+    ),
+    # Password reset
+    path(
+        "password-reset/request/",
+        PasswordResetRequestView.as_view(),
+        name="user-password-reset-request",
+    ),
+    path(
+        "password-reset/confirm/",
+        PasswordResetConfirmView.as_view(),
+        name="user-password-reset-confirm",
     ),
     # Admin
     path("list/", UserViewSet.as_view({"get": "list"}), name="user-list"),

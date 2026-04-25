@@ -211,6 +211,35 @@ USE_I18N = True
 USE_TZ = True
 
 
+# ----- Email -----------------------------------------------------------------
+# Default to the console backend so local development and the initial VPS
+# rollout don't need any SMTP credentials — verification / reset emails will
+# print to stdout / container logs. Override via `EMAIL_BACKEND` env var (e.g.
+# `django.core.mail.backends.smtp.EmailBackend` once an SMTP relay is wired).
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "25"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", False)
+EMAIL_USE_SSL = _env_bool("EMAIL_USE_SSL", False)
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "10"))
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@shava.local")
+
+# Single-domain deployment: the frontend (SvelteKit) is served from the same
+# origin as the API in production. Verification / reset links embed this URL
+# so we don't have to parse `Origin` headers and can build canonical links
+# from CLI / Celery contexts as well.
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+
+# Lifetimes (in seconds) for signed email tokens. Both default to 24h —
+# long enough to survive a delayed inbox, short enough to limit replay risk.
+EMAIL_VERIFY_TOKEN_MAX_AGE = int(os.getenv("EMAIL_VERIFY_TOKEN_MAX_AGE", "86400"))
+PASSWORD_RESET_TOKEN_MAX_AGE = int(os.getenv("PASSWORD_RESET_TOKEN_MAX_AGE", "86400"))
+
+
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
@@ -248,6 +277,8 @@ REST_FRAMEWORK = {
         "auth": os.getenv("THROTTLE_AUTH", "5/min"),
         "register": os.getenv("THROTTLE_REGISTER", "10/hour"),
         "helpful": os.getenv("THROTTLE_HELPFUL", "30/min"),
+        "email_verify": os.getenv("THROTTLE_EMAIL_VERIFY", "5/hour"),
+        "password_reset": os.getenv("THROTTLE_PASSWORD_RESET", "5/hour"),
     },
     "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
     "TEST_REQUEST_DEFAULT_FORMAT": "json",

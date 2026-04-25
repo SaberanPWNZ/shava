@@ -139,3 +139,37 @@ class UserAdminSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
+
+
+class VerifyEmailConfirmSerializer(serializers.Serializer):
+    """Public — accepts a signed token and marks the user as verified."""
+
+    token = serializers.CharField(required=True, write_only=True)
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """Public — requests a password-reset link by email.
+
+    Validation here is *deliberately* lenient: the view never reveals
+    whether the address is registered, so we only check the format.
+    """
+
+    email = serializers.EmailField(required=True)
+
+    def validate_email(self, value: str) -> str:
+        return value.strip().lower()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Public — completes a password reset using a signed token."""
+
+    token = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True)
+
+    def validate_new_password(self, value: str) -> str:
+        # The user is resolved from the token in the view, so we can only
+        # apply password validators that don't need a user instance here.
+        # The view runs ``validate_password(value, user=user)`` again with
+        # the resolved user for similarity checks.
+        validate_password(value)
+        return value
