@@ -3,6 +3,7 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv  # type: ignore
 
 load_dotenv()
@@ -18,21 +19,33 @@ def _env_list(name: str, default: str = "") -> list[str]:
     return [v.strip() for v in os.getenv(name, default).split(",") if v.strip()]
 
 
+def _resolve_secret_key(*, debug: bool, running_tests: bool) -> str:
+    """Resolve ``SECRET_KEY`` from the environment with safe dev fallback.
+
+    Raises :class:`~django.core.exceptions.ImproperlyConfigured` when
+    ``DJANGO_SECRET_KEY`` is empty in a production-like context
+    (``DEBUG=False`` and not a test run) so misconfigured deploys fail
+    loudly at boot rather than silently shipping with a blank key.
+    """
+
+    key = os.getenv("DJANGO_SECRET_KEY", "")
+    if key:
+        return key
+    if debug or running_tests:
+        # Insecure fallback used only for local development / test runs.
+        return "django-insecure-dev-only-do-not-use-in-production"
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY is required when DEBUG is False. "
+        "Set it via environment variable / .env.prod."
+    )
+
+
 # Detect the test runner early so we don't enforce production-grade secrets in CI.
 _RUNNING_TESTS = "test" in sys.argv
 
 DEBUG = _env_bool("DEBUG", False)
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
-if not SECRET_KEY:
-    if DEBUG or _RUNNING_TESTS:
-        # Insecure fallback used only for local development / test runs.
-        SECRET_KEY = "django-insecure-dev-only-do-not-use-in-production"
-    else:
-        raise RuntimeError(
-            "DJANGO_SECRET_KEY is required when DEBUG is False. "
-            "Set it via environment variable / .env.prod."
-        )
+SECRET_KEY = _resolve_secret_key(debug=DEBUG, running_tests=_RUNNING_TESTS)
 
 ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
 SITE_ID = 1

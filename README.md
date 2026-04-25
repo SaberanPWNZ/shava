@@ -153,7 +153,10 @@ the `main` branch:
 
 See `.env.example`. Notable ones:
 
-- `DJANGO_SECRET_KEY` — required in production.
+- `DJANGO_SECRET_KEY` — **required in production**. Django refuses to
+  boot when this is empty and `DEBUG=False` (raises
+  `ImproperlyConfigured`). Generate one with `python -c "import secrets;
+  print(secrets.token_urlsafe(64))"`.
 - `CORS_ALLOWED_ORIGINS` — comma-separated frontend origins.
 - `THROTTLE_AUTH`, `THROTTLE_REGISTER`, `THROTTLE_EMAIL_VERIFY`,
   `THROTTLE_PASSWORD_RESET` — DRF rate strings.
@@ -197,7 +200,6 @@ See `.env.example`. Notable ones:
 ## Suggested follow-up improvements (out of scope)
 
 ### Security
-- Make `DJANGO_SECRET_KEY` mandatory (currently empty default).
 - `SECURE_*` settings + HSTS in prod; HTTPS-only cookies.
 - `django-axes` against brute-force on login.
 - Email verification (signed token) and password reset flow.

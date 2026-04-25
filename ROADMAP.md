@@ -60,10 +60,10 @@ Suggested closing comment template:
 `DJANGO_SECRET_KEY`, which is silently insecure when `DEBUG=False`.
 
 **Acceptance criteria.**
-- [ ] In `backend/config/settings.py`, raise `ImproperlyConfigured` when
+- [x] In `backend/config/settings.py`, raise `ImproperlyConfigured` when
       `DJANGO_SECRET_KEY` is empty **and** `DEBUG` is `False`.
-- [ ] Document the requirement in `README.md` and `.env.prod.example`.
-- [ ] Tests still pass under the existing `DJANGO_SECRET_KEY=test` flow.
+- [x] Document the requirement in `README.md` and `.env.prod.example`.
+- [x] Tests still pass under the existing `DJANGO_SECRET_KEY=test` flow.
 
 #### 1.2 Production hardening: `SECURE_*` + HSTS + cookie flags
 **Labels:** `backend`, `security`, `P1`
