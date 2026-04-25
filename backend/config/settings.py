@@ -74,7 +74,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # AxesMiddleware must be the *last* entry so that the request reaches
     # auth views first; it then increments the failure counter on
-    # ``user_login_failed`` and serves a 429-equivalent lockout response
+    # ``user_login_failed`` and serves a 403 Forbidden lockout response
     # once the configured threshold is exceeded.
     "axes.middleware.AxesMiddleware",
 ]

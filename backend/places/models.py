@@ -2,7 +2,7 @@ from decimal import Decimal
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth import get_user_model
-from django.db.models import Avg
+from django.db.models import Avg, Count, Q
 from django.utils import timezone
 
 from places.choices import DISTRICT_CHOICES, PLACE_STATUS_CHOICES
@@ -54,6 +54,31 @@ class PlaceRating(models.Model):
 
     def __str__(self):
         return f"{self.place.name} - {self.rating}"
+
+
+class PlaceQuerySet(models.QuerySet):
+    """Custom queryset with helpers for the public list endpoint.
+
+    The serializer needs the average rating, ratings count and approved-
+    reviews count for every Place. Computing them lazily through the
+    instance properties causes one extra query per row (an N+1 storm on
+    paginated lists). :meth:`with_list_annotations` rolls them into the
+    main SELECT so list endpoints stay at a constant ~3 queries
+    regardless of page size.
+    """
+
+    def with_list_annotations(self):
+        return self.annotate(
+            _avg_rating=Avg("ratings__rating"),
+            _ratings_count=Count("ratings", distinct=True),
+            _reviews_count=Count(
+                "review_set",
+                filter=Q(
+                    review_set__is_moderated=True, review_set__is_deleted=False
+                ),
+                distinct=True,
+            ),
+        )
 
 
 class Place(models.Model):
@@ -118,6 +143,8 @@ class Place(models.Model):
     )
     moderation_reason = models.TextField(blank=True, null=True)
     moderated_at = models.DateTimeField(blank=True, null=True)
+
+    objects = PlaceQuerySet.as_manager()
 
     class Meta:
         verbose_name = "Place"

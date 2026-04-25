@@ -24,7 +24,8 @@ class ArticleViewSet(viewsets.ModelViewSet):
         return [IsAdminUser()]
 
     def get_queryset(self):
-        qs = Article.objects.all()
+        # `select_related("author")` avoids an N+1 in `get_author_name`.
+        qs = Article.objects.select_related("author")
         params = self.request.query_params
 
         # Non-staff users only see published articles.

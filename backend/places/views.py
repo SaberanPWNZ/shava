@@ -115,6 +115,10 @@ class PlaceListView(ListAPIView):
             qs = Place.objects.filter(status=status_filter)
         else:
             qs = Place.objects.filter(status__in=PUBLIC_VISIBLE_STATUSES)
+        # Annotate aggregate columns the serializer would otherwise compute
+        # one-place-at-a-time. Keeps the list endpoint at constant query
+        # count regardless of page size.
+        qs = qs.with_list_annotations().select_related("city_ref", "author")
         return _apply_place_filters(qs, params)
 
 
@@ -184,7 +188,12 @@ class PlaceModerationListView(ListAPIView):
     permission_classes = [IsAdminUser]
 
     def get_queryset(self):
-        return Place.objects.filter(status="On_moderation").order_by("-created_at")
+        return (
+            Place.objects.filter(status="On_moderation")
+            .with_list_annotations()
+            .select_related("city_ref", "author")
+            .order_by("-created_at")
+        )
 
 
 class PlaceModerationActionView(UpdateAPIView):
