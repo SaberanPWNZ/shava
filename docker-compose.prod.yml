@@ -23,7 +23,8 @@ services:
     env_file:
       - ./.env.prod
     environment:
-      # Hard-override; .env.prod must not flip these on.
+      # Defence in depth: ensure DEBUG stays False in production even if the
+      # operator accidentally flips it on in `.env.prod`.
       - DEBUG=False
     volumes:
       - static_volume:/app/staticfiles

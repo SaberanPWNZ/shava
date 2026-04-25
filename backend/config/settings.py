@@ -107,7 +107,7 @@ if not DEBUG and not _RUNNING_TESTS:
     )
     SECURE_HSTS_PRELOAD = _env_bool("SECURE_HSTS_PRELOAD", True)
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_REFERRER_POLICY = "same-origin"
+    SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
     X_FRAME_OPTIONS = "DENY"
 
 ROOT_URLCONF = "config.urls"
