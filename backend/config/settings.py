@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "places_menu",
     "articles",
     "gamification",
+    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
@@ -219,6 +220,26 @@ REST_FRAMEWORK = {
     },
     "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# ----- OpenAPI schema (drf-spectacular) --------------------------------------
+# Exposed at /api/schema/, /api/docs/ (Swagger UI), /api/redoc/.
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Shava API",
+    "DESCRIPTION": (
+        "Public REST API for the Shava project: places, reviews, ratings, "
+        "users (JWT auth), articles, gamification."
+    ),
+    "VERSION": os.getenv("API_VERSION", "1.0.0"),
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SCHEMA_PATH_PREFIX": r"/api/",
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": False,
+    },
 }
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO" if not DEBUG else "DEBUG")

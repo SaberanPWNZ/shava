@@ -13,7 +13,8 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"test:e2e": "playwright test",
-		"test": "npm run test:e2e"
+		"test": "npm run test:e2e",
+		"generate:api": "openapi-typescript ${OPENAPI_SCHEMA_URL:-http://localhost:8000/api/schema/} --output src/lib/api/types.gen.ts"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
@@ -32,6 +33,7 @@
 		"eslint-plugin-svelte": "^3.0.0",
 		"globals": "^16.0.0",
 		"lightningcss": "^1.21.0",
+		"openapi-typescript": "^7.13.0",
 		"prettier": "^3.4.2",
 		"prettier-plugin-svelte": "^3.3.3",
 		"prettier-plugin-tailwindcss": "^0.6.11",
