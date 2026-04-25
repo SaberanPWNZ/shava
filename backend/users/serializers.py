@@ -17,8 +17,18 @@ The serializers are intentionally split by responsibility (SRP/ISP):
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
+from config.thumbnails import thumbnail_set
 from users.models import User
 from users.services import RegistrationData, UserRegistrationService
+
+
+def _avatar_thumbnails(serializer, obj):
+    """Shared resolver for the ``avatar_thumbnails`` SerializerMethodField."""
+
+    request = serializer.context.get("request")
+    return thumbnail_set(
+        getattr(obj, "avatar", None), alias_group="avatar", request=request
+    )
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -59,6 +69,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserPublicSerializer(serializers.ModelSerializer):
     """Safe, read-only view of a user."""
 
+    avatar_thumbnails = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -67,9 +79,13 @@ class UserPublicSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "avatar",
+            "avatar_thumbnails",
             "is_verified",
         ]
         read_only_fields = fields
+
+    def get_avatar_thumbnails(self, obj):
+        return _avatar_thumbnails(self, obj)
 
 
 class MeUpdateSerializer(serializers.ModelSerializer):
@@ -109,6 +125,7 @@ class UserAdminSerializer(serializers.ModelSerializer):
         required=False,
         validators=[validate_password],
     )
+    avatar_thumbnails = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -123,6 +140,7 @@ class UserAdminSerializer(serializers.ModelSerializer):
             "is_superuser",
             "telegram_id",
             "avatar",
+            "avatar_thumbnails",
             "is_verified",
             "is_banned",
             "is_moderator",
@@ -130,6 +148,9 @@ class UserAdminSerializer(serializers.ModelSerializer):
             "password",
         ]
         read_only_fields = ["id"]
+
+    def get_avatar_thumbnails(self, obj):
+        return _avatar_thumbnails(self, obj)
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)

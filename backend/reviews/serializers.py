@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from config.thumbnails import thumbnail_set
 from reviews.choices import REVIEW_SCORE_CHOICES
 from reviews.models import Review
 
@@ -8,6 +9,8 @@ class ReviewSerializer(serializers.ModelSerializer):
     author_username = serializers.CharField(source="author.username", read_only=True)
     place_name = serializers.CharField(source="place.name", read_only=True)
     viewer_voted = serializers.SerializerMethodField()
+    dish_image_thumbnails = serializers.SerializerMethodField()
+    receipt_image_thumbnails = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
@@ -20,7 +23,9 @@ class ReviewSerializer(serializers.ModelSerializer):
             "score",
             "comment",
             "dish_image",
+            "dish_image_thumbnails",
             "receipt_image",
+            "receipt_image_thumbnails",
             "is_verified",
             "helpful_count",
             "viewer_voted",
@@ -36,6 +41,16 @@ class ReviewSerializer(serializers.ModelSerializer):
             "helpful_count",
             "viewer_voted",
         ]
+
+    def get_dish_image_thumbnails(self, obj: Review):
+        return thumbnail_set(
+            obj.dish_image, alias_group="photo", request=self.context.get("request")
+        )
+
+    def get_receipt_image_thumbnails(self, obj: Review):
+        return thumbnail_set(
+            obj.receipt_image, alias_group="photo", request=self.context.get("request")
+        )
 
     def get_viewer_voted(self, obj: Review) -> bool:
         """Whether the *current* request user has cast a helpful vote.

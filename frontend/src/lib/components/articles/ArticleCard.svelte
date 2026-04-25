@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ResponsiveImage from '$lib/components/ResponsiveImage.svelte';
 	import type { Article } from '$lib/types';
 
 	let { article } = $props<{ article: Article }>();
@@ -8,14 +9,13 @@
 	href={`/articles/${article.slug}`}
 	class="block overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
 >
-	{#if article.cover_image}
-		<img
-			src={article.cover_image}
-			alt={article.title}
-			class="h-44 w-full object-cover"
-			loading="lazy"
-		/>
-	{/if}
+	<ResponsiveImage
+		thumbnails={article.cover_image_thumbnails}
+		src={article.cover_image}
+		alt={article.title}
+		sizes="(min-width: 768px) 33vw, 100vw"
+		class="h-44 w-full object-cover"
+	/>
 	<div class="p-4">
 		<span class="text-xs font-medium tracking-wide text-orange-600 uppercase">
 			{article.category}

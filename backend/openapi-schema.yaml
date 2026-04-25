@@ -1963,6 +1963,9 @@ components:
           type: string
           format: uri
           nullable: true
+        cover_image_thumbnails:
+          type: string
+          readOnly: true
         category:
           $ref: '#/components/schemas/Category9f0Enum'
         author:
@@ -1987,6 +1990,7 @@ components:
       required:
       - author_name
       - content
+      - cover_image_thumbnails
       - created_at
       - id
       - slug
@@ -2043,6 +2047,9 @@ components:
           format: uri
           readOnly: true
           nullable: true
+        cover_image_thumbnails:
+          type: string
+          readOnly: true
         category:
           allOf:
           - $ref: '#/components/schemas/Category9f0Enum'
@@ -2061,6 +2068,7 @@ components:
       - author_name
       - category
       - cover_image
+      - cover_image_thumbnails
       - excerpt
       - id
       - is_published
@@ -2733,6 +2741,9 @@ components:
         main_image:
           type: string
           format: uri
+        main_image_thumbnails:
+          type: string
+          readOnly: true
         additional_images:
           type: string
           format: uri
@@ -2783,6 +2794,7 @@ components:
       - google_maps_url
       - id
       - main_image
+      - main_image_thumbnails
       - ratings_count
       - reviews_count
       - stars
@@ -2937,6 +2949,9 @@ components:
         main_image:
           type: string
           format: uri
+        main_image_thumbnails:
+          type: string
+          readOnly: true
         additional_images:
           type: string
           format: uri
@@ -2997,6 +3012,7 @@ components:
       - google_maps_url
       - id
       - main_image
+      - main_image_thumbnails
       - menu
       - ratings
       - ratings_count
@@ -3207,10 +3223,16 @@ components:
           type: string
           format: uri
           nullable: true
+        dish_image_thumbnails:
+          type: string
+          readOnly: true
         receipt_image:
           type: string
           format: uri
           nullable: true
+        receipt_image_thumbnails:
+          type: string
+          readOnly: true
         is_verified:
           type: boolean
           readOnly: true
@@ -3240,12 +3262,14 @@ components:
       - author
       - author_username
       - created_at
+      - dish_image_thumbnails
       - helpful_count
       - id
       - is_moderated
       - is_verified
       - place
       - place_name
+      - receipt_image_thumbnails
       - score
       - viewer_voted
     ReviewCreate:
@@ -3452,6 +3476,9 @@ components:
           type: string
           format: uri
           nullable: true
+        avatar_thumbnails:
+          type: string
+          readOnly: true
         is_verified:
           type: boolean
         is_banned:
@@ -3461,6 +3488,7 @@ components:
         is_admin:
           type: boolean
       required:
+      - avatar_thumbnails
       - email
       - id
       - username
@@ -3549,11 +3577,15 @@ components:
           format: uri
           readOnly: true
           nullable: true
+        avatar_thumbnails:
+          type: string
+          readOnly: true
         is_verified:
           type: boolean
           readOnly: true
       required:
       - avatar
+      - avatar_thumbnails
       - email
       - first_name
       - id

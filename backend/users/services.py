@@ -50,8 +50,15 @@ class UserRegistrationService:
             first_name=data.first_name or "",
             last_name=data.last_name or "",
         )
+        # Dispatch the verification email through Celery so a slow SMTP
+        # transport doesn't extend the registration response time. When
+        # no broker is configured ``CELERY_TASK_ALWAYS_EAGER`` makes
+        # this call synchronous, preserving the existing dev/test
+        # behaviour where registration tests assert ``mail.outbox``.
+        from users.tasks import send_verification_email
+
         try:
-            self._email_service.send_verify_email(user)
+            send_verification_email.delay(user.pk)
         except Exception:  # pragma: no cover - already logged in the service.
             logger.warning(
                 "Verification email could not be sent for %s; user can "

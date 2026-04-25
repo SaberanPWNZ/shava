@@ -183,26 +183,26 @@ Suggested closing comment template:
 **Labels:** `backend`, `infra`, `P2`
 
 **Acceptance criteria.**
-- [ ] Redis service in `docker-compose.yml`.
-- [ ] `CACHES` uses `django-redis`.
-- [ ] Celery worker + beat container; first task: send verification email.
-- [ ] Healthcheck for Redis.
+- [x] Redis service in `docker-compose.yml`.
+- [x] `CACHES` uses `django-redis`.
+- [x] Celery worker + beat container; first task: send verification email.
+- [x] Healthcheck for Redis.
 
 #### 4.2 Query audit: `select_related` / `prefetch_related`
 **Labels:** `backend`, `performance`, `P2`
 
 **Acceptance criteria.**
-- [ ] `django-debug-toolbar` in dev; document N+1 hotspots.
-- [ ] List endpoints (`places`, `reviews`, `articles`) issue ≤ 3 queries
+- [x] `django-debug-toolbar` in dev; document N+1 hotspots.
+- [x] List endpoints (`places`, `reviews`, `articles`) issue ≤ 3 queries
       regardless of page size; assert with `assertNumQueries` tests.
 
 #### 4.3 Image thumbnails (`easy-thumbnails`)
 **Labels:** `backend`, `performance`, `P3`
 
 **Acceptance criteria.**
-- [ ] Avatar, place photo, review photo serve sized thumbnails (e.g. 64,
+- [x] Avatar, place photo, review photo serve sized thumbnails (e.g. 64,
       256, 1024 px) via API field.
-- [ ] Frontend uses `srcset` for responsive images.
+- [x] Frontend uses `srcset` for responsive images.
 
 ---
 

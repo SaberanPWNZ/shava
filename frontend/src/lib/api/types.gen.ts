@@ -884,6 +884,7 @@ export interface components {
             content: string;
             /** Format: uri */
             cover_image?: string | null;
+            readonly cover_image_thumbnails: string;
             category?: components["schemas"]["Category9f0Enum"];
             author?: number | null;
             readonly author_name: string;
@@ -914,6 +915,7 @@ export interface components {
             readonly excerpt: string;
             /** Format: uri */
             readonly cover_image: string | null;
+            readonly cover_image_thumbnails: string;
             readonly category: components["schemas"]["Category9f0Enum"];
             readonly author_name: string;
             /** Format: date-time */
@@ -1252,6 +1254,7 @@ export interface components {
             readonly ratings_count: string;
             /** Format: uri */
             main_image: string;
+            readonly main_image_thumbnails: string;
             /** Format: uri */
             additional_images?: string | null;
             /** Format: date-time */
@@ -1331,6 +1334,7 @@ export interface components {
             readonly ratings_count: string;
             /** Format: uri */
             main_image: string;
+            readonly main_image_thumbnails: string;
             /** Format: uri */
             additional_images?: string | null;
             /** Format: date-time */
@@ -1432,8 +1436,10 @@ export interface components {
             comment?: string | null;
             /** Format: uri */
             dish_image?: string | null;
+            readonly dish_image_thumbnails: string;
             /** Format: uri */
             receipt_image?: string | null;
+            readonly receipt_image_thumbnails: string;
             /** @description Set by a moderator after checking the receipt photo. */
             readonly is_verified: boolean;
             readonly helpful_count: number;
@@ -1548,6 +1554,7 @@ export interface components {
             telegram_id?: string | null;
             /** Format: uri */
             avatar?: string | null;
+            readonly avatar_thumbnails: string;
             is_verified?: boolean;
             is_banned?: boolean;
             is_moderator?: boolean;
@@ -1594,6 +1601,7 @@ export interface components {
             readonly last_name: string | null;
             /** Format: uri */
             readonly avatar: string | null;
+            readonly avatar_thumbnails: string;
             readonly is_verified: boolean;
         };
         /** @description Public — accepts a signed token and marks the user as verified. */

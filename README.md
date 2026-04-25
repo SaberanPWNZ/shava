@@ -186,6 +186,86 @@ See `.env.example`. Notable ones:
   `AXES_COOLOFF_TIME_HOURS` (default `1`), `AXES_PROXY_COUNT` (default `1`) —
   brute-force protection on login (`django-axes`). Lockouts are tracked per
   `(username, ip_address)`.
+- `REDIS_URL` — when set, switches `CACHES["default"]` to `django-redis`
+  and is used as the default Celery broker / result backend. Empty
+  value falls back to in-process `LocMemCache` and Celery
+  `ALWAYS_EAGER` mode (sufficient for dev / CI / single-worker
+  installs).
+- `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` — explicit overrides
+  when the Celery infra is split from the cache.
+  `CELERY_TASK_ALWAYS_EAGER` (default off when `REDIS_URL` is set,
+  always on under the test runner) forces synchronous task execution.
+
+## Async tasks (Celery)
+
+`backend/config/celery.py` defines a single `Celery("shava")` app
+auto-loaded by Django (`backend/config/__init__.py`). Tasks are
+auto-discovered from any app with a `tasks` module — currently
+`users.tasks` exposes `send_verification_email(user_id)` and
+`send_password_reset_email(user_id)`. Registration dispatches
+`send_verification_email.delay(user.pk)` so a slow SMTP transport
+doesn't extend the response time of `POST /api/v1/users/register/`.
+
+In production run worker + beat next to the web container:
+
+```bash
+docker compose up redis web celery_worker celery_beat
+```
+
+For local debugging without a broker just leave `REDIS_URL=` empty —
+calls to `.delay()` execute inline thanks to `ALWAYS_EAGER`. The test
+suite forces eager mode automatically (see `_RUNNING_TESTS` in
+`backend/config/settings.py`).
+
+## Image thumbnails
+
+Image fields exposed via the API have a sibling `*_thumbnails` field
+backed by `easy-thumbnails`:
+
+| Endpoint                | Original field    | Thumbnails field            | Alias group |
+| ----------------------- | ----------------- | --------------------------- | ----------- |
+| `users.UserPublic`      | `avatar`          | `avatar_thumbnails`         | `avatar` (square crop) |
+| `places.Place`          | `main_image`      | `main_image_thumbnails`     | `photo` (landscape)    |
+| `reviews.Review`        | `dish_image` / `receipt_image` | `*_thumbnails` per field | `photo` |
+| `articles.Article`      | `cover_image`     | `cover_image_thumbnails`    | `photo`     |
+
+Each thumbnail field has the shape:
+
+```json
+{
+  "src": "/media/place_images/x.jpg",
+  "srcset": "/media/.../x.64x0.jpg 64w, .../x.256x0.jpg 256w, .../x.512x0.jpg 512w, .../x.1024x0.jpg 1024w",
+  "sizes": { "xs": "...", "sm": "...", "md": "...", "lg": "..." }
+}
+```
+
+Aliases live in `settings.THUMBNAIL_ALIASES`; widths in
+`settings.THUMBNAIL_SRCSET_SIZES`. Avatars use `crop=smart` so a
+1024×768 source still produces a square 256² with the face centred.
+Thumbnails are generated on first request, then cached in
+`MEDIA_ROOT/thumbs/`.
+
+## Performance — query budgets and N+1 hotspots
+
+The three high-traffic list endpoints have a hard query budget enforced
+by `backend/places/test_query_counts.py` (see `LIST_QUERY_BUDGET = 6`,
+which fits one paginated `COUNT(*)`, one main `SELECT`, transaction
+savepoints, and the prefetch-related joins):
+
+| Endpoint                              | Why it was N+1                                            | Fix                                                                                |
+| ------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `GET /api/v1/places/`                 | `average_rating` / `ratings_count` / `reviews_count` SerializerMethodFields per row | `Place.objects.with_list_annotations().select_related("city_ref", "author")` |
+| `GET /api/v1/places/<id>/reviews/`    | `author_username` per row + `viewer_voted` per request    | `select_related("author")` + `with_viewer_votes_prefetch(request)`                 |
+| `GET /api/v1/articles/`               | `author` joined per row                                   | `select_related("author")` on the queryset                                         |
+
+If you add a new list endpoint, write the queryset against
+`select_related` / `prefetch_related` first, then add a sibling case to
+`test_query_counts.py` so a future regression fails CI loudly.
+
+In dev `django-debug-toolbar` is mounted at `/__debug__/` (gated on
+`DEBUG=True`, `INTERNAL_IPS = ["127.0.0.1"]`) — open any list endpoint
+via the SvelteKit dev server proxy and the SQL panel will show the
+exact queries.
 
 ## SOLID notes
 
@@ -215,8 +295,6 @@ still open at the time of writing.
 - Move uploads to S3/MinIO via `django-storages`.
 
 ### Performance
-- Redis for cache + Celery broker; async tasks (email, image processing).
-- `select_related` / `prefetch_related` audit.
 - Thumbnail generation (`easy-thumbnails`).
 
 ### DevEx / Infra

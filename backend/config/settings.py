@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "gamification",
     "drf_spectacular",
     "axes",
+    "easy_thumbnails",
 ]
 
 MIDDLEWARE = [
@@ -270,6 +271,96 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+
+# ----- Image thumbnails (easy-thumbnails) ------------------------------------
+# Aliases consumed by ``common.thumbnails.thumbnail_set`` so every API
+# field exposing an image returns the same shape:
+# ``{"src": original_url, "srcset": "...64w, ...256w, ...512w, ...1024w"}``.
+# Using ``crop=smart`` for square avatars (so faces stay centred) and a
+# plain scaled width for landscape-style place / article photos so we
+# don't distort wide compositions.
+THUMBNAIL_ALIASES = {
+    # Square crops (avatars / small place tiles).
+    "avatar": {
+        "xs": {"size": (64, 64), "crop": "smart", "quality": 80},
+        "sm": {"size": (128, 128), "crop": "smart", "quality": 80},
+        "md": {"size": (256, 256), "crop": "smart", "quality": 85},
+        "lg": {"size": (512, 512), "crop": "smart", "quality": 85},
+    },
+    # Landscape photos (place hero, review dish, article cover).
+    "photo": {
+        "xs": {"size": (64, 0), "quality": 80},
+        "sm": {"size": (256, 0), "quality": 80},
+        "md": {"size": (512, 0), "quality": 85},
+        "lg": {"size": (1024, 0), "quality": 85},
+    },
+}
+# Sizes for ``srcset`` width descriptors — keep in sync with the alias
+# widths above. Stored as tuples of (alias, width-px).
+THUMBNAIL_SRCSET_SIZES = (("xs", 64), ("sm", 256), ("md", 512), ("lg", 1024))
+# Don't fail a request if a thumbnail can't be generated (corrupt source,
+# missing file): emit ``None`` for that thumbnail and let the client fall
+# back to the original ``src``.
+THUMBNAIL_DEBUG = False
+# Generate the file on demand the first time it's requested, then cache
+# under ``MEDIA_ROOT/thumbs/`` exactly like the upload originals.
+THUMBNAIL_BASEDIR = "thumbs"
+
+
+# ----- Cache (django-redis when REDIS_URL is set) ----------------------------
+REDIS_URL = os.getenv("REDIS_URL", "").strip()
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                # 5s connect / read timeouts so a flaky Redis can't pin
+                # gunicorn workers indefinitely.
+                "SOCKET_CONNECT_TIMEOUT": 5,
+                "SOCKET_TIMEOUT": 5,
+                "IGNORE_EXCEPTIONS": True,
+            },
+            "KEY_PREFIX": "shava",
+        }
+    }
+    # If Redis is configured for cache, hand DRF rate-limiting the same
+    # store so throttles work across gunicorn workers.
+    DJANGO_REDIS_IGNORE_EXCEPTIONS = True
+else:
+    # In-process cache is fine for dev / tests / single-worker deploys.
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "shava-default",
+        }
+    }
+
+
+# ----- Celery (async tasks) --------------------------------------------------
+# Broker / result backend default to the same Redis URL — set
+# CELERY_BROKER_URL explicitly only when you want to split brokers from
+# the cache. When neither is configured we run ``ALWAYS_EAGER`` so calls
+# to ``.delay()`` execute synchronously (dev, tests, CI).
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
+# Eager when the broker is unset OR explicitly requested OR running tests.
+CELERY_TASK_ALWAYS_EAGER = (
+    _env_bool("CELERY_TASK_ALWAYS_EAGER", default=not bool(CELERY_BROKER_URL))
+    or _RUNNING_TESTS
+)
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "UTC"
+# Reasonable defaults — workers retry on broker connection loss but
+# don't acknowledge until the task body has finished.
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
 
 REST_FRAMEWORK = {

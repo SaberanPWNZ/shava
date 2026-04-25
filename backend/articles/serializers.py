@@ -1,10 +1,19 @@
 from rest_framework import serializers
 
 from articles.models import Article
+from config.thumbnails import thumbnail_set
+
+
+def _cover_image_thumbnails(serializer, obj):
+    request = serializer.context.get("request")
+    return thumbnail_set(
+        getattr(obj, "cover_image", None), alias_group="photo", request=request
+    )
 
 
 class ArticleListSerializer(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField()
+    cover_image_thumbnails = serializers.SerializerMethodField()
 
     class Meta:
         model = Article
@@ -14,6 +23,7 @@ class ArticleListSerializer(serializers.ModelSerializer):
             "slug",
             "excerpt",
             "cover_image",
+            "cover_image_thumbnails",
             "category",
             "author_name",
             "published_at",
@@ -28,9 +38,13 @@ class ArticleListSerializer(serializers.ModelSerializer):
             obj.author, "email", None
         )
 
+    def get_cover_image_thumbnails(self, obj):
+        return _cover_image_thumbnails(self, obj)
+
 
 class ArticleDetailSerializer(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField()
+    cover_image_thumbnails = serializers.SerializerMethodField()
 
     class Meta:
         model = Article
@@ -41,6 +55,7 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
             "excerpt",
             "content",
             "cover_image",
+            "cover_image_thumbnails",
             "category",
             "author",
             "author_name",
@@ -57,3 +72,6 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
         return getattr(obj.author, "username", None) or getattr(
             obj.author, "email", None
         )
+
+    def get_cover_image_thumbnails(self, obj):
+        return _cover_image_thumbnails(self, obj)
