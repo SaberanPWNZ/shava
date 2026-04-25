@@ -132,8 +132,19 @@ See `.env.example`. Notable ones:
 
 - `DJANGO_SECRET_KEY` — required in production.
 - `CORS_ALLOWED_ORIGINS` — comma-separated frontend origins.
-- `THROTTLE_AUTH`, `THROTTLE_REGISTER` — DRF rate strings.
+- `THROTTLE_AUTH`, `THROTTLE_REGISTER`, `THROTTLE_EMAIL_VERIFY`,
+  `THROTTLE_PASSWORD_RESET` — DRF rate strings.
 - `VITE_API_BASE_URL` — backend URL exposed to the browser.
+- `EMAIL_BACKEND` (default `django.core.mail.backends.console.EmailBackend`),
+  `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`,
+  `EMAIL_USE_TLS`, `EMAIL_USE_SSL`, `DEFAULT_FROM_EMAIL` — outgoing email for
+  verification and password-reset flows. Console backend prints emails to
+  stdout, so the initial VPS install needs no SMTP credentials.
+- `FRONTEND_URL` — public origin of the SvelteKit app; embedded as the link
+  prefix inside verification / reset emails. Single-domain deploys can set
+  this to the same host as the backend.
+- `EMAIL_VERIFY_TOKEN_MAX_AGE`, `PASSWORD_RESET_TOKEN_MAX_AGE` — TTL (in
+  seconds) for the signed email tokens. Default `86400` (24 h).
 - `AXES_ENABLED` (default: on outside tests), `AXES_FAILURE_LIMIT` (default `5`),
   `AXES_COOLOFF_TIME_HOURS` (default `1`), `AXES_PROXY_COUNT` (default `1`) —
   brute-force protection on login (`django-axes`). Lockouts are tracked per

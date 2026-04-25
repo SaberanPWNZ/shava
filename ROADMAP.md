@@ -88,11 +88,11 @@ Suggested closing comment template:
 **Labels:** `backend`, `frontend`, `security`, `P2`
 
 **Acceptance criteria.**
-- [ ] Backend: signed token endpoints `verify-email`, `request-password-reset`,
+- [x] Backend: signed token endpoints `verify-email`, `request-password-reset`,
       `confirm-password-reset`.
-- [ ] Frontend: `/verify-email/[token]` and `/reset-password/[token]` routes.
-- [ ] Emails sent via Django's email backend; templates in `users/templates/`.
-- [ ] Unit tests for happy path, expired token, replay.
+- [x] Frontend: `/verify-email/[token]` and `/reset-password/[token]` routes.
+- [x] Emails sent via Django's email backend; templates in `users/templates/`.
+- [x] Unit tests for happy path, expired token, replay.
 
 #### 1.5 Sentry integration (closes #35)
 **Labels:** `backend`, `frontend`, `observability`, `P2`

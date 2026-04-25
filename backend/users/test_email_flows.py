@@ -95,9 +95,7 @@ class VerifyEmailFlowTests(APITestCase):
         self.assertFalse(user.is_verified)
         token = make_verify_email_token(user)
 
-        response = self.client.post(
-            self.confirm_url, {"token": token}, format="json"
-        )
+        response = self.client.post(self.confirm_url, {"token": token}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         user.refresh_from_db()
         self.assertTrue(user.is_verified)
@@ -112,9 +110,7 @@ class VerifyEmailFlowTests(APITestCase):
 
         # Second use should be rejected — the token's fingerprint no longer
         # matches the user's current ``is_verified`` state.
-        response = self.client.post(
-            self.confirm_url, {"token": token}, format="json"
-        )
+        response = self.client.post(self.confirm_url, {"token": token}, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     # --- Confirm: tampered / unknown / expired ----------------------------
@@ -122,18 +118,14 @@ class VerifyEmailFlowTests(APITestCase):
     def test_confirm_rejects_tampered_token(self):
         user = self._register()
         token = make_verify_email_token(user) + "garbage"
-        response = self.client.post(
-            self.confirm_url, {"token": token}, format="json"
-        )
+        response = self.client.post(self.confirm_url, {"token": token}, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_confirm_rejects_wrong_purpose_token(self):
         """A password-reset token must not be accepted by verify-email."""
         user = self._register()
         token = make_password_reset_token(user)
-        response = self.client.post(
-            self.confirm_url, {"token": token}, format="json"
-        )
+        response = self.client.post(self.confirm_url, {"token": token}, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     @override_settings(EMAIL_VERIFY_TOKEN_MAX_AGE=1)
@@ -141,9 +133,7 @@ class VerifyEmailFlowTests(APITestCase):
         user = self._register()
         token = make_verify_email_token(user)
         time.sleep(1.1)
-        response = self.client.post(
-            self.confirm_url, {"token": token}, format="json"
-        )
+        response = self.client.post(self.confirm_url, {"token": token}, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     # --- Re-send (request) endpoint ---------------------------------------
@@ -212,9 +202,7 @@ class PasswordResetFlowTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(len(mail.outbox), 1)
-        self.assertIn(
-            "http://testserver-frontend/reset-password/", mail.outbox[0].body
-        )
+        self.assertIn("http://testserver-frontend/reset-password/", mail.outbox[0].body)
         # UA subject.
         self.assertIn("Скидання", mail.outbox[0].subject)
 
