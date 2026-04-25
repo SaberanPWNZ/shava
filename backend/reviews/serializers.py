@@ -7,6 +7,7 @@ from reviews.models import Review
 class ReviewSerializer(serializers.ModelSerializer):
     author_username = serializers.CharField(source="author.username", read_only=True)
     place_name = serializers.CharField(source="place.name", read_only=True)
+    viewer_voted = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
@@ -22,6 +23,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             "receipt_image",
             "is_verified",
             "helpful_count",
+            "viewer_voted",
             "created_at",
             "is_moderated",
         ]
@@ -32,7 +34,29 @@ class ReviewSerializer(serializers.ModelSerializer):
             "is_moderated",
             "is_verified",
             "helpful_count",
+            "viewer_voted",
         ]
+
+    def get_viewer_voted(self, obj: Review) -> bool:
+        """Whether the *current* request user has cast a helpful vote.
+
+        Always ``False`` for anonymous viewers. Reads from a prefetched
+        per-request attribute (``viewer_votes``) when the queryset has
+        been prepared by the view — see
+        :meth:`reviews.views.with_viewer_votes_prefetch` — so listing
+        endpoints never trigger an N+1.
+        """
+
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request is not None else None
+        if user is None or not getattr(user, "is_authenticated", False):
+            return False
+        prefetched = getattr(obj, "viewer_votes", None)
+        if prefetched is not None:
+            return len(prefetched) > 0
+        # Fallback for callers that don't prefetch (e.g. detail endpoints
+        # building a serializer from a freshly-fetched ``Review`` instance).
+        return obj.helpful_votes.filter(user_id=user.id).exists()
 
 
 class ReviewCreateSerializer(serializers.ModelSerializer):

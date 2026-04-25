@@ -65,6 +65,8 @@ export interface Review {
 	receipt_image?: string | null;
 	is_verified?: boolean;
 	helpful_count?: number;
+	/** True when the *current* user has cast a helpful vote on this review. */
+	viewer_voted?: boolean;
 	created_at: string;
 	is_moderated: boolean;
 }

@@ -13,7 +13,9 @@ from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import generics, status, views
+from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
@@ -119,6 +121,31 @@ class ReviewHelpfulView(views.APIView):
     permission_classes = [IsAuthenticated]
     throttle_scope = "helpful"
 
+    _RESPONSE_SERIALIZER = inline_serializer(
+        name="ReviewHelpfulResponse",
+        fields={
+            "helpful_count": drf_serializers.IntegerField(),
+            "voted": drf_serializers.BooleanField(),
+        },
+    )
+
+    @extend_schema(
+        tags=["reviews"],
+        summary="Cast a 'helpful' vote on a review",
+        description=(
+            "Idempotent on repeat calls. Combine with ``DELETE`` to toggle. "
+            "Returns the new aggregate ``helpful_count`` and the viewer's "
+            "current vote state."
+        ),
+        request=None,
+        responses={
+            200: _RESPONSE_SERIALIZER,
+            201: _RESPONSE_SERIALIZER,
+            400: OpenApiResponse(description="Cannot vote on your own review."),
+            401: OpenApiResponse(description="Authentication required."),
+            404: OpenApiResponse(description="Review not found."),
+        },
+    )
     def post(self, request, pk: int):
         from django.db import transaction
         from django.db.models import F
@@ -146,6 +173,20 @@ class ReviewHelpfulView(views.APIView):
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
+    @extend_schema(
+        tags=["reviews"],
+        summary="Remove a 'helpful' vote on a review",
+        description=(
+            "Idempotent — safe to call when the user has not voted. "
+            "Returns the new aggregate ``helpful_count`` and ``voted=false``."
+        ),
+        request=None,
+        responses={
+            200: _RESPONSE_SERIALIZER,
+            401: OpenApiResponse(description="Authentication required."),
+            404: OpenApiResponse(description="Review not found."),
+        },
+    )
     def delete(self, request, pk: int):
         from django.db import transaction
         from django.db.models import F

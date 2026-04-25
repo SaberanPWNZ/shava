@@ -1047,7 +1047,10 @@ paths:
   /api/reviews/{id}/helpful/:
     post:
       operationId: reviews_helpful_create
-      description: POST/DELETE `/api/reviews/<id>/helpful/` — toggle a helpful vote.
+      description: Idempotent on repeat calls. Combine with ``DELETE`` to toggle.
+        Returns the new aggregate ``helpful_count`` and the viewer's current vote
+        state.
+      summary: Cast a 'helpful' vote on a review
       parameters:
       - in: path
         name: id
@@ -1060,10 +1063,28 @@ paths:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewHelpfulResponse'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewHelpfulResponse'
+          description: ''
+        '400':
+          description: Cannot vote on your own review.
+        '401':
+          description: Authentication required.
+        '404':
+          description: Review not found.
     delete:
       operationId: reviews_helpful_destroy
-      description: POST/DELETE `/api/reviews/<id>/helpful/` — toggle a helpful vote.
+      description: Idempotent — safe to call when the user has not voted. Returns
+        the new aggregate ``helpful_count`` and ``voted=false``.
+      summary: Remove a 'helpful' vote on a review
       parameters:
       - in: path
         name: id
@@ -1075,8 +1096,16 @@ paths:
       security:
       - jwtAuth: []
       responses:
-        '204':
-          description: No response body
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewHelpfulResponse'
+          description: ''
+        '401':
+          description: Authentication required.
+        '404':
+          description: Review not found.
   /api/reviews/moderation/:
     get:
       operationId: reviews_moderation_list
@@ -3189,6 +3218,17 @@ components:
         helpful_count:
           type: integer
           readOnly: true
+        viewer_voted:
+          type: boolean
+          description: |-
+            Whether the *current* request user has cast a helpful vote.
+
+            Always ``False`` for anonymous viewers. Reads from a prefetched
+            per-request attribute (``viewer_votes``) when the queryset has
+            been prepared by the view — see
+            :meth:`reviews.views.with_viewer_votes_prefetch` — so listing
+            endpoints never trigger an N+1.
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -3207,6 +3247,7 @@ components:
       - place
       - place_name
       - score
+      - viewer_voted
     ReviewCreate:
       type: object
       properties:
@@ -3257,6 +3298,16 @@ components:
           nullable: true
       required:
       - score
+    ReviewHelpfulResponse:
+      type: object
+      properties:
+        helpful_count:
+          type: integer
+        voted:
+          type: boolean
+      required:
+      - helpful_count
+      - voted
     ReviewRequest:
       type: object
       properties:

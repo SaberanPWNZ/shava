@@ -308,9 +308,12 @@ Suggested closing comment template:
 **Labels:** `backend`, `gamification`, `P3`
 
 **Acceptance criteria.**
-- [ ] `POST /reviews/{id}/helpful/` toggles vote (auth required).
-- [ ] Aggregated `helpful_count` returned in review serializer.
-- [ ] Points awarded via existing `PointsService.award` signal flow.
+- [x] `POST /reviews/{id}/helpful/` toggles vote (auth required) — POST is
+      idempotent-add, `DELETE` removes; clients toggle by reading
+      `viewer_voted` and dispatching the appropriate verb.
+- [x] Aggregated `helpful_count` returned in review serializer (plus the
+      new `viewer_voted` flag — prefetched per request to avoid N+1).
+- [x] Points awarded via existing `PointsService.award` signal flow.
 
 ---
 

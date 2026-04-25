@@ -385,9 +385,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST/DELETE `/api/reviews/<id>/helpful/` — toggle a helpful vote. */
+        /**
+         * Cast a 'helpful' vote on a review
+         * @description Idempotent on repeat calls. Combine with ``DELETE`` to toggle. Returns the new aggregate ``helpful_count`` and the viewer's current vote state.
+         */
         post: operations["reviews_helpful_create"];
-        /** @description POST/DELETE `/api/reviews/<id>/helpful/` — toggle a helpful vote. */
+        /**
+         * Remove a 'helpful' vote on a review
+         * @description Idempotent — safe to call when the user has not voted. Returns the new aggregate ``helpful_count`` and ``voted=false``.
+         */
         delete: operations["reviews_helpful_destroy"];
         options?: never;
         head?: never;
@@ -1431,6 +1437,16 @@ export interface components {
             /** @description Set by a moderator after checking the receipt photo. */
             readonly is_verified: boolean;
             readonly helpful_count: number;
+            /**
+             * @description Whether the *current* request user has cast a helpful vote.
+             *
+             *     Always ``False`` for anonymous viewers. Reads from a prefetched
+             *     per-request attribute (``viewer_votes``) when the queryset has
+             *     been prepared by the view — see
+             *     :meth:`reviews.views.with_viewer_votes_prefetch` — so listing
+             *     endpoints never trigger an N+1.
+             */
+            readonly viewer_voted: boolean;
             /** Format: date-time */
             readonly created_at: string;
             readonly is_moderated: boolean;
@@ -1452,6 +1468,10 @@ export interface components {
             dish_image?: string | null;
             /** Format: binary */
             receipt_image?: string | null;
+        };
+        ReviewHelpfulResponse: {
+            helpful_count: number;
+            voted: boolean;
         };
         ReviewRequest: {
             place: number;
@@ -2495,8 +2515,38 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewHelpfulResponse"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewHelpfulResponse"];
+                };
+            };
+            /** @description Cannot vote on your own review. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Review not found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2515,8 +2565,23 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
-            204: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewHelpfulResponse"];
+                };
+            };
+            /** @description Authentication required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Review not found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

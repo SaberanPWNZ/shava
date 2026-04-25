@@ -358,3 +358,56 @@ class HelpfulVoteApiTests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.review.refresh_from_db()
         self.assertEqual(self.review.helpful_count, 0)
+
+    # ------------------------------------------------------------------
+    # ``viewer_voted`` field on ReviewSerializer (Roadmap 8.2)
+    # ------------------------------------------------------------------
+
+    def _list_url(self) -> str:
+        return f"/api/reviews/reviews/{self.place.id}/"
+
+    def _approve(self) -> None:
+        # Make the review visible to anonymous + non-author viewers.
+        self.review.is_moderated = True
+        self.review.save(update_fields=["is_moderated"])
+
+    def _row(self, payload):
+        # The list endpoint returns a paginated dict in some configs and a
+        # bare list in others; tolerate both shapes.
+        data = payload.get("results", payload) if isinstance(payload, dict) else payload
+        return next(r for r in data if r["id"] == self.review.id)
+
+    def test_viewer_voted_false_for_anonymous(self):
+        self._approve()
+        resp = self.client.get(self._list_url())
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertFalse(self._row(resp.data)["viewer_voted"])
+
+    def test_viewer_voted_true_after_voting(self):
+        self._approve()
+        self._login_as("voter@example.com")
+        self.client.post(f"/api/reviews/{self.review.id}/helpful/")
+        resp = self.client.get(self._list_url())
+        self.assertTrue(self._row(resp.data)["viewer_voted"])
+
+    def test_viewer_voted_false_after_unvoting(self):
+        self._approve()
+        self._login_as("voter@example.com")
+        self.client.post(f"/api/reviews/{self.review.id}/helpful/")
+        self.client.delete(f"/api/reviews/{self.review.id}/helpful/")
+        resp = self.client.get(self._list_url())
+        self.assertFalse(self._row(resp.data)["viewer_voted"])
+
+    def test_viewer_voted_does_not_leak_across_users(self):
+        self._approve()
+        self._login_as("voter@example.com")
+        self.client.post(f"/api/reviews/{self.review.id}/helpful/")
+        # Different (non-voting) user logs in: viewer_voted must be False.
+        other = User.objects.create_user(
+            email="bystander@example.com", password="StrongPass!234"
+        )
+        self._login_as(other.email)
+        resp = self.client.get(self._list_url())
+        row = self._row(resp.data)
+        self.assertEqual(row["helpful_count"], 1)
+        self.assertFalse(row["viewer_voted"])
