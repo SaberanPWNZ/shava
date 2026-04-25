@@ -10,8 +10,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
+from users.authentication import BanAwareJWTAuthentication as JWTAuthentication
 from users.models import User
 from users.permissions import IsAdmin, IsSelfOrAdmin
 from users.serializers import (
@@ -143,3 +143,42 @@ class UserViewSet(viewsets.ModelViewSet):
             if not is_admin:
                 return UserPublicSerializer
         return UserAdminSerializer
+
+
+class UserBanView(APIView):
+    """Admin-only: ban or unban a user.
+
+    ``POST /api/users/<id>/ban/``    — set ``is_banned=True``.
+    ``POST /api/users/<id>/unban/``  — set ``is_banned=False``.
+    Optional JSON body: ``{"reason": "..."}`` (informational, not stored
+    server-side in MVP — surfaced in the response only).
+    """
+
+    permission_classes = [IsAuthenticated, IsAdmin]
+    authentication_classes = [JWTAuthentication]
+
+    def post(self, request, pk: int, action: str):
+        try:
+            target = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        if target == request.user:
+            return Response(
+                {"detail": "You cannot ban yourself."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if action == "ban":
+            target.is_banned = True
+        elif action == "unban":
+            target.is_banned = False
+        else:  # pragma: no cover - URL conf restricts values
+            return Response(
+                {"detail": "Unknown action."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        target.save(update_fields=["is_banned"])
+        return Response(UserAdminSerializer(target).data)

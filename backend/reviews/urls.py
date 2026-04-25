@@ -1,6 +1,8 @@
 from django.urls import path, include, re_path
 from rest_framework.routers import SimpleRouter
 
+from gamification.views import ReviewHelpfulView
+
 from .views import (
     PlaceReviewsListCreateView,
     ReviewCreateView,
@@ -24,6 +26,12 @@ urlpatterns = [
         r"^(?P<pk>\d+)/(?P<action_name>approve|reject)/$",
         ReviewModerationActionView.as_view(),
         name="review-moderation-action",
+    ),
+    # Helpful votes (gamification integration)
+    path(
+        "<int:pk>/helpful/",
+        ReviewHelpfulView.as_view(),
+        name="review-helpful",
     ),
     # Public list of approved reviews for a place
     path(

@@ -1,6 +1,7 @@
 export interface Place {
 	id: number;
 	name: string;
+	city?: string;
 	district: string;
 	address: string;
 	delivery: boolean;
@@ -60,6 +61,10 @@ export interface Review {
 	author_username?: string;
 	score: string;
 	comment?: string | null;
+	dish_image?: string | null;
+	receipt_image?: string | null;
+	is_verified?: boolean;
+	helpful_count?: number;
 	created_at: string;
 	is_moderated: boolean;
 }

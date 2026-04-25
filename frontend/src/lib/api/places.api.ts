@@ -74,10 +74,15 @@ export const reviewsApi = {
 	listForPlace(placeId: number | string): Promise<Paginated<Review>> {
 		return apiFetch<Paginated<Review>>(`/places/${placeId}/reviews/`, { auth: false });
 	},
-	create(placeId: number, payload: { score: string | number; comment?: string }): Promise<Review> {
+	create(
+		placeId: number,
+		payload: FormData | { score: string | number; comment?: string }
+	): Promise<Review> {
+		const isFormData = typeof FormData !== 'undefined' && payload instanceof FormData;
 		return apiFetch<Review>(`/places/${placeId}/reviews/`, {
 			method: 'POST',
-			body: payload
+			body: payload,
+			rawBody: isFormData
 		});
 	},
 	moderationList(): Promise<Paginated<Review>> {

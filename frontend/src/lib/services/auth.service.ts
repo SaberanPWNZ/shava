@@ -2,6 +2,7 @@ import { goto } from '$app/navigation';
 import { authApi } from '$lib/api/auth.api';
 import { tokenStorage } from '$lib/api/client';
 import { authStore } from '$lib/stores/auth.svelte';
+import { gamificationService } from '$lib/services/gamification.service';
 import type { User } from '$lib/types/auth';
 
 export const authService = {
@@ -15,6 +16,7 @@ export const authService = {
 		try {
 			const user = await authApi.me();
 			authStore.setUser(user);
+			void gamificationService.refreshMe();
 		} catch {
 			tokenStorage.clear();
 			authStore.reset();
@@ -29,12 +31,14 @@ export const authService = {
 		const user = await authApi.me();
 		authStore.setUser(user);
 		authStore.setHydrated(true);
+		void gamificationService.refreshMe();
 		return user;
 	},
 
 	async logout(redirectTo = '/login'): Promise<void> {
 		await authApi.logout();
 		authStore.reset();
+		gamificationService.reset();
 		await goto(redirectTo);
 	}
 };

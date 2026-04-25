@@ -44,7 +44,7 @@ class PlaceViewsTest(APITestCase):
         """Test successful place creation"""
         data = {
             "name": "New Place",
-            "district": "Dnipro",
+            "city": "Київ",
             "address": "New Address",
             "delivery": True,
             "latitude": "50.4501",
@@ -174,3 +174,72 @@ class PlaceModelValidationTest(TestCase):
             main_image="test.jpg",
         )
         self.assertIsNone(place_no_coords.google_maps_url())
+
+
+class PlaceCreateRequiredFieldsTest(APITestCase):
+    """City and map coordinates are required when submitting a new place."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="creator@example.com", password="testpass123", username="creator"
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def _image(self):
+        image = Image.new("RGB", (10, 10), color="red")
+        buf = io.BytesIO()
+        image.save(buf, format="PNG")
+        buf.seek(0)
+        return SimpleUploadedFile("t.png", buf.getvalue(), content_type="image/png")
+
+    def _payload(self, **overrides):
+        data = {
+            "name": "My Place",
+            "city": "Київ",
+            "address": "Some street 1",
+            "delivery": True,
+            "latitude": "50.4501",
+            "longitude": "30.5234",
+            "description": "X",
+            "main_image": self._image(),
+        }
+        data.update(overrides)
+        return data
+
+    def test_create_requires_city(self):
+        data = self._payload()
+        data.pop("city")
+        resp = self.client.post(
+            "/api/places/create-place/", data, format="multipart"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("city", resp.data)
+
+    def test_create_requires_latitude(self):
+        data = self._payload()
+        data.pop("latitude")
+        resp = self.client.post(
+            "/api/places/create-place/", data, format="multipart"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("latitude", resp.data)
+
+    def test_create_requires_longitude(self):
+        data = self._payload()
+        data.pop("longitude")
+        resp = self.client.post(
+            "/api/places/create-place/", data, format="multipart"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("longitude", resp.data)
+
+    def test_create_goes_to_moderation(self):
+        resp = self.client.post(
+            "/api/places/create-place/", self._payload(), format="multipart"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        place = Place.objects.get(name="My Place")
+        self.assertEqual(place.status, "On_moderation")
+        self.assertEqual(place.city, "Київ")
+        self.assertEqual(str(place.latitude), "50.450100")
+        self.assertEqual(str(place.longitude), "30.523400")

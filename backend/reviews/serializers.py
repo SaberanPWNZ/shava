@@ -18,10 +18,21 @@ class ReviewSerializer(serializers.ModelSerializer):
             "author_username",
             "score",
             "comment",
+            "dish_image",
+            "receipt_image",
+            "is_verified",
+            "helpful_count",
             "created_at",
             "is_moderated",
         ]
-        read_only_fields = ["id", "author", "created_at", "is_moderated"]
+        read_only_fields = [
+            "id",
+            "author",
+            "created_at",
+            "is_moderated",
+            "is_verified",
+            "helpful_count",
+        ]
 
 
 class ReviewCreateSerializer(serializers.ModelSerializer):
@@ -31,6 +42,8 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
             "place",
             "score",
             "comment",
+            "dish_image",
+            "receipt_image",
         ]
         extra_kwargs = {
             # When the place is supplied via URL kwargs (nested route), the

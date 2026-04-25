@@ -3,15 +3,17 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
+	import MapPicker from '$lib/components/places/MapPicker.svelte';
 	import { placesApi } from '$lib/api/places.api';
 	import { ApiError, type FieldErrors } from '$lib/types/auth';
 
 	let name = $state('');
-	let district = $state('Unknown');
+	let city = $state('Київ');
 	let address = $state('');
 	let description = $state('');
 	let delivery = $state(false);
 	let mainImage = $state<File | null>(null);
+	let coords = $state<{ lat: number; lng: number } | null>(null);
 
 	let submitting = $state(false);
 	let success = $state(false);
@@ -33,22 +35,32 @@
 		formError = null;
 		fieldErrors = {};
 		success = false;
+
+		if (!coords) {
+			formError = 'Please pick a location on the map.';
+			submitting = false;
+			return;
+		}
+
 		try {
 			const data = new FormData();
 			data.set('name', name);
-			data.set('district', district);
+			data.set('city', city);
 			data.set('address', address);
 			data.set('description', description);
 			data.set('delivery', String(delivery));
+			data.set('latitude', coords.lat.toFixed(6));
+			data.set('longitude', coords.lng.toFixed(6));
 			if (mainImage) data.set('main_image', mainImage);
 			await placesApi.create(data);
 			success = true;
 			name = '';
-			district = 'Unknown';
+			city = 'Київ';
 			address = '';
 			description = '';
 			delivery = false;
 			mainImage = null;
+			coords = null;
 		} catch (error) {
 			if (error instanceof ApiError) {
 				fieldErrors = error.fieldErrors;
@@ -75,25 +87,13 @@
 
 		<form class="flex flex-col gap-4" onsubmit={submit} novalidate>
 			<Input id="place-name" label="Name" required bind:value={name} error={fieldError('name')} />
-			<label class="flex flex-col gap-1 text-sm">
-				<span class="font-medium text-zinc-700 dark:text-zinc-300">District</span>
-				<select
-					bind:value={district}
-					class="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-				>
-					<option value="Unknown">Unknown</option>
-					<option value="Dnipro">Дніпровський</option>
-					<option value="Desna">Деснянський</option>
-					<option value="Solomyanka">Солом'янський</option>
-					<option value="Shevchenko">Шевченківський</option>
-					<option value="Pechersk">Печерський</option>
-					<option value="Obolon">Оболонський</option>
-					<option value="Podil">Подільський</option>
-					<option value="Svyatoshyn">Святошинський</option>
-					<option value="Holosiiv">Голосіївський</option>
-					<option value="Darnytsia">Дарницький</option>
-				</select>
-			</label>
+			<Input
+				id="place-city"
+				label="City"
+				required
+				bind:value={city}
+				error={fieldError('city')}
+			/>
 			<Input
 				id="place-address"
 				label="Address"
@@ -113,6 +113,27 @@
 				<input type="checkbox" bind:checked={delivery} class="rounded" />
 				Delivery available
 			</label>
+
+			<div class="flex flex-col gap-1 text-sm">
+				<span class="font-medium text-zinc-700 dark:text-zinc-300">
+					Location <span class="text-red-600">*</span>
+				</span>
+				<p class="text-xs text-zinc-500 dark:text-zinc-400">
+					Click on the map or drag the marker to pin the exact spot.
+				</p>
+				<MapPicker bind:value={coords} />
+				{#if coords}
+					<p class="text-xs text-zinc-600 dark:text-zinc-400">
+						Selected: {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
+					</p>
+				{/if}
+				{#if fieldError('latitude') || fieldError('longitude')}
+					<p class="text-sm text-red-600">
+						{fieldError('latitude') ?? fieldError('longitude')}
+					</p>
+				{/if}
+			</div>
+
 			<label class="flex flex-col gap-1 text-sm">
 				<span class="font-medium text-zinc-700 dark:text-zinc-300">Main image</span>
 				<input type="file" accept="image/*" onchange={onFile} class="text-sm" />

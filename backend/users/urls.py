@@ -6,6 +6,7 @@ from .views import (
     LogoutView,
     MeView,
     RegisterView,
+    UserBanView,
     UserViewSet,
 )
 from .jwt_views import EmailTokenObtainPairView
@@ -25,6 +26,18 @@ urlpatterns = [
     ),
     # Admin
     path("list/", UserViewSet.as_view({"get": "list"}), name="user-list"),
+    path(
+        "<int:pk>/ban/",
+        UserBanView.as_view(),
+        {"action": "ban"},
+        name="user-ban",
+    ),
+    path(
+        "<int:pk>/unban/",
+        UserBanView.as_view(),
+        {"action": "unban"},
+        name="user-unban",
+    ),
     path(
         "<int:pk>/",
         UserViewSet.as_view(

@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "ingredients",
     "places_menu",
     "articles",
+    "gamification",
 ]
 
 MIDDLEWARE = [
@@ -152,7 +153,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "users.authentication.BanAwareJWTAuthentication",
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
@@ -166,6 +167,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "auth": os.getenv("THROTTLE_AUTH", "5/min"),
         "register": os.getenv("THROTTLE_REGISTER", "10/hour"),
+        "helpful": os.getenv("THROTTLE_HELPFUL", "30/min"),
     },
     "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
