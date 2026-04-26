@@ -179,10 +179,24 @@ Suggested closing comment template:
 **Labels:** `backend`, `infra`, `P3`
 
 **Acceptance criteria.**
-- [ ] `DEFAULT_FILE_STORAGE` switchable via env between local and S3-compatible.
-- [ ] `docker-compose.yml` adds MinIO for local dev.
-- [ ] Avatar / place photo / review photo upload paths use the storage
-      backend transparently.
+- [x] `DEFAULT_FILE_STORAGE` switchable via env between local and S3-compatible.
+      Implemented as Django 5's `STORAGES` dict gated on `USE_S3_STORAGE`
+      in `backend/config/settings.py`. Off → `FileSystemStorage` (default
+      Django behaviour, dev/tests untouched). On → `storages.backends.s3.S3Storage`
+      with env-driven options (`AWS_STORAGE_BUCKET_NAME`, `AWS_S3_ENDPOINT_URL`,
+      keys, region, addressing style, custom domain, public URL). Loud
+      `ImproperlyConfigured` error when bucket name is missing.
+- [x] `docker-compose.yml` adds MinIO for local dev. `minio` service
+      (S3 API + admin console, bound to 127.0.0.1) plus a one-shot
+      `minio_init` container that idempotently creates the bucket and
+      makes it public-read via `mc anonymous set download`.
+- [x] Avatar / place photo / review photo upload paths use the storage
+      backend transparently. All `ImageField`s
+      (`users.User.avatar`, `places.Place.main_image`, `places.PlaceImage.image`,
+      `reviews.Review.dish_image`/`receipt_image`, `articles.Article.cover_image`,
+      etc.) flow through `STORAGES["default"]`; easy-thumbnails inherits
+      the same backend, so srcset thumbnails are written to the same
+      bucket. No model changes were needed.
 
 ---
 

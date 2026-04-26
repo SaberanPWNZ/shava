@@ -100,9 +100,9 @@ MIDDLEWARE = [
 
 # Sunset date advertised on legacy /api/ responses (RFC 8594). Override via
 # env if you want to push the deadline; ``None`` omits the header.
-API_LEGACY_SUNSET_DATE = os.getenv(
-    "API_LEGACY_SUNSET_DATE", "Wed, 01 Oct 2026 00:00:00 GMT"
-) or None
+API_LEGACY_SUNSET_DATE = (
+    os.getenv("API_LEGACY_SUNSET_DATE", "Wed, 01 Oct 2026 00:00:00 GMT") or None
+)
 
 # django-axes — brute-force protection. Layered on top of the existing DRF
 # ScopedRateThrottle (which limits *rate*) by tracking *failures* per
@@ -271,6 +271,74 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+
+# ----- File storage (django-storages, S3/MinIO when enabled) -----------------
+# By default we use Django's FileSystemStorage so dev / tests stay fully
+# self-contained. Flip ``USE_S3_STORAGE=True`` to route every model
+# ``ImageField`` / ``FileField`` (and easy-thumbnails) through the S3
+# backend — works against AWS S3 or any S3-compatible service (MinIO,
+# Cloudflare R2, DigitalOcean Spaces) by setting ``AWS_S3_ENDPOINT_URL``.
+# Static assets keep the default ``StaticFilesStorage`` because we serve
+# them from nginx in production; only user uploads need the object store.
+USE_S3_STORAGE = _env_bool("USE_S3_STORAGE", False)
+if USE_S3_STORAGE:
+    AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "").strip()
+    if not AWS_STORAGE_BUCKET_NAME:
+        raise ImproperlyConfigured(
+            "USE_S3_STORAGE=True but AWS_STORAGE_BUCKET_NAME is empty."
+        )
+    # Build the S3Storage option dict, dropping empty strings so
+    # ``django-storages`` falls back to its own defaults (e.g. region
+    # ``us-east-1`` and the AWS endpoint when no MinIO is configured).
+    _s3_options: dict[str, object] = {
+        "bucket_name": AWS_STORAGE_BUCKET_NAME,
+        "region_name": os.getenv("AWS_S3_REGION_NAME", "us-east-1"),
+        # MinIO / Cloudflare R2 / Backblaze B2 etc. require ``path`` style
+        # addressing; AWS itself accepts both. ``path`` is the safe default.
+        "addressing_style": os.getenv("AWS_S3_ADDRESSING_STYLE", "path"),
+        # Don't generate a fresh signed URL on every render — uploads are
+        # public-read in this app (place photos, avatars, review images)
+        # and signed URLs would defeat CDN caching.
+        "querystring_auth": _env_bool("AWS_S3_QUERYSTRING_AUTH", default=False),
+        # Keep historical filenames; uploads are content-hashed by the
+        # caller when uniqueness matters (see ``common.thumbnails``).
+        "file_overwrite": _env_bool("AWS_S3_FILE_OVERWRITE", default=False),
+        "use_ssl": _env_bool("AWS_S3_USE_SSL", default=True),
+        # Optional prefix inside the bucket so static and media can share
+        # one bucket if needed; defaults to no prefix.
+        "location": os.getenv("AWS_S3_LOCATION", ""),
+    }
+    _endpoint = os.getenv("AWS_S3_ENDPOINT_URL", "").strip()
+    if _endpoint:
+        _s3_options["endpoint_url"] = _endpoint
+    _access = os.getenv("AWS_S3_ACCESS_KEY_ID", "").strip()
+    _secret = os.getenv("AWS_S3_SECRET_ACCESS_KEY", "").strip()
+    if _access and _secret:
+        _s3_options["access_key"] = _access
+        _s3_options["secret_key"] = _secret
+    _custom_domain = os.getenv("AWS_S3_CUSTOM_DOMAIN", "").strip()
+    if _custom_domain:
+        _s3_options["custom_domain"] = _custom_domain
+    _default_acl = os.getenv("AWS_S3_DEFAULT_ACL", "").strip()
+    if _default_acl:
+        _s3_options["default_acl"] = _default_acl
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": _s3_options,
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+    # Public URL prefix used by serializers when surfacing image URLs to
+    # the API. Override with ``AWS_S3_PUBLIC_URL`` when fronting MinIO
+    # with a CDN; otherwise we let ``S3Storage.url()`` synthesize it.
+    _public_url = os.getenv("AWS_S3_PUBLIC_URL", "").strip()
+    if _public_url:
+        MEDIA_URL = _public_url.rstrip("/") + "/"
 
 
 # ----- Image thumbnails (easy-thumbnails) ------------------------------------
