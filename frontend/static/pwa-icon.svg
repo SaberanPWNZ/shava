@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Shava</title>
+  <rect width="512" height="512" rx="96" fill="#ea580c"/>
+  <g fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M256 96c-72 0-128 60-128 152 0 24 6 46 16 64h224c10-18 16-40 16-64 0-92-56-152-128-152z" fill="#fb923c"/>
+    <path d="M148 312h216l-24 88c-4 14-16 24-30 24H202c-14 0-26-10-30-24z" fill="#fef3c7"/>
+    <path d="M192 156c20 12 32 32 32 56M256 140v60M320 156c-20 12-32 32-32 56"/>
+    <path d="M180 360h152M188 392h136"/>
+  </g>
+</svg>

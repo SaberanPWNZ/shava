@@ -80,7 +80,7 @@
 					aria-selected={period === p.value}
 					onclick={() => selectPeriod(p.value)}
 					class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {period === p.value
-						? 'bg-orange-600 text-white shadow-sm'
+						? 'bg-orange-700 text-white shadow-sm'
 						: 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800'}"
 				>
 					{p.label}
@@ -106,7 +106,7 @@
 					<li class="flex items-center gap-4 py-3">
 						<span
 							class="w-8 shrink-0 text-right font-mono text-sm font-semibold {idx < 3
-								? 'text-orange-600 dark:text-orange-400'
+								? 'text-orange-700 dark:text-orange-400'
 								: 'text-zinc-500 dark:text-zinc-400'}"
 							aria-label={`Rank ${idx + 1}`}
 						>

@@ -68,6 +68,16 @@
 	onMount(load);
 </script>
 
+<Seo
+	title={place?.name ?? 'Place'}
+	description={place?.description ??
+		(place
+			? `${place.name} — ${place.stars?.toFixed(1) ?? '?'}★ from ${place.ratings_count} ratings on Shava.`
+			: 'Place details on Shava.')}
+	image={place?.main_image ?? ''}
+	type="article"
+/>
+
 {#if loading}
 	<div class="flex flex-col gap-6" aria-busy="true">
 		<Skeleton class="h-8 w-2/3" rounded="md" />
@@ -78,13 +88,6 @@
 {:else if error}
 	<Alert variant="error">{error}</Alert>
 {:else if place}
-	<Seo
-		title={place.name}
-		description={place.description ??
-			`${place.name} — ${place.stars?.toFixed(1) ?? '?'}★ from ${place.ratings_count} ratings on Shava.`}
-		image={place.main_image ?? ''}
-		type="article"
-	/>
 	<article class="flex flex-col gap-6">
 		<header class="flex flex-col gap-3">
 			<h1 class="text-2xl font-bold text-zinc-900 sm:text-3xl dark:text-zinc-100">
@@ -130,7 +133,7 @@
 				<ReviewForm placeId={id} oncreated={onReviewCreated} />
 			{:else}
 				<p class="text-sm text-zinc-500">
-					<a class="text-orange-600 hover:underline" href={`/login?next=/places/${id}`}>
+					<a class="text-orange-700 hover:underline" href={`/login?next=/places/${id}`}>
 						Sign in
 					</a>
 					to leave a review.

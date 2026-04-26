@@ -297,7 +297,7 @@
 					{:else if placesData && placesData.results.length === 0}
 						<p class="text-sm text-zinc-500 dark:text-zinc-400">
 							You haven't submitted any places yet.
-							<a class="text-orange-600 hover:underline" href="/places/new">Submit one</a>.
+							<a class="text-orange-700 hover:underline" href="/places/new">Submit one</a>.
 						</p>
 					{:else if placesData}
 						<ul class="flex flex-col gap-3">

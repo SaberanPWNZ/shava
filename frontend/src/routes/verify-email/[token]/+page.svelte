@@ -39,12 +39,12 @@
 		{:else if status === 'success'}
 			<Alert variant="success">{message}</Alert>
 			<p class="mt-4 text-center text-sm">
-				<a href="/" class="font-medium text-orange-600 hover:underline">На головну</a>
+				<a href="/" class="font-medium text-orange-700 hover:underline">На головну</a>
 			</p>
 		{:else}
 			<Alert variant="error">{message}</Alert>
 			<p class="mt-4 text-center text-sm text-zinc-600 dark:text-zinc-400">
-				<a href="/login" class="font-medium text-orange-600 hover:underline"
+				<a href="/login" class="font-medium text-orange-700 hover:underline"
 					>Повернутися до входу</a
 				>
 			</p>

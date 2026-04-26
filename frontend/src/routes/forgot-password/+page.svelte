@@ -44,7 +44,7 @@
 				Якщо адреса зареєстрована — на неї надіслано лист із посиланням для скидання пароля.
 			</Alert>
 			<p class="mt-4 text-center text-sm">
-				<a href="/login" class="font-medium text-orange-600 hover:underline"
+				<a href="/login" class="font-medium text-orange-700 hover:underline"
 					>Повернутися до входу</a
 				>
 			</p>
@@ -65,7 +65,7 @@
 				<Button type="submit" loading={submitting}>Надіслати посилання</Button>
 			</form>
 			<p class="mt-4 text-center text-sm text-zinc-600 dark:text-zinc-400">
-				<a href="/login" class="font-medium text-orange-600 hover:underline"
+				<a href="/login" class="font-medium text-orange-700 hover:underline"
 					>Повернутися до входу</a
 				>
 			</p>

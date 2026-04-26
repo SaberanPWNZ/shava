@@ -33,8 +33,8 @@
 		type="article"
 	/>
 	<article class="mx-auto flex max-w-3xl flex-col gap-4 py-6">
-		<a href="/articles" class="text-sm text-orange-600 hover:underline">← Back to articles</a>
-		<span class="text-xs font-medium tracking-wide text-orange-600 uppercase">
+		<a href="/articles" class="text-sm text-orange-700 hover:underline">← Back to articles</a>
+		<span class="text-xs font-medium tracking-wide text-orange-700 uppercase">
 			{article.category}
 		</span>
 		<h1 class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">{article.title}</h1>

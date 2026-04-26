@@ -2,7 +2,7 @@
 	import { gamificationStore } from '$lib/stores/gamification.svelte';
 
 	const variantClass: Record<string, string> = {
-		points: 'bg-orange-600 text-white',
+		points: 'bg-orange-700 text-white',
 		level: 'bg-amber-500 text-white',
 		badge: 'bg-emerald-600 text-white'
 	};

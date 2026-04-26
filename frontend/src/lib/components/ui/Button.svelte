@@ -17,7 +17,7 @@
 	}>();
 
 	const variants: Record<Variant, string> = {
-		primary: 'bg-orange-600 text-white hover:bg-orange-700',
+		primary: 'bg-orange-700 text-white hover:bg-orange-800',
 		secondary:
 			'border border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800',
 		danger: 'bg-red-600 text-white hover:bg-red-700',

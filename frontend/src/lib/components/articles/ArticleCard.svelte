@@ -17,7 +17,7 @@
 		class="h-44 w-full object-cover"
 	/>
 	<div class="p-4">
-		<span class="text-xs font-medium tracking-wide text-orange-600 uppercase">
+		<span class="text-xs font-medium tracking-wide text-orange-700 uppercase">
 			{article.category}
 		</span>
 		<h3 class="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">

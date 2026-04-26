@@ -27,24 +27,24 @@
 	<div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
 		<a
 			href="/"
-			class="rounded-md text-lg font-bold text-orange-600 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-zinc-900"
+			class="rounded-md text-lg font-bold text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-zinc-900"
 		>
 			Shava
 		</a>
 
 		<!-- Desktop nav -->
 		<nav class="hidden flex-wrap items-center gap-4 text-sm md:flex" aria-label="Primary">
-			<a href="/places" class="text-zinc-700 hover:text-orange-600 dark:text-zinc-200">Places</a>
-			<a href="/articles" class="text-zinc-700 hover:text-orange-600 dark:text-zinc-200">Articles</a>
-			<a href="/leaderboard" class="text-zinc-700 hover:text-orange-600 dark:text-zinc-200">
+			<a href="/places" class="text-zinc-700 hover:text-orange-700 dark:text-zinc-200">Places</a>
+			<a href="/articles" class="text-zinc-700 hover:text-orange-700 dark:text-zinc-200">Articles</a>
+			<a href="/leaderboard" class="text-zinc-700 hover:text-orange-700 dark:text-zinc-200">
 				Leaderboard
 			</a>
 			{#if authStore.isAuthenticated}
 				<PointsBadge />
-				<a href="/places/new" class="text-zinc-700 hover:text-orange-600 dark:text-zinc-200">
+				<a href="/places/new" class="text-zinc-700 hover:text-orange-700 dark:text-zinc-200">
 					Submit place
 				</a>
-				<a href="/profile" class="text-zinc-700 hover:text-orange-600 dark:text-zinc-200">Profile</a>
+				<a href="/profile" class="text-zinc-700 hover:text-orange-700 dark:text-zinc-200">Profile</a>
 				{#if authStore.isAdmin}
 					<a
 						href="/admin/moderation"
@@ -56,15 +56,15 @@
 				<button
 					type="button"
 					onclick={logout}
-					class="text-zinc-700 hover:text-orange-600 dark:text-zinc-200"
+					class="text-zinc-700 hover:text-orange-700 dark:text-zinc-200"
 				>
 					Log out
 				</button>
 			{:else}
-				<a href="/login" class="text-zinc-700 hover:text-orange-600 dark:text-zinc-200">Log in</a>
+				<a href="/login" class="text-zinc-700 hover:text-orange-700 dark:text-zinc-200">Log in</a>
 				<a
 					href="/register"
-					class="rounded-lg bg-orange-600 px-3 py-1.5 font-semibold text-white hover:bg-orange-700"
+					class="rounded-lg bg-orange-700 px-3 py-1.5 font-semibold text-white hover:bg-orange-800"
 				>
 					Sign up
 				</a>
@@ -173,7 +173,7 @@
 				<li>
 					<a
 						href="/register"
-						class="block min-h-11 rounded-md bg-orange-600 px-3 py-2 font-semibold text-white hover:bg-orange-700"
+						class="block min-h-11 rounded-md bg-orange-700 px-3 py-2 font-semibold text-white hover:bg-orange-800"
 					>
 						Sign up
 					</a>

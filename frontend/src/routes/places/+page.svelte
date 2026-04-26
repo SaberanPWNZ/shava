@@ -115,7 +115,7 @@
 			<h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Places</h1>
 			<a
 				href="/places/new"
-				class="inline-flex min-h-11 items-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-zinc-950"
+				class="inline-flex min-h-11 items-center rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-zinc-950"
 			>
 				+ Submit a place
 			</a>
