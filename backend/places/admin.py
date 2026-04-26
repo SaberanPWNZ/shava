@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from places.models import City, Place, PlaceRating
+from places.models import City, ModerationLog, Place, PlaceRating
 
 
 @admin.register(City)
@@ -72,3 +72,12 @@ class PlaceRatingAdmin(admin.ModelAdmin):
 
 admin.site.register(Place, PlaceAdmin)
 admin.site.register(PlaceRating, PlaceRatingAdmin)
+
+
+@admin.register(ModerationLog)
+class ModerationLogAdmin(admin.ModelAdmin):
+    list_display = ("id", "created_at", "actor", "target_type", "target_id", "action")
+    list_filter = ("target_type", "action")
+    search_fields = ("actor__username", "reason")
+    readonly_fields = ("actor", "target_type", "target_id", "action", "reason", "created_at")
+    ordering = ("-created_at",)

@@ -23,9 +23,10 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
-from places.models import Place, PlaceRating
+from places.models import ModerationLog, Place, PlaceRating
 from places.permissions import IsAuthorOrAdminOrReadOnly
 from places.serializers import (
+    ModerationLogSerializer,
     PlaceCreateSerializer,
     PlaceDetailSerializer,
     PlaceRatingSerializer,
@@ -291,8 +292,30 @@ class PlaceModerationActionView(UpdateAPIView):
                 {"detail": "Unknown moderation action."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        ModerationLog.objects.create(
+            actor=request.user,
+            target_type=ModerationLog.TARGET_PLACE,
+            target_id=place.id,
+            action=action_name,
+            reason=reason or "",
+        )
         logger.info("Place %s %sd by %s", place.id, action_name, request.user)
         return Response(self.get_serializer(place).data)
+
+
+@extend_schema(
+    tags=["places"],
+    summary="List recent moderation actions (admin)",
+    responses={200: ModerationLogSerializer(many=True)},
+)
+class ModerationLogListView(ListAPIView):
+    """Admin-only paginated list of recent moderation actions."""
+
+    permission_classes = [IsAdminUser]
+    serializer_class = ModerationLogSerializer
+
+    def get_queryset(self):
+        return ModerationLog.objects.select_related("actor").all()
 
 
 @extend_schema(

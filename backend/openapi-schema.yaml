@@ -874,6 +874,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedPlaceList'
           description: ''
+  /api/v1/places/moderation/log/:
+    get:
+      operationId: places_moderation_log_list
+      description: Admin-only paginated list of recent moderation actions.
+      summary: List recent moderation actions (admin)
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - places
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedModerationLogList'
+          description: ''
   /api/v1/places/place/{id}/:
     get:
       operationId: places_place_retrieve
@@ -1140,13 +1175,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedReviewRequest'
+              $ref: '#/components/schemas/PatchedReviewModerationActionRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedReviewRequest'
+              $ref: '#/components/schemas/PatchedReviewModerationActionRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedReviewRequest'
+              $ref: '#/components/schemas/PatchedReviewModerationActionRequestRequest'
       security:
       - jwtAuth: []
       responses:
@@ -2147,6 +2182,14 @@ paths:
           description: Email transport failure.
 components:
   schemas:
+    ActionEnum:
+      enum:
+      - approve
+      - reject
+      type: string
+      description: |-
+        * `approve` - Approve
+        * `reject` - Reject
     ArticleDetail:
       type: object
       properties:
@@ -2534,6 +2577,48 @@ components:
         item:
           type: integer
           nullable: true
+    ModerationLog:
+      type: object
+      description: Read-only serializer for moderation audit-log entries.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        actor:
+          type: integer
+          readOnly: true
+          nullable: true
+        actor_username:
+          type: string
+          readOnly: true
+          default: ''
+        target_type:
+          allOf:
+          - $ref: '#/components/schemas/TargetTypeEnum'
+          readOnly: true
+        target_id:
+          type: integer
+          readOnly: true
+        action:
+          allOf:
+          - $ref: '#/components/schemas/ActionEnum'
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - action
+      - actor
+      - actor_username
+      - created_at
+      - id
+      - reason
+      - target_id
+      - target_type
     PaginatedArticleListList:
       type: object
       required:
@@ -2580,6 +2665,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MenuItem'
+    PaginatedModerationLogList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModerationLog'
     PaginatedPlaceList:
       type: object
       required:
@@ -2865,6 +2973,11 @@ components:
           maxLength: 100
         status:
           $ref: '#/components/schemas/StatusEnum'
+    PatchedReviewModerationActionRequestRequest:
+      type: object
+      properties:
+        reason:
+          type: string
     PatchedReviewRequest:
       type: object
       properties:
@@ -3747,6 +3860,14 @@ components:
         * `Rejected` - Відхилено
         * `Closed` - Закритий
         * `Archived` - Архівний
+    TargetTypeEnum:
+      enum:
+      - place
+      - review
+      type: string
+      description: |-
+        * `place` - Place
+        * `review` - Review
     TierEnum:
       enum:
       - bronze

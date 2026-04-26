@@ -311,6 +311,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/places/moderation/log/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List recent moderation actions (admin)
+         * @description Admin-only paginated list of recent moderation actions.
+         */
+        get: operations["places_moderation_log_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/places/place/{id}/": {
         parameters: {
             query?: never;
@@ -940,6 +960,12 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description * `approve` - Approve
+         *     * `reject` - Reject
+         * @enum {string}
+         */
+        ActionEnum: "approve" | "reject";
         ArticleDetail: {
             readonly id: number;
             title: string;
@@ -1089,6 +1115,19 @@ export interface components {
             is_available?: boolean;
             item?: number | null;
         };
+        /** @description Read-only serializer for moderation audit-log entries. */
+        ModerationLog: {
+            readonly id: number;
+            readonly actor: number | null;
+            /** @default  */
+            readonly actor_username: string;
+            readonly target_type: components["schemas"]["TargetTypeEnum"];
+            readonly target_id: number;
+            readonly action: components["schemas"]["ActionEnum"];
+            readonly reason: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
         PaginatedArticleListList: {
             /** @example 123 */
             count: number;
@@ -1118,6 +1157,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["MenuItem"][];
+        };
+        PaginatedModerationLogList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["ModerationLog"][];
         };
         PaginatedPlaceList: {
             /** @example 123 */
@@ -1270,6 +1324,9 @@ export interface components {
             website?: string | null;
             opening_hours?: string | null;
             status?: components["schemas"]["StatusEnum"];
+        };
+        PatchedReviewModerationActionRequestRequest: {
+            reason?: string;
         };
         PatchedReviewRequest: {
             place?: number;
@@ -1630,6 +1687,12 @@ export interface components {
          * @enum {string}
          */
         StatusEnum: "Active" | "Inactive" | "On_moderation" | "Approved" | "Rejected" | "Closed" | "Archived";
+        /**
+         * @description * `place` - Place
+         *     * `review` - Review
+         * @enum {string}
+         */
+        TargetTypeEnum: "place" | "review";
         /**
          * @description * `bronze` - Bronze
          *     * `silver` - Silver
@@ -2443,6 +2506,32 @@ export interface operations {
             };
         };
     };
+    places_moderation_log_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedModerationLogList"];
+                };
+            };
+        };
+    };
     places_place_retrieve: {
         parameters: {
             query?: never;
@@ -2676,9 +2765,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["PatchedReviewRequest"];
-                "multipart/form-data": components["schemas"]["PatchedReviewRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedReviewRequest"];
+                "application/json": components["schemas"]["PatchedReviewModerationActionRequestRequest"];
+                "multipart/form-data": components["schemas"]["PatchedReviewModerationActionRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedReviewModerationActionRequestRequest"];
             };
         };
         responses: {

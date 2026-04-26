@@ -212,3 +212,49 @@ class Place(models.Model):
     @property
     def ratings_count(self):
         return self.ratings.count()
+
+
+class ModerationLog(models.Model):
+    """Audit-log entry for a single moderation action on a Place or Review.
+
+    Kept loosely-coupled (string ``target_type`` + ``target_id``) so we can
+    log actions on objects from other apps without introducing a circular
+    import or a generic relation.
+    """
+
+    TARGET_PLACE = "place"
+    TARGET_REVIEW = "review"
+    TARGET_CHOICES = [
+        (TARGET_PLACE, "Place"),
+        (TARGET_REVIEW, "Review"),
+    ]
+
+    ACTION_APPROVE = "approve"
+    ACTION_REJECT = "reject"
+    ACTION_CHOICES = [
+        (ACTION_APPROVE, "Approve"),
+        (ACTION_REJECT, "Reject"),
+    ]
+
+    actor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="moderation_actions",
+    )
+    target_type = models.CharField(max_length=16, choices=TARGET_CHOICES)
+    target_id = models.PositiveIntegerField()
+    action = models.CharField(max_length=16, choices=ACTION_CHOICES)
+    reason = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["target_type", "target_id"]),
+            models.Index(fields=["-created_at"]),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover - cosmetic
+        return f"{self.action} {self.target_type}#{self.target_id} by {self.actor}"

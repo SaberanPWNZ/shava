@@ -2,6 +2,7 @@ from django.urls import include, path, re_path
 from rest_framework.routers import SimpleRouter
 
 from .views import (
+    ModerationLogListView,
     PlaceCreateView,
     PlaceDetailView,
     PlaceListView,
@@ -23,6 +24,11 @@ urlpatterns = [
     path("create-place/", PlaceCreateView.as_view(), name="create-place"),
     path("submit-place/", PlaceCreateView.as_view(), name="submit-place"),
     path("moderation/", PlaceModerationListView.as_view(), name="places-moderation"),
+    path(
+        "moderation/log/",
+        ModerationLogListView.as_view(),
+        name="moderation-log",
+    ),
     # Public detail (kept under /place/<pk>/ for back-compat with existing tests)
     path("place/<int:pk>/", PlaceDetailView.as_view(), name="place-detail"),
     # Per-place menu / reviews / moderation actions / rate

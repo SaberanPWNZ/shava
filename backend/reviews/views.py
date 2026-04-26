@@ -2,14 +2,18 @@ import logging
 
 from django.db.models import Prefetch, QuerySet
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import permissions, status, viewsets
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+    inline_serializer,
+)
+from rest_framework import permissions, serializers as drf_serializers, status, viewsets
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import ListAPIView, ListCreateAPIView, UpdateAPIView
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
-from places.models import Place
+from places.models import ModerationLog, Place
 from reviews.models import Review, ReviewHelpfulVote
 from reviews.serializers import ReviewCreateSerializer, ReviewSerializer
 
@@ -138,6 +142,10 @@ class ReviewModerationListView(ListAPIView):
 @extend_schema(
     tags=["reviews"],
     summary="Approve or reject a review (admin)",
+    request=inline_serializer(
+        name="ReviewModerationActionRequest",
+        fields={"reason": drf_serializers.CharField(required=False, allow_blank=True)},
+    ),
     responses={200: ReviewSerializer, 400: OpenApiResponse(description="Unknown action.")},
 )
 class ReviewModerationActionView(UpdateAPIView):
@@ -151,6 +159,7 @@ class ReviewModerationActionView(UpdateAPIView):
     def update(self, request, *args, **kwargs):
         review = self.get_object()
         action_name = self.kwargs.get("action_name")
+        reason = request.data.get("reason", "") if hasattr(request, "data") else ""
         if action_name == "approve":
             review.is_moderated = True
             review.is_deleted = False
@@ -168,6 +177,13 @@ class ReviewModerationActionView(UpdateAPIView):
                 {"detail": "Unknown moderation action."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        ModerationLog.objects.create(
+            actor=request.user,
+            target_type=ModerationLog.TARGET_REVIEW,
+            target_id=review.id,
+            action=action_name,
+            reason=reason or "",
+        )
         logger.info("Review %s %sd by %s", review.id, action_name, request.user)
         return Response(self.get_serializer(review).data)
 

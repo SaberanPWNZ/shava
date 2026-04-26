@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from config.thumbnails import thumbnail_set
-from places.models import Place, PlaceRating
+from places.models import ModerationLog, Place, PlaceRating
 
 
 class PlaceSerializer(ModelSerializer):
@@ -217,3 +217,25 @@ class PlaceDetailSerializer(PlaceSerializer):
 
         items = obj.menus.filter(is_available=True).order_by("category", "name")
         return MenuItemSerializer(items, many=True, context=self.context).data
+
+
+class ModerationLogSerializer(ModelSerializer):
+    """Read-only serializer for moderation audit-log entries."""
+
+    actor_username = serializers.CharField(
+        source="actor.username", read_only=True, default=""
+    )
+
+    class Meta:
+        model = ModerationLog
+        fields = [
+            "id",
+            "actor",
+            "actor_username",
+            "target_type",
+            "target_id",
+            "action",
+            "reason",
+            "created_at",
+        ]
+        read_only_fields = fields

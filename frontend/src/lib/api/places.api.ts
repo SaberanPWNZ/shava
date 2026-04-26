@@ -2,6 +2,7 @@ import { apiFetch } from '$lib/api/client';
 import type {
 	Article,
 	MenuItem,
+	ModerationLogEntry,
 	Paginated,
 	Place,
 	PlaceDetail,
@@ -42,6 +43,11 @@ export const placesApi = {
 	},
 	moderationList(): Promise<Paginated<Place>> {
 		return apiFetch<Paginated<Place>>('/places/moderation/');
+	},
+	moderationLog(page = 1): Promise<Paginated<ModerationLogEntry>> {
+		return apiFetch<Paginated<ModerationLogEntry>>(
+			`/places/moderation/log/${buildQuery({ page })}`
+		);
 	},
 	approve(id: number, reason = ''): Promise<Place> {
 		return apiFetch<Place>(`/places/${id}/approve/`, { method: 'PATCH', body: { reason } });
@@ -96,11 +102,11 @@ export const reviewsApi = {
 	moderationList(): Promise<Paginated<Review>> {
 		return apiFetch<Paginated<Review>>('/reviews/moderation/');
 	},
-	approve(id: number): Promise<Review> {
-		return apiFetch<Review>(`/reviews/${id}/approve/`, { method: 'PATCH' });
+	approve(id: number, reason = ''): Promise<Review> {
+		return apiFetch<Review>(`/reviews/${id}/approve/`, { method: 'PATCH', body: { reason } });
 	},
-	reject(id: number): Promise<Review> {
-		return apiFetch<Review>(`/reviews/${id}/reject/`, { method: 'PATCH' });
+	reject(id: number, reason = ''): Promise<Review> {
+		return apiFetch<Review>(`/reviews/${id}/reject/`, { method: 'PATCH', body: { reason } });
 	}
 };
 
