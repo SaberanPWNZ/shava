@@ -235,12 +235,33 @@ Suggested closing comment template:
 **Labels:** `frontend`, `infra`, `P2`
 
 **Acceptance criteria.**
-- [ ] `frontend/Dockerfile.prod` builds with `node` then serves with
-      `nginx`, copying `build/` artifacts.
-- [ ] Image size reduced vs current; documented in `DOCKER_README.md`.
+- [x] `frontend/Dockerfile.prod` builds with `node` (multi-stage:
+      `deps` → `builder` → `production`) and runs as the unprivileged
+      `node` user. Note: SvelteKit uses `@sveltejs/adapter-node` (SSR),
+      so the `build/` output is a Node server bundle, not static
+      files; the production stage runs `node build/index.js` and
+      `nginx` reverse-proxies to it (rather than serving `build/`
+      directly), as documented in `DOCKER_README.md`. nginx still
+      terminates TLS and serves Django static / media.
+- [x] Image size reduced vs the dev image and documented in
+      `DOCKER_README.md`: prod ~148 MB vs dev ~762 MB (~80 % smaller).
 
 #### 5.2 `docker-compose.dev.yml` with hot-reload + healthchecks
 **Labels:** `infra`, `dx`, `P3`
+
+**Acceptance criteria.**
+- [x] Dev compose file ships hot-reload via bind mounts.
+      Implemented as the canonical `docker-compose.yml` (the `*.dev.yml`
+      naming was abandoned in favour of "default = dev,
+      `docker-compose.prod.yml` = prod"; documented in
+      `DOCKER_README.md`). `web` mounts `./backend:/app`, `frontend`
+      mounts `./frontend:/app` so Django auto-reload and Vite HMR pick
+      up source changes without rebuilding.
+- [x] Healthchecks on stateful services. `db` (`pg_isready`), `redis`
+      (`redis-cli ping`), `minio` (`/minio/health/live`); `web`,
+      `celery_worker`, `celery_beat`, and `frontend` use
+      `depends_on: { db: service_healthy, redis: service_healthy }`
+      so they only start once the data plane is ready.
 
 #### 5.3 `Makefile` (or `justfile`) for common commands
 **Labels:** `dx`, `P3`

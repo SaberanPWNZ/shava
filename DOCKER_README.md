@@ -143,6 +143,16 @@ The configuration in this repository already enforces the following:
 - [x] **Healthchecks** on all services.
 - [x] **Multi-stage Python image** keeps build tools out of the final
       production image and reduces the attack surface.
+- [x] **Multi-stage SvelteKit image** (`frontend/Dockerfile.prod`):
+      separate `deps` / `builder` / `production` stages copy only the
+      built `build/` directory, pruned production `node_modules` and
+      `package.json` into a `node:20-alpine` runtime running as the
+      unprivileged `node` user with a baked-in healthcheck. Roughly
+      **148 MB** vs **762 MB** for the dev image (~80 % smaller).
+      Note: we serve the frontend via `node build/index.js` (SvelteKit
+      `@sveltejs/adapter-node`, SSR) rather than copying the build
+      output into nginx — `nginx` only fronts TLS / static / media and
+      reverse-proxies HTTP to the SvelteKit Node process on port 3000.
 - [x] **Pinned Docker base images** (`python:3.12-slim`, `node:20-alpine`,
       `postgres:15-alpine`, `nginx:1.27-alpine`).
 
