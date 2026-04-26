@@ -70,12 +70,13 @@ docker compose down -v         # stop and DROP the database
    ```
 
    For automated renewals add a host cron entry that copies the renewed
-   files into `./certs/` and reloads nginx inside the running container:
+   files into `./certs/` and reloads nginx inside the running container.
+   Replace `/opt/shava` with the absolute path to your checkout:
 
    ```cron
    0 3 * * * certbot renew --quiet --deploy-hook \
-       'cp /etc/letsencrypt/live/example.com/fullchain.pem /opt/shava/certs/ && \
-        cp /etc/letsencrypt/live/example.com/privkey.pem  /opt/shava/certs/ && \
+       'install -m 644 -o root -g root /etc/letsencrypt/live/example.com/fullchain.pem /opt/shava/certs/fullchain.pem && \
+        install -m 600 -o root -g root /etc/letsencrypt/live/example.com/privkey.pem  /opt/shava/certs/privkey.pem && \
         docker compose -f /opt/shava/docker-compose.prod.yml exec -T nginx nginx -s reload'
    ```
 
