@@ -19,10 +19,15 @@ function buildQuery(params: Record<string, unknown>): string {
 }
 
 export const placesApi = {
-	list(filters: PlaceFilters = {}): Promise<Paginated<Place>> {
-		return apiFetch<Paginated<Place>>(`/places/${buildQuery(filters as Record<string, unknown>)}`, {
+	list(filters: PlaceFilters = {}, page?: number): Promise<Paginated<Place>> {
+		const params = { ...filters } as Record<string, unknown>;
+		if (page) params.page = page;
+		return apiFetch<Paginated<Place>>(`/places/${buildQuery(params)}`, {
 			auth: false
 		});
+	},
+	myList(page = 1): Promise<Paginated<Place>> {
+		return apiFetch<Paginated<Place>>(`/places/${buildQuery({ author: 'me', page })}`);
 	},
 	detail(id: number | string): Promise<PlaceDetail> {
 		return apiFetch<PlaceDetail>(`/places/place/${id}/`, { auth: false });
@@ -74,6 +79,9 @@ export const reviewsApi = {
 	listForPlace(placeId: number | string): Promise<Paginated<Review>> {
 		return apiFetch<Paginated<Review>>(`/places/${placeId}/reviews/`, { auth: false });
 	},
+	myList(page = 1): Promise<Paginated<Review>> {
+		return apiFetch<Paginated<Review>>(`/reviews/my-reviews/${buildQuery({ page })}`);
+	},
 	create(
 		placeId: number,
 		payload: FormData | { score: string | number; comment?: string }
@@ -97,9 +105,9 @@ export const reviewsApi = {
 };
 
 export const articlesApi = {
-	list(filters: { category?: string; search?: string; ordering?: string } = {}): Promise<
-		Paginated<Article>
-	> {
+	list(
+		filters: { category?: string; search?: string; ordering?: string } = {}
+	): Promise<Paginated<Article>> {
 		return apiFetch<Paginated<Article>>(
 			`/articles/${buildQuery(filters as Record<string, unknown>)}`,
 			{ auth: false }

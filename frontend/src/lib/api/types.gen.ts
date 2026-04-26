@@ -66,7 +66,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description `GET /api/gamification/leaderboard/?period=week|month|all`. */
+        /**
+         * Top points earners (filtered by period)
+         * @description `GET /api/gamification/leaderboard/?period=week|month|all`.
+         */
         get: operations["gamification_leaderboard_retrieve"];
         put?: never;
         post?: never;
@@ -83,8 +86,31 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description `GET /api/gamification/me/` — current user's points/level/badges. */
+        /**
+         * Get the current user's gamification profile
+         * @description `GET /api/gamification/me/` — current user's points/level/badges.
+         */
         get: operations["gamification_me_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gamification/me/transactions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Paginated points-history of the current user
+         * @description `GET /api/gamification/me/transactions/` — paginated points history.
+         */
+        get: operations["gamification_me_transactions_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -100,7 +126,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description `GET /api/gamification/users/<id>/public/`. */
+        /**
+         * Get a user's public gamification profile
+         * @description `GET /api/gamification/users/<id>/public/`.
+         */
         get: operations["gamification_users_public_retrieve"];
         put?: never;
         post?: never;
@@ -159,7 +188,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Admin endpoint to approve/reject a place. Action is taken from URL kwargs. */
+        /**
+         * Approve or reject a place (admin)
+         * @description Admin endpoint to approve/reject a place. Action is taken from URL kwargs.
+         */
         patch: operations["places_partial_update_2"];
         trace?: never;
     };
@@ -172,7 +204,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Star-rating endpoint: accepts {rating: 1..5}, stored on 0-10 scale. */
+        /**
+         * Submit a 1–5 star rating
+         * @description Star-rating endpoint: accepts {rating: 1..5}, stored on 0-10 scale.
+         */
         post: operations["places_rate_create"];
         delete?: never;
         options?: never;
@@ -245,7 +280,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Authenticated users submit a new place; always created on moderation. */
+        /**
+         * Submit a new place (goes to moderation)
+         * @description Authenticated users submit a new place; always created on moderation.
+         */
         post: operations["places_create_place_create"];
         delete?: never;
         options?: never;
@@ -260,7 +298,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Admin-only list of places pending moderation. */
+        /**
+         * List places pending moderation (admin)
+         * @description Admin-only list of places pending moderation.
+         */
         get: operations["places_moderation_list"];
         put?: never;
         post?: never;
@@ -351,7 +392,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Authenticated users submit a new place; always created on moderation. */
+        /**
+         * Submit a new place (goes to moderation)
+         * @description Authenticated users submit a new place; always created on moderation.
+         */
         post: operations["places_submit_place_create"];
         delete?: never;
         options?: never;
@@ -372,7 +416,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Admin endpoint to approve/reject a review (action_name from URL). */
+        /**
+         * Approve or reject a review (admin)
+         * @description Admin endpoint to approve/reject a review (action_name from URL).
+         */
         patch: operations["reviews_partial_update"];
         trace?: never;
     };
@@ -407,7 +454,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Admin-only list of reviews pending moderation. */
+        /**
+         * List reviews pending moderation (admin)
+         * @description Admin-only list of reviews pending moderation.
+         */
         get: operations["reviews_moderation_list"];
         put?: never;
         post?: never;
@@ -594,6 +644,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
+         * Ban or unban a user (admin only)
          * @description Admin-only: ban or unban a user.
          *
          *     ``POST /api/users/<id>/ban/``    — set ``is_banned=True``.
@@ -618,6 +669,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
+         * Ban or unban a user (admin only)
          * @description Admin-only: ban or unban a user.
          *
          *     ``POST /api/users/<id>/ban/``    — set ``is_banned=True``.
@@ -702,7 +754,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Blacklist the supplied refresh token to log the user out. */
+        /**
+         * Log out — blacklist the supplied refresh token
+         * @description Blacklist the supplied refresh token to log the user out.
+         */
         post: operations["users_logout_create"];
         delete?: never;
         options?: never;
@@ -717,14 +772,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description ``/me/`` — get or partially update the current user's profile. */
+        /**
+         * Get the current user's profile
+         * @description ``/me/`` — get or partially update the current user's profile.
+         */
         get: operations["users_me_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** @description ``/me/`` — get or partially update the current user's profile. */
+        /**
+         * Partially update the current user's profile
+         * @description ``/me/`` — get or partially update the current user's profile.
+         */
         patch: operations["users_me_partial_update"];
         trace?: never;
     };
@@ -737,7 +798,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Change the password of the authenticated user. */
+        /**
+         * Change the current user's password
+         * @description Change the password of the authenticated user.
+         */
         post: operations["users_me_change_password_create"];
         delete?: never;
         options?: never;
@@ -940,6 +1004,10 @@ export interface components {
          * @enum {string}
          */
         Category9f0Enum: "guide" | "review" | "news" | "recipe" | "other";
+        ChangePasswordRequest: {
+            old_password: string;
+            new_password: string;
+        };
         /**
          * @description * `Unknown` - Unknown
          *     * `Dnipro` - Дніпровський
@@ -958,6 +1026,30 @@ export interface components {
         EmailTokenObtainPairRequest: {
             email: string;
             password: string;
+        };
+        LeaderboardEntry: {
+            user_id: number;
+            username: string;
+            points: number;
+            level: number;
+            level_title: string;
+        };
+        LeaderboardResponse: {
+            period: string;
+            results: components["schemas"]["LeaderboardEntry"][];
+        };
+        LogoutRequestRequest: {
+            refresh: string;
+        };
+        /** @description Adds level-derived read-only fields to a serializer payload. */
+        MeGamification: {
+            readonly points: number;
+            readonly level: string;
+            readonly level_title: string;
+            readonly next_threshold: string;
+            readonly progress_pct: string;
+            readonly badges: string;
+            readonly recent_transactions: string;
         };
         MenuItem: {
             readonly id: number;
@@ -1057,6 +1149,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["PlaceRating"][];
         };
+        PaginatedPointsTransactionList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["PointsTransaction"][];
+        };
         PaginatedReviewList: {
             /** @example 123 */
             count: number;
@@ -1118,6 +1225,13 @@ export interface components {
             published_at?: string;
             is_published?: boolean;
         };
+        /** @description Fields a user is allowed to change about themselves. */
+        PatchedMeUpdateRequest: {
+            first_name?: string | null;
+            last_name?: string | null;
+            /** Format: binary */
+            avatar?: string | null;
+        };
         PatchedMenuItemRequest: {
             name?: string;
             description?: string | null;
@@ -1129,45 +1243,13 @@ export interface components {
             is_available?: boolean;
             item?: number | null;
         };
+        PatchedPlaceModerationActionRequestRequest: {
+            reason?: string;
+        };
         PatchedPlaceRatingRequest: {
             place?: number;
             /** Format: decimal */
             rating?: string;
-        };
-        PatchedPlaceRequest: {
-            name?: string;
-            city?: string;
-            /** @description Optional reference to the canonical City row. The free-text `city` field above is preserved for legacy/back-compat reads. */
-            city_ref?: number | null;
-            district?: components["schemas"]["DistrictEnum"];
-            address?: string;
-            delivery?: boolean;
-            /** Format: decimal */
-            latitude?: string | null;
-            /** Format: decimal */
-            longitude?: string | null;
-            description?: string | null;
-            status?: components["schemas"]["StatusEnum"];
-            /**
-             * Format: decimal
-             * @description Average rating calculated from reviews
-             */
-            rating?: string;
-            /** Format: binary */
-            main_image?: string;
-            /** Format: binary */
-            additional_images?: string | null;
-            /** Format: date-time */
-            created_at?: string;
-            /** Format: uri */
-            website?: string | null;
-            opening_hours?: string | null;
-            is_featured?: boolean;
-            author?: number | null;
-            moderated_by?: number | null;
-            moderation_reason?: string | null;
-            /** Format: date-time */
-            moderated_at?: string | null;
         };
         PatchedPlaceUpdateRequest: {
             name?: string;
@@ -1356,6 +1438,10 @@ export interface components {
             readonly ratings: components["schemas"]["PlaceRating"][];
             readonly menu: string;
         };
+        PlaceRateRequestRequest: {
+            /** Format: decimal */
+            rating: string;
+        };
         PlaceRating: {
             readonly id: number;
             place: number;
@@ -1411,6 +1497,37 @@ export interface components {
             opening_hours?: string | null;
             status?: components["schemas"]["StatusEnum"];
         };
+        PointsTransaction: {
+            readonly id: number;
+            /** @description Positive for awards, negative for adjustments/penalties. */
+            amount: number;
+            reason: components["schemas"]["ReasonEnum"];
+            ref_type?: string;
+            ref_id?: number;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /** @description Public-facing subset (no transaction log). */
+        PublicGamification: {
+            readonly user_id: number;
+            readonly points: number;
+            readonly level: string;
+            readonly level_title: string;
+            readonly next_threshold: string;
+            readonly progress_pct: string;
+            readonly badges: string;
+        };
+        /**
+         * @description * `REVIEW_CREATED` - Review created
+         *     * `REVIEW_FIRST_FOR_PLACE` - First review for place
+         *     * `REVIEW_PHOTO` - Review with dish photo
+         *     * `REVIEW_VERIFIED` - Review verified by moderator
+         *     * `REVIEW_HELPFUL_VOTE` - Review marked as helpful
+         *     * `BADGE_AWARDED` - Badge awarded
+         *     * `MANUAL_ADJUSTMENT` - Manual adjustment
+         * @enum {string}
+         */
+        ReasonEnum: "REVIEW_CREATED" | "REVIEW_FIRST_FOR_PLACE" | "REVIEW_PHOTO" | "REVIEW_VERIFIED" | "REVIEW_HELPFUL_VOTE" | "BADGE_AWARDED" | "MANUAL_ADJUSTMENT";
         /** @description Public registration input. Whitelists fields explicitly. */
         Register: {
             /** Format: email */
@@ -1591,6 +1708,9 @@ export interface components {
             is_moderator?: boolean;
             is_admin?: boolean;
             password?: string;
+        };
+        UserBanRequestRequest: {
+            reason?: string;
         };
         /** @description Safe, read-only view of a user. */
         UserPublic: {
@@ -1789,15 +1909,26 @@ export interface operations {
     };
     gamification_leaderboard_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Time window for aggregating points. */
+                period?: "all" | "month" | "week";
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaderboardResponse"];
+                };
+            };
+            /** @description Unknown period. */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1814,12 +1945,39 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MeGamification"];
+                };
+            };
+        };
+    };
+    gamification_me_transactions_list: {
+        parameters: {
+            query?: {
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedPointsTransactionList"];
+                };
             };
         };
     };
@@ -1834,8 +1992,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicGamification"];
+                };
+            };
+            /** @description User not found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1846,11 +2012,18 @@ export interface operations {
     places_list: {
         parameters: {
             query?: {
-                /** @description Which field to use when ordering the results. */
-                ordering?: string;
+                /** @description Filter to a specific author user id, or 'me' for the current user. */
+                author?: string;
+                city?: string;
+                delivery?: boolean;
+                district?: string;
+                has_menu?: boolean;
+                is_featured?: boolean;
+                min_rating?: number;
+                min_stars?: number;
+                ordering?: "-created_at" | "-name" | "-rating" | "created_at" | "name" | "rating";
                 /** @description A page number within the paginated result set. */
                 page?: number;
-                /** @description A search term. */
                 search?: string;
             };
             header?: never;
@@ -1956,9 +2129,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["PatchedPlaceRequest"];
-                "multipart/form-data": components["schemas"]["PatchedPlaceRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedPlaceRequest"];
+                "application/json": components["schemas"]["PatchedPlaceModerationActionRequestRequest"];
+                "multipart/form-data": components["schemas"]["PatchedPlaceModerationActionRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedPlaceModerationActionRequestRequest"];
             };
         };
         responses: {
@@ -1983,9 +2156,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PlaceRatingRequest"];
-                "multipart/form-data": components["schemas"]["PlaceRatingRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PlaceRatingRequest"];
+                "application/json": components["schemas"]["PlaceRateRequestRequest"];
+                "multipart/form-data": components["schemas"]["PlaceRateRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PlaceRateRequestRequest"];
             };
         };
         responses: {
@@ -1996,6 +2169,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PlaceRating"];
                 };
+            };
+            /** @description Invalid rating value. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2509,6 +2689,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Review"];
                 };
+            };
+            /** @description Unknown action. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3029,10 +3216,31 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UserBanRequestRequest"];
+                "multipart/form-data": components["schemas"]["UserBanRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["UserBanRequestRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserAdmin"];
+                };
+            };
+            /** @description Invalid action or self-target. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User not found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3049,10 +3257,31 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UserBanRequestRequest"];
+                "multipart/form-data": components["schemas"]["UserBanRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["UserBanRequestRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserAdmin"];
+                };
+            };
+            /** @description Invalid action or self-target. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User not found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3142,10 +3371,23 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LogoutRequestRequest"];
+                "multipart/form-data": components["schemas"]["LogoutRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["LogoutRequestRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
-            200: {
+            /** @description Logged out. */
+            205: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid refresh token. */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3162,12 +3404,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UserPublic"];
+                };
             };
         };
     };
@@ -3178,14 +3421,21 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedMeUpdateRequest"];
+                "multipart/form-data": components["schemas"]["PatchedMeUpdateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedMeUpdateRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UserPublic"];
+                };
             };
         };
     };
@@ -3196,10 +3446,23 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+                "multipart/form-data": components["schemas"]["ChangePasswordRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
-            200: {
+            /** @description Password changed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error. */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

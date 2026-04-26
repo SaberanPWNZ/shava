@@ -12,14 +12,12 @@
 	};
 
 	let grouped = $derived.by(() => {
-		const map = new Map<string, MenuItem[]>();
+		const map: Record<string, MenuItem[]> = {};
 		for (const item of items) {
 			const key = item.category || 'other';
-			const list = map.get(key) ?? [];
-			list.push(item);
-			map.set(key, list);
+			(map[key] ??= []).push(item);
 		}
-		return Array.from(map.entries());
+		return Object.entries(map);
 	});
 </script>
 

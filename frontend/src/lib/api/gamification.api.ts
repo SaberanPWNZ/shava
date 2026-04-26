@@ -3,12 +3,19 @@ import type {
 	Badge,
 	Leaderboard,
 	MeGamification,
+	PointsTransactionRecord,
 	PublicGamification
 } from '$lib/types/gamification';
+import type { Paginated } from '$lib/types';
 
 export const gamificationApi = {
 	me(): Promise<MeGamification> {
 		return apiFetch<MeGamification>('/gamification/me/');
+	},
+	myTransactions(page = 1): Promise<Paginated<PointsTransactionRecord>> {
+		return apiFetch<Paginated<PointsTransactionRecord>>(
+			`/gamification/me/transactions/?page=${page}`
+		);
 	},
 	publicProfile(userId: number | string): Promise<PublicGamification> {
 		return apiFetch<PublicGamification>(`/gamification/users/${userId}/public/`, {

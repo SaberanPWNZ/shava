@@ -92,7 +92,7 @@ function serializeBody(options: RequestOptions): BodyInit | undefined {
 
 async function parseError(resp: Response): Promise<ApiError> {
 	let message = `Request failed (${resp.status})`;
-	let fieldErrors: FieldErrors = {};
+	const fieldErrors: FieldErrors = {};
 	try {
 		const data = await resp.json();
 		if (data?.detail) message = data.detail;

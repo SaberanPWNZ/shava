@@ -208,6 +208,18 @@ paths:
     get:
       operationId: gamification_leaderboard_retrieve
       description: '`GET /api/gamification/leaderboard/?period=week|month|all`.'
+      summary: Top points earners (filtered by period)
+      parameters:
+      - in: query
+        name: period
+        schema:
+          type: string
+          enum:
+          - all
+          - month
+          - week
+          default: all
+        description: Time window for aggregating points.
       tags:
       - gamification
       security:
@@ -215,40 +227,34 @@ paths:
       - {}
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardResponse'
+          description: ''
+        '400':
+          description: Unknown period.
   /api/v1/gamification/me/:
     get:
       operationId: gamification_me_retrieve
       description: '`GET /api/gamification/me/` — current user''s points/level/badges.'
+      summary: Get the current user's gamification profile
       tags:
       - gamification
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
-  /api/v1/gamification/users/{id}/public/:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeGamification'
+          description: ''
+  /api/v1/gamification/me/transactions/:
     get:
-      operationId: gamification_users_public_retrieve
-      description: '`GET /api/gamification/users/<id>/public/`.'
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - gamification
-      security:
-      - jwtAuth: []
-      - {}
-      responses:
-        '200':
-          description: No response body
-  /api/v1/places/:
-    get:
-      operationId: places_list
-      description: Public list of approved/active places, with filters.
+      operationId: gamification_me_transactions_list
+      description: '`GET /api/gamification/me/transactions/` — paginated points history.'
+      summary: Paginated points-history of the current user
       parameters:
       - name: ordering
         required: false
@@ -266,6 +272,104 @@ paths:
         required: false
         in: query
         description: A search term.
+        schema:
+          type: string
+      tags:
+      - gamification
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPointsTransactionList'
+          description: ''
+  /api/v1/gamification/users/{id}/public/:
+    get:
+      operationId: gamification_users_public_retrieve
+      description: '`GET /api/gamification/users/<id>/public/`.'
+      summary: Get a user's public gamification profile
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - gamification
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicGamification'
+          description: ''
+        '404':
+          description: User not found.
+  /api/v1/places/:
+    get:
+      operationId: places_list
+      description: Public list of approved/active places, with filters.
+      parameters:
+      - in: query
+        name: author
+        schema:
+          type: string
+        description: Filter to a specific author user id, or 'me' for the current
+          user.
+      - in: query
+        name: city
+        schema:
+          type: string
+      - in: query
+        name: delivery
+        schema:
+          type: boolean
+      - in: query
+        name: district
+        schema:
+          type: string
+      - in: query
+        name: has_menu
+        schema:
+          type: boolean
+      - in: query
+        name: is_featured
+        schema:
+          type: boolean
+      - in: query
+        name: min_rating
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: min_stars
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -created_at
+          - -name
+          - -rating
+          - created_at
+          - name
+          - rating
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: search
         schema:
           type: string
       tags:
@@ -368,6 +472,7 @@ paths:
       operationId: places_partial_update_2
       description: Admin endpoint to approve/reject a place. Action is taken from
         URL kwargs.
+      summary: Approve or reject a place (admin)
       parameters:
       - in: path
         name: action_name
@@ -387,13 +492,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedPlaceRequest'
+              $ref: '#/components/schemas/PatchedPlaceModerationActionRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedPlaceRequest'
+              $ref: '#/components/schemas/PatchedPlaceModerationActionRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedPlaceRequest'
+              $ref: '#/components/schemas/PatchedPlaceModerationActionRequestRequest'
       security:
       - jwtAuth: []
       responses:
@@ -407,6 +512,7 @@ paths:
     post:
       operationId: places_rate_create
       description: 'Star-rating endpoint: accepts {rating: 1..5}, stored on 0-10 scale.'
+      summary: Submit a 1–5 star rating
       parameters:
       - in: path
         name: id
@@ -419,13 +525,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PlaceRatingRequest'
+              $ref: '#/components/schemas/PlaceRateRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PlaceRatingRequest'
+              $ref: '#/components/schemas/PlaceRateRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PlaceRatingRequest'
+              $ref: '#/components/schemas/PlaceRateRequestRequest'
         required: true
       security:
       - jwtAuth: []
@@ -436,6 +542,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/PlaceRating'
           description: ''
+        '400':
+          description: Invalid rating value.
   /api/v1/places/{place_pk}/menu/:
     get:
       operationId: places_menu_list
@@ -660,7 +768,7 @@ paths:
         schema:
           type: string
       tags:
-      - places
+      - reviews
       security:
       - jwtAuth: []
       - {}
@@ -681,7 +789,7 @@ paths:
           type: integer
         required: true
       tags:
-      - places
+      - reviews
       requestBody:
         content:
           application/json:
@@ -707,6 +815,7 @@ paths:
     post:
       operationId: places_create_place_create
       description: Authenticated users submit a new place; always created on moderation.
+      summary: Submit a new place (goes to moderation)
       tags:
       - places
       requestBody:
@@ -734,6 +843,7 @@ paths:
     get:
       operationId: places_moderation_list
       description: Admin-only list of places pending moderation.
+      summary: List places pending moderation (admin)
       parameters:
       - name: ordering
         required: false
@@ -982,6 +1092,7 @@ paths:
     post:
       operationId: places_submit_place_create
       description: Authenticated users submit a new place; always created on moderation.
+      summary: Submit a new place (goes to moderation)
       tags:
       - places
       requestBody:
@@ -1009,6 +1120,7 @@ paths:
     patch:
       operationId: reviews_partial_update
       description: Admin endpoint to approve/reject a review (action_name from URL).
+      summary: Approve or reject a review (admin)
       parameters:
       - in: path
         name: action_name
@@ -1044,6 +1156,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Review'
           description: ''
+        '400':
+          description: Unknown action.
   /api/v1/reviews/{id}/helpful/:
     post:
       operationId: reviews_helpful_create
@@ -1110,6 +1224,7 @@ paths:
     get:
       operationId: reviews_moderation_list
       description: Admin-only list of reviews pending moderation.
+      summary: List reviews pending moderation (admin)
       parameters:
       - name: ordering
         required: false
@@ -1606,6 +1721,7 @@ paths:
         ``POST /api/users/<id>/unban/``  — set ``is_banned=False``.
         Optional JSON body: ``{"reason": "..."}`` (informational, not stored
         server-side in MVP — surfaced in the response only).
+      summary: Ban or unban a user (admin only)
       parameters:
       - in: path
         name: id
@@ -1614,11 +1730,30 @@ paths:
         required: true
       tags:
       - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBanRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserBanRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserBanRequestRequest'
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAdmin'
+          description: ''
+        '400':
+          description: Invalid action or self-target.
+        '404':
+          description: User not found.
   /api/v1/users/{id}/unban/:
     post:
       operationId: users_unban_create
@@ -1629,6 +1764,7 @@ paths:
         ``POST /api/users/<id>/unban/``  — set ``is_banned=False``.
         Optional JSON body: ``{"reason": "..."}`` (informational, not stored
         server-side in MVP — surfaced in the response only).
+      summary: Ban or unban a user (admin only)
       parameters:
       - in: path
         name: id
@@ -1637,11 +1773,30 @@ paths:
         required: true
       tags:
       - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBanRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserBanRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserBanRequestRequest'
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAdmin'
+          description: ''
+        '400':
+          description: Invalid action or self-target.
+        '404':
+          description: User not found.
   /api/v1/users/create/:
     post:
       operationId: users_create_create
@@ -1736,45 +1891,96 @@ paths:
     post:
       operationId: users_logout_create
       description: Blacklist the supplied refresh token to log the user out.
+      summary: Log out — blacklist the supplied refresh token
       tags:
       - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LogoutRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LogoutRequestRequest'
+        required: true
       security:
       - jwtAuth: []
       responses:
-        '200':
-          description: No response body
+        '205':
+          description: Logged out.
+        '400':
+          description: Missing or invalid refresh token.
   /api/v1/users/me/:
     get:
       operationId: users_me_retrieve
       description: '``/me/`` — get or partially update the current user''s profile.'
+      summary: Get the current user's profile
       tags:
       - users
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPublic'
+          description: ''
     patch:
       operationId: users_me_partial_update
       description: '``/me/`` — get or partially update the current user''s profile.'
+      summary: Partially update the current user's profile
       tags:
       - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMeUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMeUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMeUpdateRequest'
       security:
       - jwtAuth: []
       responses:
         '200':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPublic'
+          description: ''
   /api/v1/users/me/change-password/:
     post:
       operationId: users_me_change_password_create
       description: Change the password of the authenticated user.
+      summary: Change the current user's password
       tags:
       - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
       security:
       - jwtAuth: []
       responses:
-        '200':
-          description: No response body
+        '204':
+          description: Password changed.
+        '400':
+          description: Validation error.
   /api/v1/users/password-reset/confirm/:
     post:
       operationId: users_password_reset_confirm_create
@@ -2114,6 +2320,20 @@ components:
         * `news` - News
         * `recipe` - Recipe
         * `other` - Other
+    ChangePasswordRequest:
+      type: object
+      properties:
+        old_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - new_password
+      - old_password
     DistrictEnum:
       enum:
       - Unknown
@@ -2154,6 +2374,78 @@ components:
       required:
       - email
       - password
+    LeaderboardEntry:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        username:
+          type: string
+        points:
+          type: integer
+        level:
+          type: integer
+        level_title:
+          type: string
+      required:
+      - level
+      - level_title
+      - points
+      - user_id
+      - username
+    LeaderboardResponse:
+      type: object
+      properties:
+        period:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeaderboardEntry'
+      required:
+      - period
+      - results
+    LogoutRequestRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    MeGamification:
+      type: object
+      description: Adds level-derived read-only fields to a serializer payload.
+      properties:
+        points:
+          type: integer
+          readOnly: true
+        level:
+          type: string
+          readOnly: true
+        level_title:
+          type: string
+          readOnly: true
+        next_threshold:
+          type: string
+          readOnly: true
+        progress_pct:
+          type: string
+          readOnly: true
+        badges:
+          type: string
+          readOnly: true
+        recent_transactions:
+          type: string
+          readOnly: true
+      required:
+      - badges
+      - level
+      - level_title
+      - next_threshold
+      - points
+      - progress_pct
+      - recent_transactions
     MenuItem:
       type: object
       properties:
@@ -2334,6 +2626,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PlaceRating'
+    PaginatedPointsTransactionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PointsTransaction'
     PaginatedReviewList:
       type: object
       required:
@@ -2445,6 +2760,22 @@ components:
           format: date-time
         is_published:
           type: boolean
+    PatchedMeUpdateRequest:
+      type: object
+      description: Fields a user is allowed to change about themselves.
+      properties:
+        first_name:
+          type: string
+          nullable: true
+          maxLength: 50
+        last_name:
+          type: string
+          nullable: true
+          maxLength: 50
+        avatar:
+          type: string
+          format: binary
+          nullable: true
     PatchedMenuItemRequest:
       type: object
       properties:
@@ -2471,6 +2802,11 @@ components:
         item:
           type: integer
           nullable: true
+    PatchedPlaceModerationActionRequestRequest:
+      type: object
+      properties:
+        reason:
+          type: string
     PatchedPlaceRatingRequest:
       type: object
       properties:
@@ -2480,84 +2816,6 @@ components:
           type: string
           format: decimal
           pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
-    PatchedPlaceRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 200
-        city:
-          type: string
-          minLength: 1
-          maxLength: 100
-        city_ref:
-          type: integer
-          nullable: true
-          description: Optional reference to the canonical City row. The free-text
-            `city` field above is preserved for legacy/back-compat reads.
-        district:
-          $ref: '#/components/schemas/DistrictEnum'
-        address:
-          type: string
-          minLength: 1
-          maxLength: 300
-        delivery:
-          type: boolean
-        latitude:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
-          nullable: true
-        longitude:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
-          nullable: true
-        description:
-          type: string
-          nullable: true
-        status:
-          $ref: '#/components/schemas/StatusEnum'
-        rating:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
-          description: Average rating calculated from reviews
-        main_image:
-          type: string
-          format: binary
-        additional_images:
-          type: string
-          format: binary
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-        website:
-          type: string
-          format: uri
-          nullable: true
-          maxLength: 200
-        opening_hours:
-          type: string
-          nullable: true
-          maxLength: 100
-        is_featured:
-          type: boolean
-        author:
-          type: integer
-          nullable: true
-        moderated_by:
-          type: integer
-          nullable: true
-        moderation_reason:
-          type: string
-          nullable: true
-        moderated_at:
-          type: string
-          format: date-time
-          nullable: true
     PatchedPlaceUpdateRequest:
       type: object
       properties:
@@ -3019,6 +3277,15 @@ components:
       - reviews_count
       - stars
       - updated_at
+    PlaceRateRequestRequest:
+      type: object
+      properties:
+        rating:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,1})?$
+      required:
+      - rating
     PlaceRating:
       type: object
       properties:
@@ -3152,6 +3419,86 @@ components:
           maxLength: 100
         status:
           $ref: '#/components/schemas/StatusEnum'
+    PointsTransaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        amount:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          description: Positive for awards, negative for adjustments/penalties.
+        reason:
+          $ref: '#/components/schemas/ReasonEnum'
+        ref_type:
+          type: string
+          maxLength: 64
+        ref_id:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount
+      - created_at
+      - id
+      - reason
+    PublicGamification:
+      type: object
+      description: Public-facing subset (no transaction log).
+      properties:
+        user_id:
+          type: integer
+          readOnly: true
+        points:
+          type: integer
+          readOnly: true
+        level:
+          type: string
+          readOnly: true
+        level_title:
+          type: string
+          readOnly: true
+        next_threshold:
+          type: string
+          readOnly: true
+        progress_pct:
+          type: string
+          readOnly: true
+        badges:
+          type: string
+          readOnly: true
+      required:
+      - badges
+      - level
+      - level_title
+      - next_threshold
+      - points
+      - progress_pct
+      - user_id
+    ReasonEnum:
+      enum:
+      - REVIEW_CREATED
+      - REVIEW_FIRST_FOR_PLACE
+      - REVIEW_PHOTO
+      - REVIEW_VERIFIED
+      - REVIEW_HELPFUL_VOTE
+      - BADGE_AWARDED
+      - MANUAL_ADJUSTMENT
+      type: string
+      description: |-
+        * `REVIEW_CREATED` - Review created
+        * `REVIEW_FIRST_FOR_PLACE` - First review for place
+        * `REVIEW_PHOTO` - Review with dish photo
+        * `REVIEW_VERIFIED` - Review verified by moderator
+        * `REVIEW_HELPFUL_VOTE` - Review marked as helpful
+        * `BADGE_AWARDED` - Badge awarded
+        * `MANUAL_ADJUSTMENT` - Manual adjustment
     Register:
       type: object
       description: Public registration input. Whitelists fields explicitly.
@@ -3553,6 +3900,12 @@ components:
       required:
       - email
       - username
+    UserBanRequestRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
     UserPublic:
       type: object
       description: Safe, read-only view of a user.

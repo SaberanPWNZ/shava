@@ -2,6 +2,7 @@ import logging
 
 from django.db.models import Prefetch, QuerySet
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import permissions, status, viewsets
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import ListAPIView, ListCreateAPIView, UpdateAPIView
@@ -37,6 +38,7 @@ def with_viewer_votes_prefetch(qs: QuerySet, request) -> QuerySet:
     )
 
 
+@extend_schema(tags=["reviews"])
 class ReviewViewSet(viewsets.ModelViewSet):
     """A user's own reviews."""
 
@@ -73,6 +75,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
             instance.place.recalculate_rating_from_reviews()
 
 
+@extend_schema(tags=["reviews"])
 class PlaceReviewsListCreateView(ListCreateAPIView):
     """List approved reviews for a place; create a new (pending) review."""
 
@@ -119,6 +122,7 @@ class PlaceReviewsListView(PlaceReviewsListCreateView):
     pass
 
 
+@extend_schema(tags=["reviews"], summary="List reviews pending moderation (admin)")
 class ReviewModerationListView(ListAPIView):
     """Admin-only list of reviews pending moderation."""
 
@@ -131,6 +135,11 @@ class ReviewModerationListView(ListAPIView):
         ).select_related("author", "place")
 
 
+@extend_schema(
+    tags=["reviews"],
+    summary="Approve or reject a review (admin)",
+    responses={200: ReviewSerializer, 400: OpenApiResponse(description="Unknown action.")},
+)
 class ReviewModerationActionView(UpdateAPIView):
     """Admin endpoint to approve/reject a review (action_name from URL)."""
 

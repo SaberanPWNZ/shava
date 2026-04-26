@@ -13,7 +13,12 @@ from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    inline_serializer,
+)
 from rest_framework import generics, status, views
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -25,6 +30,7 @@ from .serializers import (
     BadgeSerializer,
     LeaderboardEntrySerializer,
     MeGamificationSerializer,
+    PointsTransactionSerializer,
     PublicGamificationSerializer,
 )
 
@@ -32,21 +38,47 @@ logger = logging.getLogger("gamification")
 User = get_user_model()
 
 
+@extend_schema(tags=["gamification"])
 class MeGamificationView(views.APIView):
     """`GET /api/gamification/me/` — current user's points/level/badges."""
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get the current user's gamification profile",
+        responses={200: MeGamificationSerializer},
+    )
     def get(self, request):
         balance, _ = UserPointsBalance.objects.get_or_create(user=request.user)
         return Response(MeGamificationSerializer(balance).data)
 
 
+@extend_schema(tags=["gamification"], summary="Paginated points-history of the current user")
+class MyPointsTransactionsView(generics.ListAPIView):
+    """`GET /api/gamification/me/transactions/` — paginated points history."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = PointsTransactionSerializer
+
+    def get_queryset(self):
+        return PointsTransaction.objects.filter(user_id=self.request.user.id).order_by(
+            "-created_at"
+        )
+
+
+@extend_schema(tags=["gamification"])
 class PublicUserGamificationView(views.APIView):
     """`GET /api/gamification/users/<id>/public/`."""
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Get a user's public gamification profile",
+        responses={
+            200: PublicGamificationSerializer,
+            404: OpenApiResponse(description="User not found."),
+        },
+    )
     def get(self, request, pk: int):
         user = get_object_or_404(User, pk=pk)
         balance, _ = UserPointsBalance.objects.get_or_create(user=user)
@@ -56,6 +88,7 @@ class PublicUserGamificationView(views.APIView):
         return Response(data)
 
 
+@extend_schema(tags=["gamification"])
 class BadgeCatalogueView(generics.ListAPIView):
     """`GET /api/gamification/badges/` — full catalogue (public)."""
 
@@ -67,12 +100,37 @@ class BadgeCatalogueView(generics.ListAPIView):
         return Badge.objects.filter(is_active=True).order_by("tier", "title")
 
 
+@extend_schema(tags=["gamification"])
 class LeaderboardView(views.APIView):
     """`GET /api/gamification/leaderboard/?period=week|month|all`."""
 
     permission_classes = [AllowAny]
     PERIODS = {"week": 7, "month": 30, "all": None}
 
+    @extend_schema(
+        summary="Top points earners (filtered by period)",
+        parameters=[
+            OpenApiParameter(
+                name="period",
+                type=str,
+                enum=["week", "month", "all"],
+                location=OpenApiParameter.QUERY,
+                required=False,
+                default="all",
+                description="Time window for aggregating points.",
+            ),
+        ],
+        responses={
+            200: inline_serializer(
+                name="LeaderboardResponse",
+                fields={
+                    "period": drf_serializers.CharField(),
+                    "results": LeaderboardEntrySerializer(many=True),
+                },
+            ),
+            400: OpenApiResponse(description="Unknown period."),
+        },
+    )
     def get(self, request):
         period = request.query_params.get("period", "all")
         if period not in self.PERIODS:

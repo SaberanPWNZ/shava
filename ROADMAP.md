@@ -153,11 +153,14 @@ Suggested closing comment template:
 
 **Acceptance criteria.**
 - [x] `drf-spectacular` exposing `/api/schema/` and `/api/docs/`.
-- [ ] All public endpoints documented (tags, request/response examples).
-      Partial: `users` email-flow endpoints annotated; the auth extension
-      now resolves bearer auth on every operation. Remaining APIView-based
-      endpoints (`MeView`, `LogoutView`, `UserBanView`, …) still need
-      `@extend_schema` decorators — tracked separately.
+- [x] All public endpoints documented (tags, request/response examples).
+      `users` email-flow endpoints, `users` auth/profile/logout/ban,
+      `gamification` (me/public/badges/leaderboard/me-transactions),
+      `places` (list/create/detail/update/moderation/rate) and `reviews`
+      (own/place/moderation) `APIView`/generic views all carry
+      `@extend_schema` with tags + summaries + inline request/response
+      shapes. The auth extension still resolves bearer auth on every
+      operation.
 - [x] `npm run generate:api` calls `openapi-typescript` and writes
       `frontend/src/lib/api/types.gen.ts`; checked-in and re-exported
       via `$lib/api/client` (`paths`, `components`, `operations`,
@@ -307,18 +310,40 @@ Suggested closing comment template:
 **Labels:** `frontend`, `ux`, `P2`
 
 **Acceptance criteria.**
-- [ ] `Skeleton` component used on `/places`, `/places/[id]`, `/profile`.
-- [ ] Optimistic create/edit for reviews and ratings; rollback on error.
-- [ ] Toast component in `src/lib/components/ui/`; used by services on
-      success/error.
+- [x] `Skeleton` component used on `/places`, `/places/[id]`, `/profile`.
+      `Skeleton.svelte` lives in `src/lib/components/ui/`; six card
+      placeholders on the listing, a header+image+text grid on the
+      detail page, and per-tab placeholders on `/profile`. Each block
+      is `aria-hidden` with an off-screen `role="status"` "Loading…"
+      label so it's announced once instead of as content.
+- [x] Optimistic create/edit for reviews and ratings; rollback on error.
+      `places/[id]/+page.svelte` bumps `place.stars`/`ratings_count`
+      before the network call and rolls them back if the request
+      throws; `ReviewForm.svelte` returns the (server or synthetic)
+      `Review` to its parent so it appears at the top of the list
+      immediately.
+- [x] Toast component in `src/lib/components/ui/`; used by services on
+      success/error. `Toaster.svelte` + a Svelte 5 runes-based
+      `toasts` store in `src/lib/stores/toasts.svelte.ts` are mounted
+      once in the root layout. Auth/profile flows, ratings and review
+      submission surface success and error toasts; the live region
+      uses `role=status` (polite) for info/success and `role=alert`
+      for errors so assistive tech reads them.
 
 #### 6.2 Accessibility polish
 **Labels:** `frontend`, `a11y`, `P2`
 
 **Acceptance criteria.**
-- [ ] `eslint-plugin-svelte` a11y rules enabled; zero warnings.
-- [ ] All interactive elements keyboard-navigable; focus rings visible.
+- [x] `eslint-plugin-svelte` a11y rules enabled; zero warnings.
+      Already enabled via `svelte.configs.recommended`; cleaned up
+      pre-existing offenders so `npm run lint` reports zero issues.
+- [x] All interactive elements keyboard-navigable; focus rings visible.
+      New `Tabs` component implements the WAI-ARIA tabs pattern
+      (←/→/Home/End, manual activation); Header mobile-menu toggle,
+      Toast dismiss button and Pagination buttons all expose
+      `focus-visible:ring-2` + 44 px touch targets.
 - [ ] Lighthouse a11y ≥ 95 on `/`, `/places`, `/places/[id]`.
+      Not measured in this iteration (requires headless Chrome run).
 
 #### 6.3 PWA support
 **Labels:** `frontend`, `ux`, `P3`
@@ -332,9 +357,17 @@ Suggested closing comment template:
 **Labels:** `frontend`, `ux`, `P2`
 
 **Acceptance criteria.**
-- [ ] All pages render correctly at 320, 375, 768, 1024, 1440 px.
-- [ ] No horizontal scroll on mobile; touch targets ≥ 44 px.
-- [ ] Closes #16.
+- [x] All pages render correctly at 320, 375, 768, 1024, 1440 px.
+      Header collapses to a hamburger menu below `md`; the listing/detail
+      and profile pages now use stacked, single-column layouts with
+      `flex-wrap` actions and capped widths. Layout grid keeps the
+      sidebar above the list on narrow screens.
+- [x] No horizontal scroll on mobile; touch targets ≥ 44 px.
+      Header buttons, mobile-drawer entries, tab triggers, pagination
+      buttons and the toast close button all have `min-h-11` or
+      `h-11 w-11`. Tab list permits horizontal scroll within itself
+      so it never overflows the page.
+- [x] Closes #16.
 
 ---
 
@@ -366,8 +399,19 @@ Suggested closing comment template:
 **Labels:** `frontend`, `feature`, `P2`
 
 **Acceptance criteria.**
-- [ ] `/profile` tabs for reviews, places, points (gamification).
-- [ ] Pagination on each tab.
+- [x] `/profile` tabs for reviews, places, points (gamification).
+      The profile route now uses `Tabs.svelte` with four panels
+      (Overview / My reviews / My places / Points history). Data is
+      lazy-loaded the first time each tab is activated; the existing
+      Achievements card still lives under Overview.
+- [x] Pagination on each tab.
+      Each tab uses the new `Pagination.svelte` component driven by
+      DRF's `?page=N`. Backend additions: `?author=me` filter on
+      `PlaceListView` (returns the requesting user's submissions
+      across all statuses) and a paginated
+      `GET /api/v1/gamification/me/transactions/` for points history.
+      `/api/v1/reviews/my-reviews/` already provided paginated own
+      reviews.
 
 ---
 
