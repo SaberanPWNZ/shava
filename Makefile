@@ -21,7 +21,7 @@ down: ## Stop the dev stack.
 	$(COMPOSE) down
 
 migrate: ## Apply Django database migrations inside the backend container.
-	$(COMPOSE) exec backend python manage.py migrate
+	$(COMPOSE) exec web python manage.py migrate
 
 test: test-backend test-frontend ## Run all tests (backend + frontend).
 

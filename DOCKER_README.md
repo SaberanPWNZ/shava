@@ -8,8 +8,10 @@ This project ships with two ready-to-use Docker stacks:
 | Production  | `docker-compose.prod.yml` | `.env.prod.example`    |
 
 Both stacks contain a Django + DRF backend (`web`), a SvelteKit frontend
-(`frontend`) and PostgreSQL (`db`). The production stack adds an `nginx`
-reverse proxy that terminates TLS and serves static / media files.
+(`frontend`), PostgreSQL (`db`), Redis (`redis`) and Celery worker / beat
+(`celery_worker`, `celery_beat`). The production stack adds an `nginx`
+reverse proxy that terminates TLS and serves static / media files. The dev
+stack additionally ships a MinIO container as a local S3-compatible store.
 
 ---
 
@@ -53,6 +55,35 @@ docker compose down -v         # stop and DROP the database
    ./certs/fullchain.pem
    ./certs/privkey.pem
    ```
+
+   The simplest one-shot bootstrap with `certbot` running on the host
+   (nginx must be temporarily stopped or run with the HTTP server only):
+
+   ```bash
+   sudo apt-get install -y certbot
+   sudo certbot certonly --standalone \
+       -d example.com -d www.example.com \
+       --email admin@example.com --agree-tos --non-interactive
+   sudo cp /etc/letsencrypt/live/example.com/fullchain.pem ./certs/
+   sudo cp /etc/letsencrypt/live/example.com/privkey.pem  ./certs/
+   sudo chown "$USER":"$USER" ./certs/*.pem
+   ```
+
+   For automated renewals add a host cron entry that copies the renewed
+   files into `./certs/` and reloads nginx inside the running container.
+   Replace `/opt/shava` with the absolute path to your checkout:
+
+   ```cron
+   0 3 * * * certbot renew --quiet --deploy-hook \
+       'install -m 644 -o root -g root /etc/letsencrypt/live/example.com/fullchain.pem /opt/shava/certs/fullchain.pem && \
+        install -m 600 -o root -g root /etc/letsencrypt/live/example.com/privkey.pem  /opt/shava/certs/privkey.pem && \
+        docker compose -f /opt/shava/docker-compose.prod.yml exec -T nginx nginx -s reload'
+   ```
+
+   The HTTP server in `nginx.conf` already serves
+   `/.well-known/acme-challenge/` from `/var/www/certbot`, so you can
+   alternatively run certbot in `--webroot` mode by mounting
+   `/var/www/certbot` into the nginx container.
 
 ### 2.2 Configure secrets
 

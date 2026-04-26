@@ -12,16 +12,20 @@ Full-stack application: Django REST API + SvelteKit (Svelte 5, Tailwind 4) front
 JWT-based, with refresh-token rotation, blacklist on rotation, and
 per-endpoint rate-limiting.
 
-| Endpoint                              | Method | Auth     | Description                         |
-| ------------------------------------- | ------ | -------- | ----------------------------------- |
-| `/api/users/register/`                | POST   | public   | Create a regular user (rate-limited)|
-| `/api/users/login/`                   | POST   | public   | Obtain access + refresh tokens      |
-| `/api/users/token/refresh/`           | POST   | public   | Rotate access (and refresh) tokens  |
-| `/api/users/logout/`                  | POST   | required | Blacklist the supplied refresh token|
-| `/api/users/me/`                      | GET    | required | Current user's safe profile         |
-| `/api/users/me/`                      | PATCH  | required | Update first/last name and avatar   |
-| `/api/users/me/change-password/`      | POST   | required | Change password (old + new)         |
-| `/api/users/list/` `/api/users/<id>/` | —      | admin    | Admin CRUD                          |
+| Endpoint                                 | Method | Auth     | Description                         |
+| ---------------------------------------- | ------ | -------- | ----------------------------------- |
+| `/api/v1/users/register/`                | POST   | public   | Create a regular user (rate-limited)|
+| `/api/v1/users/login/`                   | POST   | public   | Obtain access + refresh tokens      |
+| `/api/v1/users/token/refresh/`           | POST   | public   | Rotate access (and refresh) tokens  |
+| `/api/v1/users/logout/`                  | POST   | required | Blacklist the supplied refresh token|
+| `/api/v1/users/me/`                      | GET    | required | Current user's safe profile         |
+| `/api/v1/users/me/`                      | PATCH  | required | Update first/last name and avatar   |
+| `/api/v1/users/me/change-password/`      | POST   | required | Change password (old + new)         |
+| `/api/v1/users/list/` `/api/v1/users/<id>/` | —   | admin    | Admin CRUD                          |
+
+The legacy unversioned `/api/users/...` mount continues to resolve for one
+release window; responses carry `Deprecation`, `Sunset` and
+`Link: <…>; rel="successor-version"` headers nudging consumers to migrate.
 
 Privileged flags (`is_staff`, `is_superuser`, `is_admin`, `is_moderator`,
 `is_verified`) **cannot** be set through any public endpoint.
@@ -44,7 +48,7 @@ Privileged flags (`is_staff`, `is_superuser`, `is_admin`, `is_moderator`,
 # Backend
 cd backend
 pip install -r requirements-dev.txt
-cp ../.env.example ../.env
+cp ../.env.dev.example ../.env.dev
 DJANGO_SECRET_KEY=dev python manage.py migrate
 DJANGO_SECRET_KEY=dev python manage.py runserver
 
@@ -151,7 +155,8 @@ the `main` branch:
 
 ## Environment variables
 
-See `.env.example`. Notable ones:
+See `.env.dev.example` (development) and `.env.prod.example` (production).
+Notable ones:
 
 - `DJANGO_SECRET_KEY` — **required in production**. Django refuses to
   boot when this is empty and `DEBUG=False` (raises
