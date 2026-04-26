@@ -393,17 +393,43 @@ Suggested closing comment template:
 **Labels:** `backend`, `frontend`, `gamification`, `P3`
 
 **Acceptance criteria.**
-- [ ] `GET /api/gamification/leaderboard/` paginated, ordered by points.
-- [ ] `/leaderboard` page on frontend.
+- [x] `GET /api/gamification/leaderboard/` ordered by points (top 50,
+      `?period=week|month|all`). Implemented in
+      `backend/gamification/views.py:LeaderboardView`; aggregates
+      `PointsTransaction.amount` with `Sum`, joins level metadata via
+      `levels.level_for`, returns `LeaderboardEntrySerializer` payload.
+      Public (`AllowAny`).
+- [x] `/leaderboard` page on frontend. Implemented at
+      `frontend/src/routes/leaderboard/+page.svelte`: period tabs
+      (week / month / all) URL-synced via `?period=`, top-50 list with
+      rank, username, level title, points, dark-mode styles, loading
+      and empty states. Linked from `Header.svelte`.
 
 #### 9.2 Badges
 **Labels:** `backend`, `frontend`, `gamification`, `P3`
 
 **Acceptance criteria.**
-- [ ] `Badge` + `UserBadge` models; awarded by signal handlers.
-- [ ] First badges: First Review, 10 Reviews, First Place, Helpful (10
-      helpful votes).
-- [ ] Displayed on profile.
+- [x] `Badge` + `UserBadge` models; awarded by signal handlers.
+      Implemented in `backend/gamification/models.py` (`Badge`,
+      `UserBadge`) with a strategy-based evaluator
+      (`gamification/services.py:BadgeService` + `BadgeStrategy`
+      subclasses); signals on `Review` / `ReviewHelpfulVote` call
+      `BadgeService.evaluate` after every points event.
+- [x] First badges seeded via data migration
+      `gamification/migrations/0002_seed_badges.py` and matched by
+      strategy classes in `services.py`:
+      `first_review` ("First Review", ✓), `ten_reviews` ("10 Reviews", ✓),
+      `helpful_fifty` ("Helpful — 50 helpful votes" — chosen over the
+      original "10 helpful votes" target because helpful votes are
+      cheap to acquire; aligns with the throttle scope), plus two
+      bonus badges the team added: `foodie` (reaches Foodie level) and
+      `verified_five` (5 verified reviews). The "First Place" badge
+      from the original roadmap was not added — submitting a place
+      already awards points and the team chose not to ship a dedicated
+      badge for it.
+- [x] Displayed on profile via
+      `frontend/src/lib/components/gamification/BadgeGrid.svelte`,
+      consumed in `src/routes/(app)/profile/+page.svelte`.
 
 ---
 

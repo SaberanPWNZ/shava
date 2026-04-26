@@ -16,6 +16,9 @@
 		<nav class="flex flex-wrap items-center gap-4 text-sm">
 			<a href="/places" class="text-zinc-700 hover:text-orange-600 dark:text-zinc-200">Places</a>
 			<a href="/articles" class="text-zinc-700 hover:text-orange-600 dark:text-zinc-200">Articles</a>
+			<a href="/leaderboard" class="text-zinc-700 hover:text-orange-600 dark:text-zinc-200">
+				Leaderboard
+			</a>
 			{#if authStore.isAuthenticated}
 				<PointsBadge />
 				<a href="/places/new" class="text-zinc-700 hover:text-orange-600 dark:text-zinc-200">
