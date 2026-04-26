@@ -120,20 +120,29 @@ Suggested closing comment template:
 **Labels:** `frontend`, `testing`, `P2`
 
 **Acceptance criteria.**
-- [ ] `vitest` configured with happy-dom; `npm run test:unit` script.
-- [ ] Coverage for `auth.service.ts`, `token.storage.ts`, `auth.svelte.ts`,
-      `requireAuth.ts` ≥ 80 %.
-- [ ] Existing Playwright e2e remains under `npm run test:e2e`.
+- [x] `vitest` configured with happy-dom; `npm run test:unit` script.
+      Dedicated `frontend/vitest.config.ts` with `environment: 'happy-dom'`,
+      `$app/*` virtual modules stubbed, and per-test `localStorage` /
+      `vi.unstubAllGlobals()` reset in `tests/unit/setup.ts`.
+- [x] Coverage for `auth.service.ts`, `token.storage.ts` (token storage
+      lives in `src/lib/api/client.ts` as `tokenStorage`),
+      `auth.svelte.ts`, `requireAuth.ts` ≥ 80 %. Latest run:
+      91.8 % stmt / 80 % branch / 100 % func across all four modules.
+- [x] Existing Playwright e2e remains under `npm run test:e2e`.
 
 #### 2.3 GitHub Actions CI pipeline
 **Labels:** `infra`, `testing`, `P1`
 
 **Acceptance criteria.**
-- [ ] `.github/workflows/ci.yml` with parallel jobs:
-      `backend-lint`, `backend-test`, `frontend-lint`, `frontend-check`,
-      `frontend-build`, `e2e`.
-- [ ] Cache pip and npm; matrix on Python 3.12 / Node 20.
-- [ ] Required checks documented in `README.md`.
+- [x] `.github/workflows/ci.yml` with parallel jobs:
+      `backend-lint`, `backend-typecheck`, `backend-test`,
+      `frontend-lint`, `frontend-check`, `frontend-build`,
+      `frontend-unit`, `api-types-fresh`, `e2e` (depends on
+      `frontend-build`). Runs cancel in-progress on the same ref.
+- [x] Cache pip and npm; Python 3.12 / Node 20 pinned via the
+      `PYTHON_VERSION` / `NODE_VERSION` workflow env.
+- [x] Required checks documented in `README.md` (`## Continuous
+      integration` table).
 
 ---
 
