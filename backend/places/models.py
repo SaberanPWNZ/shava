@@ -1,7 +1,8 @@
 from decimal import Decimal
-from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
+
 from django.contrib.auth import get_user_model
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 from django.db.models import Avg, Count, Q
 from django.utils import timezone
 
@@ -73,9 +74,7 @@ class PlaceQuerySet(models.QuerySet):
             _ratings_count=Count("ratings", distinct=True),
             _reviews_count=Count(
                 "review_set",
-                filter=Q(
-                    review_set__is_moderated=True, review_set__is_deleted=False
-                ),
+                filter=Q(review_set__is_moderated=True, review_set__is_deleted=False),
                 distinct=True,
             ),
         )
@@ -170,8 +169,9 @@ class Place(models.Model):
         Uses the lazy import to avoid circular imports at module load time.
         Reviews use a 1-10 score, matching the place rating scale.
         """
-        from reviews.models import Review
         from django.db.models import Avg
+
+        from reviews.models import Review
 
         avg = Review.objects.filter(
             place=self, is_moderated=True, is_deleted=False

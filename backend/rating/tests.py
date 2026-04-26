@@ -1,12 +1,15 @@
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from django.urls import reverse
-from rest_framework.test import APITestCase
-from rest_framework import status
 from decimal import Decimal
-from reviews.models import Review
+
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
+
 from places.models import Place
-from .models import Achievement, UserRating, UserAchievement
+from reviews.models import Review
+
+from .models import Achievement, UserAchievement, UserRating
 
 User = get_user_model()
 
@@ -19,7 +22,7 @@ class AchievementModelTest(TestCase):
             name="Newbie Shaurmie",
             description="Write your first 10 reviews",
             reviews_required=10,
-            icon="🏆"
+            icon="🏆",
         )
 
     def test_achievement_creation(self):
@@ -39,16 +42,14 @@ class UserRatingModelTest(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser",
-            email="test@example.com",
-            password="testpass123"
+            username="testuser", email="test@example.com", password="testpass123"
         )
         self.user_rating = UserRating.objects.create(
             user=self.user,
             total_reviews=5,
-            average_score_given=Decimal('7.50'),
+            average_score_given=Decimal("7.50"),
             level=2,
-            experience_points=50
+            experience_points=50,
         )
 
     def test_user_rating_creation(self):
@@ -68,18 +69,15 @@ class UserAchievementModelTest(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser",
-            email="test@example.com",
-            password="testpass123"
+            username="testuser", email="test@example.com", password="testpass123"
         )
         self.achievement = Achievement.objects.create(
             name="Newbie Shaurmie",
             description="Write your first 10 reviews",
-            reviews_required=10
+            reviews_required=10,
         )
         self.user_achievement = UserAchievement.objects.create(
-            user=self.user,
-            achievement=self.achievement
+            user=self.user, achievement=self.achievement
         )
 
     def test_user_achievement_creation(self):
@@ -90,11 +88,9 @@ class UserAchievementModelTest(TestCase):
     def test_user_achievement_unique_constraint(self):
         """Test that a user can't earn the same achievement twice."""
         from django.db import IntegrityError
+
         with self.assertRaises(IntegrityError):
-            UserAchievement.objects.create(
-                user=self.user,
-                achievement=self.achievement
-            )
+            UserAchievement.objects.create(user=self.user, achievement=self.achievement)
 
     def test_user_achievement_str(self):
         """Test user achievement string representation."""
@@ -107,20 +103,17 @@ class RatingSignalsTest(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser",
-            email="test@example.com",
-            password="testpass123"
+            username="testuser", email="test@example.com", password="testpass123"
         )
         # Create a simple place for reviews
         self.place = Place.objects.create(
-            name="Test Shawarma Place",
-            address="Test Address"
+            name="Test Shawarma Place", address="Test Address"
         )
         # Create an achievement
         self.achievement = Achievement.objects.create(
             name="First Review",
             description="Write your first review",
-            reviews_required=1
+            reviews_required=1,
         )
 
     def test_user_rating_created_on_first_review(self):
@@ -132,8 +125,8 @@ class RatingSignalsTest(TestCase):
         Review.objects.create(
             place=self.place,
             author=self.user,
-            score=Decimal('8.0'),
-            comment="Great shawarma!"
+            score=Decimal("8.0"),
+            comment="Great shawarma!",
         )
 
         # Check that UserRating was created
@@ -148,14 +141,13 @@ class RatingSignalsTest(TestCase):
         Review.objects.create(
             place=self.place,
             author=self.user,
-            score=Decimal('8.0'),
-            comment="Great shawarma!"
+            score=Decimal("8.0"),
+            comment="Great shawarma!",
         )
 
         # Check that achievement was awarded
         user_achievement = UserAchievement.objects.get(
-            user=self.user,
-            achievement=self.achievement
+            user=self.user, achievement=self.achievement
         )
         self.assertIsNotNone(user_achievement)
 
@@ -165,48 +157,44 @@ class RatingAPITest(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser",
-            email="test@example.com",
-            password="testpass123"
+            username="testuser", email="test@example.com", password="testpass123"
         )
         self.admin_user = User.objects.create_user(
             username="admin",
             email="admin@example.com",
             password="adminpass123",
             is_staff=True,
-            is_superuser=True
+            is_superuser=True,
         )
         self.achievement = Achievement.objects.create(
-            name="Test Achievement",
-            description="Test description",
-            reviews_required=5
+            name="Test Achievement", description="Test description", reviews_required=5
         )
 
     def test_achievement_list_requires_authentication(self):
         """Test that achievement list requires authentication."""
-        url = reverse('achievement-list')
+        url = reverse("achievement-list")
         response = self.client.get(url)
         self.assertIn(
             response.status_code,
-            [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+            [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN],
         )
 
     def test_achievement_list_authenticated(self):
         """Test achievement list with authenticated user."""
         self.client.force_authenticate(user=self.user)
-        url = reverse('achievement-list')
+        url = reverse("achievement-list")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(len(response.data["results"]), 1)
 
     def test_achievement_create_requires_admin(self):
         """Test that creating achievements requires admin permissions."""
         self.client.force_authenticate(user=self.user)
-        url = reverse('achievement-list')
+        url = reverse("achievement-list")
         data = {
-            'name': 'New Achievement',
-            'description': 'New description',
-            'reviews_required': 10
+            "name": "New Achievement",
+            "description": "New description",
+            "reviews_required": 10,
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -214,11 +202,11 @@ class RatingAPITest(APITestCase):
     def test_achievement_create_admin(self):
         """Test achievement creation by admin user."""
         self.client.force_authenticate(user=self.admin_user)
-        url = reverse('achievement-list')
+        url = reverse("achievement-list")
         data = {
-            'name': 'New Achievement',
-            'description': 'New description',
-            'reviews_required': 10
+            "name": "New Achievement",
+            "description": "New description",
+            "reviews_required": 10,
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -226,22 +214,18 @@ class RatingAPITest(APITestCase):
     def test_user_rating_me_endpoint(self):
         """Test the user rating 'me' endpoint."""
         # Create user rating
-        UserRating.objects.create(
-            user=self.user,
-            total_reviews=5,
-            level=2
-        )
+        UserRating.objects.create(user=self.user, total_reviews=5, level=2)
 
         self.client.force_authenticate(user=self.user)
-        url = reverse('userrating-me')
+        url = reverse("userrating-me")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['total_reviews'], 5)
-        self.assertEqual(response.data['level'], 2)
+        self.assertEqual(response.data["total_reviews"], 5)
+        self.assertEqual(response.data["level"], 2)
 
     def test_user_rating_me_not_found(self):
         """Test the user rating 'me' endpoint when no rating exists."""
         self.client.force_authenticate(user=self.user)
-        url = reverse('userrating-me')
+        url = reverse("userrating-me")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

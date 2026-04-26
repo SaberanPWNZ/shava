@@ -1,3 +1,9 @@
+export interface ImageThumbnails {
+	src: string;
+	srcset: string | null;
+	sizes: { xs?: string; sm?: string; md?: string; lg?: string };
+}
+
 export interface Place {
 	id: number;
 	name: string;
@@ -13,6 +19,7 @@ export interface Place {
 	stars: number;
 	ratings_count: number;
 	main_image?: string | null;
+	main_image_thumbnails?: ImageThumbnails | null;
 	additional_images?: string | null;
 	created_at: string;
 	updated_at: string;
@@ -62,9 +69,13 @@ export interface Review {
 	score: string;
 	comment?: string | null;
 	dish_image?: string | null;
+	dish_image_thumbnails?: ImageThumbnails | null;
 	receipt_image?: string | null;
+	receipt_image_thumbnails?: ImageThumbnails | null;
 	is_verified?: boolean;
 	helpful_count?: number;
+	/** True when the *current* user has cast a helpful vote on this review. */
+	viewer_voted?: boolean;
 	created_at: string;
 	is_moderated: boolean;
 }
@@ -76,6 +87,7 @@ export interface Article {
 	excerpt?: string;
 	content?: string;
 	cover_image?: string | null;
+	cover_image_thumbnails?: ImageThumbnails | null;
 	category: string;
 	author?: number | null;
 	author_name?: string | null;
@@ -86,6 +98,7 @@ export interface Article {
 }
 
 export interface PlaceFilters {
+	city?: string;
 	district?: string;
 	delivery?: boolean;
 	is_featured?: boolean;

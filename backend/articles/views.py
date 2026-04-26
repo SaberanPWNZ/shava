@@ -1,4 +1,4 @@
-from rest_framework import permissions, viewsets
+from rest_framework import viewsets
 from rest_framework.permissions import AllowAny, IsAdminUser
 
 from articles.models import Article

@@ -8,7 +8,6 @@ from rest_framework.test import APITestCase
 
 from users.models import User
 
-
 _LOCKOUT_OVERRIDES = {
     "AXES_ENABLED": True,
     "AXES_FAILURE_LIMIT": 3,

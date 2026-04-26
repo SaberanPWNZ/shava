@@ -56,6 +56,34 @@ export const authApi = {
 		} finally {
 			tokenStorage.clear();
 		}
+	},
+
+	async requestVerifyEmail(): Promise<void> {
+		await apiFetch('/users/verify-email/request/', { method: 'POST' });
+	},
+
+	async confirmVerifyEmail(token: string): Promise<User> {
+		return apiFetch<User>('/users/verify-email/confirm/', {
+			method: 'POST',
+			body: { token },
+			auth: false
+		});
+	},
+
+	async requestPasswordReset(email: string): Promise<void> {
+		await apiFetch('/users/password-reset/request/', {
+			method: 'POST',
+			body: { email },
+			auth: false
+		});
+	},
+
+	async confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+		await apiFetch('/users/password-reset/confirm/', {
+			method: 'POST',
+			body: { token, new_password: newPassword },
+			auth: false
+		});
 	}
 };
 

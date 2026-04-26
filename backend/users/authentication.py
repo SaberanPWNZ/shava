@@ -5,6 +5,7 @@ banned users are rejected even when they hold a valid (non-expired) token.
 This keeps ban enforcement in a single, declarative place that every view
 inherits via ``DEFAULT_AUTHENTICATION_CLASSES``.
 """
+
 from rest_framework import exceptions
 from rest_framework_simplejwt.authentication import JWTAuthentication
 

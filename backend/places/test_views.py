@@ -1,14 +1,13 @@
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from django.urls import reverse
-from rest_framework.test import APITestCase
-from rest_framework import status
-from django.core.files.uploadedfile import SimpleUploadedFile
-from PIL import Image
 import io
 
+from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
+from PIL import Image
+from rest_framework import status
+from rest_framework.test import APITestCase
+
 from places.models import Place, PlaceRating
-from places.serializers import PlaceCreateSerializer, PlaceDetailSerializer
 
 User = get_user_model()
 
@@ -209,27 +208,21 @@ class PlaceCreateRequiredFieldsTest(APITestCase):
     def test_create_requires_city(self):
         data = self._payload()
         data.pop("city")
-        resp = self.client.post(
-            "/api/places/create-place/", data, format="multipart"
-        )
+        resp = self.client.post("/api/places/create-place/", data, format="multipart")
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("city", resp.data)
 
     def test_create_requires_latitude(self):
         data = self._payload()
         data.pop("latitude")
-        resp = self.client.post(
-            "/api/places/create-place/", data, format="multipart"
-        )
+        resp = self.client.post("/api/places/create-place/", data, format="multipart")
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("latitude", resp.data)
 
     def test_create_requires_longitude(self):
         data = self._payload()
         data.pop("longitude")
-        resp = self.client.post(
-            "/api/places/create-place/", data, format="multipart"
-        )
+        resp = self.client.post("/api/places/create-place/", data, format="multipart")
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("longitude", resp.data)
 

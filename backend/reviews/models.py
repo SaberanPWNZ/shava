@@ -1,5 +1,6 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
+
 from reviews.choices import REVIEW_SCORE_CHOICES
 
 
@@ -14,9 +15,7 @@ class Review(models.Model):
         choices=REVIEW_SCORE_CHOICES,
     )
     comment = models.TextField(blank=True, null=True)
-    dish_image = models.ImageField(
-        upload_to="review_dishes/", blank=True, null=True
-    )
+    dish_image = models.ImageField(upload_to="review_dishes/", blank=True, null=True)
     receipt_image = models.ImageField(
         upload_to="review_receipts/", blank=True, null=True
     )
@@ -45,7 +44,8 @@ class ReviewHelpfulVote(models.Model):
         Review, on_delete=models.CASCADE, related_name="helpful_votes"
     )
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
         related_name="helpful_votes",
     )
     created_at = models.DateTimeField(auto_now_add=True)

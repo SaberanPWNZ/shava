@@ -38,9 +38,7 @@ class SeedCitiesCommandTests(TestCase):
         City.objects.create(name="Atlantis", slug="atlantis")
         with TemporaryDirectory() as tmp:
             path = Path(tmp) / "small.csv"
-            path.write_text(
-                "name,slug,region\nKyiv,kyiv,UA\n", encoding="utf-8"
-            )
+            path.write_text("name,slug,region\nKyiv,kyiv,UA\n", encoding="utf-8")
             call_command("seed_cities", file=str(path), deactivate_missing=True)
         atlantis = City.objects.get(slug="atlantis")
         self.assertFalse(atlantis.is_active)
@@ -50,7 +48,9 @@ class PlaceCityFilterTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.kyiv, _ = City.objects.get_or_create(slug="kyiv", defaults={"name": "Київ"})
-        cls.lviv, _ = City.objects.get_or_create(slug="lviv", defaults={"name": "Львів"})
+        cls.lviv, _ = City.objects.get_or_create(
+            slug="lviv", defaults={"name": "Львів"}
+        )
         # Two places: one tied to Kyiv via FK, one to Lviv via the legacy
         # CharField only (city_ref left NULL).
         cls.p_kyiv = Place.objects.create(

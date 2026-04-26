@@ -16,13 +16,15 @@
 		"test:unit": "svelte-kit sync && vitest run",
 		"test:unit:watch": "svelte-kit sync && vitest",
 		"test": "npm run test:unit && npm run test:e2e",
-		"generate:api": "openapi-typescript ${OPENAPI_SCHEMA_URL:-http://localhost:8000/api/schema/} --output src/lib/api/types.gen.ts"
+		"generate:api": "openapi-typescript ${OPENAPI_SCHEMA_URL:-http://localhost:8000/api/schema/} --output src/lib/api/types.gen.ts",
+		"generate:api:offline": "openapi-typescript ../backend/openapi-schema.yaml --output src/lib/api/types.gen.ts"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
 		"@playwright/test": "^1.49.1",
 		"@rollup/rollup-linux-x64-gnu": "4.6.1",
+		"@sentry/sveltekit": "^9.47.1",
 		"@sveltejs/adapter-node": "^5.2.12",
 		"@sveltejs/kit": "^2.22.0",
 		"@sveltejs/vite-plugin-svelte": "^6.0.0",

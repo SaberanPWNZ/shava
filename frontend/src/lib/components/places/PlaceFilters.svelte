@@ -34,6 +34,7 @@
 	}
 
 	function reset() {
+		filters.city = '';
 		filters.district = '';
 		filters.delivery = false;
 		filters.is_featured = false;
@@ -57,6 +58,16 @@
 			type="search"
 			placeholder="Name or description"
 			bind:value={filters.search}
+			class="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+		/>
+	</label>
+
+	<label class="flex flex-col gap-1 text-sm">
+		<span class="font-medium text-zinc-700 dark:text-zinc-300">City</span>
+		<input
+			type="search"
+			placeholder="e.g. Київ, Львів, kyiv"
+			bind:value={filters.city}
 			class="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
 		/>
 	</label>

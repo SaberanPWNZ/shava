@@ -1,7 +1,10 @@
 import logging
+
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+
 from news.models import News
+
 from .serializers import NewsSerializer
 
 logger = logging.getLogger("news")

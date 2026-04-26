@@ -85,7 +85,9 @@ the full list. Notable targets:
 - `make up` / `make down` — start / stop the docker compose dev stack
 - `make migrate` — apply migrations inside the running backend container
 - `make test` — run backend (Django) and frontend (Playwright) tests
-- `make lint` / `make fmt` — flake8 + ESLint/Prettier / black + isort + Prettier
+- `make lint` / `make fmt` — ruff (check + format check) + ESLint/Prettier / ruff format + ESLint --fix + Prettier
+- `make typecheck` — mypy with `django-stubs` over the backend
+- `pre-commit install` — wire the repo-root [`.pre-commit-config.yaml`](.pre-commit-config.yaml) so `ruff` (backend) and `prettier` + `eslint` (frontend) run on every commit
 
 ## API documentation
 
@@ -106,6 +108,29 @@ OPENAPI_SCHEMA_URL=http://localhost:8000/api/schema/ npm run generate:api
 # writes frontend/src/lib/api/types.gen.ts
 ```
 
+…or **offline** (no running server) by using the schema committed at
+`backend/openapi-schema.yaml`:
+
+```bash
+# 1. Refresh the schema from the Python sources:
+cd backend && DJANGO_SECRET_KEY=test python manage.py spectacular \
+    --file openapi-schema.yaml
+
+# 2. Regenerate TS types:
+cd ../frontend && npm run generate:api:offline
+```
+
+`backend/openapi-schema.yaml` and `frontend/src/lib/api/types.gen.ts` are
+checked into the repo and a dedicated CI job (`api-types-fresh`) runs both
+commands and fails the build with `git diff --exit-code` if either artefact
+is stale. Schema-derived types are re-exported from `$lib/api/client`:
+
+```ts
+import type { Schemas, paths, operations } from '$lib/api/client';
+
+type PlaceDto = Schemas['Place'];
+```
+
 ## Continuous integration
 
 CI runs on every push and pull request via
@@ -113,28 +138,134 @@ CI runs on every push and pull request via
 in parallel and are intended to be configured as required status checks on
 the `main` branch:
 
-| Job              | What it does                                |
-| ---------------- | ------------------------------------------- |
-| `backend-lint`   | `flake8` (Python 3.12, pip cache)           |
-| `backend-test`   | `python manage.py test` (Django, sqlite)    |
-| `frontend-lint`  | `npm run lint` (Prettier + ESLint, Node 20) |
-| `frontend-check` | `npm run check` (svelte-check)              |
-| `frontend-build` | `npm run build` (production build)          |
-| `frontend-unit`  | `npm run test:unit` (Vitest + happy-dom)    |
-| `e2e`            | Playwright e2e (depends on `frontend-build`)|
+| Job                 | What it does                                |
+| ------------------- | ------------------------------------------- |
+| `backend-lint`      | `ruff check` + `ruff format --check` (Python 3.12, pip cache) |
+| `backend-typecheck` | `mypy` + `django-stubs` (Python 3.12)       |
+| `backend-test`      | `python manage.py test` (Django, sqlite)    |
+| `frontend-lint`     | `npm run lint` (Prettier + ESLint, Node 20) |
+| `frontend-check`    | `npm run check` (svelte-check)              |
+| `frontend-build`    | `npm run build` (production build)          |
+| `frontend-unit`     | `npm run test:unit` (Vitest + happy-dom)    |
+| `e2e`               | Playwright e2e (depends on `frontend-build`)|
 
 ## Environment variables
 
 See `.env.example`. Notable ones:
 
-- `DJANGO_SECRET_KEY` — required in production.
+- `DJANGO_SECRET_KEY` — **required in production**. Django refuses to
+  boot when this is empty and `DEBUG=False` (raises
+  `ImproperlyConfigured`). Generate one with `python -c "import secrets;
+  print(secrets.token_urlsafe(64))"`.
 - `CORS_ALLOWED_ORIGINS` — comma-separated frontend origins.
-- `THROTTLE_AUTH`, `THROTTLE_REGISTER` — DRF rate strings.
-- `VITE_API_BASE_URL` — backend URL exposed to the browser.
+- `THROTTLE_AUTH`, `THROTTLE_REGISTER`, `THROTTLE_EMAIL_VERIFY`,
+  `THROTTLE_PASSWORD_RESET` — DRF rate strings.
+- `VITE_API_BASE_URL` — backend URL exposed to the browser. Defaults to
+  `/api/v1` (versioned mount). The unversioned `/api/` URLs still resolve
+  for one release window; responses carry `Deprecation: true`,
+  `Sunset` and `Link: <…>; rel="successor-version"` headers so consumers
+  get a machine-readable nudge to migrate. Override the sunset date with
+  `API_LEGACY_SUNSET_DATE` on the backend.
+- `EMAIL_BACKEND` (default `django.core.mail.backends.console.EmailBackend`),
+  `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`,
+  `EMAIL_USE_TLS`, `EMAIL_USE_SSL`, `DEFAULT_FROM_EMAIL` — outgoing email for
+  verification and password-reset flows. Console backend prints emails to
+  stdout, so the initial VPS install needs no SMTP credentials.
+- `FRONTEND_URL` — public origin of the SvelteKit app; embedded as the link
+  prefix inside verification / reset emails. Single-domain deploys can set
+  this to the same host as the backend.
+- `EMAIL_VERIFY_TOKEN_MAX_AGE`, `PASSWORD_RESET_TOKEN_MAX_AGE` — TTL (in
+  seconds) for the signed email tokens. Default `86400` (24 h).
+- `SENTRY_DSN` (backend) / `PUBLIC_SENTRY_DSN` (frontend) — when set, both
+  bundles report unhandled exceptions to Sentry with `send_default_pii=False`.
+  Leave empty to disable. `GIT_SHA` / `PUBLIC_GIT_SHA` tag releases (CI sets
+  these to the commit SHA). `SENTRY_TRACES_SAMPLE_RATE`,
+  `SENTRY_PROFILES_SAMPLE_RATE`, `PUBLIC_SENTRY_TRACES_SAMPLE_RATE` opt into
+  performance / profiling and default to `0.0`.
 - `AXES_ENABLED` (default: on outside tests), `AXES_FAILURE_LIMIT` (default `5`),
   `AXES_COOLOFF_TIME_HOURS` (default `1`), `AXES_PROXY_COUNT` (default `1`) —
   brute-force protection on login (`django-axes`). Lockouts are tracked per
   `(username, ip_address)`.
+- `REDIS_URL` — when set, switches `CACHES["default"]` to `django-redis`
+  and is used as the default Celery broker / result backend. Empty
+  value falls back to in-process `LocMemCache` and Celery
+  `ALWAYS_EAGER` mode (sufficient for dev / CI / single-worker
+  installs).
+- `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` — explicit overrides
+  when the Celery infra is split from the cache.
+  `CELERY_TASK_ALWAYS_EAGER` (default off when `REDIS_URL` is set,
+  always on under the test runner) forces synchronous task execution.
+
+## Async tasks (Celery)
+
+`backend/config/celery.py` defines a single `Celery("shava")` app
+auto-loaded by Django (`backend/config/__init__.py`). Tasks are
+auto-discovered from any app with a `tasks` module — currently
+`users.tasks` exposes `send_verification_email(user_id)` and
+`send_password_reset_email(user_id)`. Registration dispatches
+`send_verification_email.delay(user.pk)` so a slow SMTP transport
+doesn't extend the response time of `POST /api/v1/users/register/`.
+
+In production run worker + beat next to the web container:
+
+```bash
+docker compose up redis web celery_worker celery_beat
+```
+
+For local debugging without a broker just leave `REDIS_URL=` empty —
+calls to `.delay()` execute inline thanks to `ALWAYS_EAGER`. The test
+suite forces eager mode automatically (see `_RUNNING_TESTS` in
+`backend/config/settings.py`).
+
+## Image thumbnails
+
+Image fields exposed via the API have a sibling `*_thumbnails` field
+backed by `easy-thumbnails`:
+
+| Endpoint                | Original field    | Thumbnails field            | Alias group |
+| ----------------------- | ----------------- | --------------------------- | ----------- |
+| `users.UserPublic`      | `avatar`          | `avatar_thumbnails`         | `avatar` (square crop) |
+| `places.Place`          | `main_image`      | `main_image_thumbnails`     | `photo` (landscape)    |
+| `reviews.Review`        | `dish_image` / `receipt_image` | `*_thumbnails` per field | `photo` |
+| `articles.Article`      | `cover_image`     | `cover_image_thumbnails`    | `photo`     |
+
+Each thumbnail field has the shape:
+
+```json
+{
+  "src": "/media/place_images/x.jpg",
+  "srcset": "/media/.../x.64x0.jpg 64w, .../x.256x0.jpg 256w, .../x.512x0.jpg 512w, .../x.1024x0.jpg 1024w",
+  "sizes": { "xs": "...", "sm": "...", "md": "...", "lg": "..." }
+}
+```
+
+Aliases live in `settings.THUMBNAIL_ALIASES`; widths in
+`settings.THUMBNAIL_SRCSET_SIZES`. Avatars use `crop=smart` so a
+1024×768 source still produces a square 256² with the face centred.
+Thumbnails are generated on first request, then cached in
+`MEDIA_ROOT/thumbs/`.
+
+## Performance — query budgets and N+1 hotspots
+
+The three high-traffic list endpoints have a hard query budget enforced
+by `backend/places/test_query_counts.py` (see `LIST_QUERY_BUDGET = 6`,
+which fits one paginated `COUNT(*)`, one main `SELECT`, transaction
+savepoints, and the prefetch-related joins):
+
+| Endpoint                              | Why it was N+1                                            | Fix                                                                                |
+| ------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `GET /api/v1/places/`                 | `average_rating` / `ratings_count` / `reviews_count` SerializerMethodFields per row | `Place.objects.with_list_annotations().select_related("city_ref", "author")` |
+| `GET /api/v1/places/<id>/reviews/`    | `author_username` per row + `viewer_voted` per request    | `select_related("author")` + `with_viewer_votes_prefetch(request)`                 |
+| `GET /api/v1/articles/`               | `author` joined per row                                   | `select_related("author")` on the queryset                                         |
+
+If you add a new list endpoint, write the queryset against
+`select_related` / `prefetch_related` first, then add a sibling case to
+`test_query_counts.py` so a future regression fails CI loudly.
+
+In dev `django-debug-toolbar` is mounted at `/__debug__/` (gated on
+`DEBUG=True`, `INTERNAL_IPS = ["127.0.0.1"]`) — open any list endpoint
+via the SvelteKit dev server proxy and the SQL panel will show the
+exact queries.
 
 ## SOLID notes
 
@@ -153,33 +284,22 @@ See `.env.example`. Notable ones:
 
 ## Suggested follow-up improvements (out of scope)
 
-### Security
-- Make `DJANGO_SECRET_KEY` mandatory (currently empty default).
-- `SECURE_*` settings + HSTS in prod; HTTPS-only cookies.
-- `django-axes` against brute-force on login.
-- Email verification (signed token) and password reset flow.
-- Optional 2FA via `django-otp`.
-- Sentry for error tracking (frontend + backend).
+See `ROADMAP.md` for the canonical list of in-flight and queued
+improvements with acceptance criteria. The buckets below are the ones
+still open at the time of writing.
 
-### Code quality
-- `ruff` instead of `flake8`; `mypy` + `django-stubs`; `pre-commit`.
-- `vitest` for frontend unit tests of services/stores.
-- GitHub Actions CI matrix (lint → test → build → e2e).
+### Security
+- Optional 2FA via `django-otp`.
 
 ### Architecture
-- `drf-spectacular` (OpenAPI) → generate TS types with `openapi-typescript`.
-- API versioning under `/api/v1/`.
 - Move uploads to S3/MinIO via `django-storages`.
 
 ### Performance
-- Redis for cache + Celery broker; async tasks (email, image processing).
-- `select_related` / `prefetch_related` audit.
 - Thumbnail generation (`easy-thumbnails`).
 
 ### DevEx / Infra
 - Multi-stage prod Dockerfile for the frontend (build → nginx).
 - `docker-compose.dev.yml` with hot-reload + healthchecks.
-- `Makefile` / `just` for common commands.
 
 ### UX
 - Skeleton loaders, optimistic updates, toast notifications.

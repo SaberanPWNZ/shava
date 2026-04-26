@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ResponsiveImage from '$lib/components/ResponsiveImage.svelte';
 	import StarRating from '$lib/components/places/StarRating.svelte';
 	import type { Place } from '$lib/types';
 
@@ -9,18 +10,21 @@
 	href={`/places/${place.id}`}
 	class="block overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
 >
-	{#if place.main_image}
-		<img
-			src={place.main_image}
-			alt={place.name}
-			class="h-40 w-full object-cover"
-			loading="lazy"
-		/>
-	{:else}
-		<div class="flex h-40 items-center justify-center bg-zinc-100 text-zinc-400 dark:bg-zinc-800">
-			No image
-		</div>
-	{/if}
+	<ResponsiveImage
+		thumbnails={place.main_image_thumbnails}
+		src={place.main_image}
+		alt={place.name}
+		sizes="(min-width: 768px) 33vw, 100vw"
+		class="h-40 w-full object-cover"
+	>
+		{#snippet fallback()}
+			<div
+				class="flex h-40 items-center justify-center bg-zinc-100 text-zinc-400 dark:bg-zinc-800"
+			>
+				No image
+			</div>
+		{/snippet}
+	</ResponsiveImage>
 	<div class="p-4">
 		<div class="flex items-start justify-between gap-2">
 			<h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{place.name}</h3>

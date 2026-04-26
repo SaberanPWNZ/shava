@@ -1,0 +1,122 @@
+# =============================================================================
+# Backend Python tooling configuration.
+#
+# Replaces the previous combination of flake8 + black + isort with `ruff`
+# (single-binary linter + formatter, much faster) and adds `mypy` with the
+# `django-stubs` plugin for static type checking.
+#
+# Roadmap epic 2.1 — see ROADMAP.md.
+# =============================================================================
+
+[tool.ruff]
+# Match the previous flake8 configuration (max-line-length, exclude list).
+line-length = 88
+target-version = "py312"
+extend-exclude = [
+    "migrations",
+    "static",
+    "media",
+    "staticfiles",
+    "logs",
+]
+
+[tool.ruff.lint]
+# Roughly mirror the flake8 plugin set we used before:
+#   E/W  → pycodestyle (was the flake8 core)
+#   F    → pyflakes
+#   B    → flake8-bugbear
+#   C4   → flake8-comprehensions
+#   A    → flake8-builtins
+#   N    → pep8-naming
+#   DJ   → flake8-django (Ruff has a small built-in subset)
+#   I    → isort (replaces standalone isort)
+#   UP   → pyupgrade (cheap modernization, opt-in conservatively)
+select = ["E", "W", "F", "B", "C4", "A", "N", "DJ", "I", "UP"]
+# Keep parity with the prior `extend-ignore = E203, W503` and avoid noise that
+# the existing codebase intentionally accepts.
+ignore = [
+    "E203",   # whitespace before ':' — clashes with Black-style slicing.
+    "E501",   # line-too-long — formatter handles this; long URLs / strings are fine.
+    "B008",   # function call in default arg — common DRF/Django idiom.
+    "N818",   # exception name suffix — pre-existing names like `Throttled`.
+    "UP007",  # `Optional[X]` → `X | None` — leave existing signatures alone.
+    "UP035",  # `typing.X` deprecated alias — leave existing imports alone.
+    "UP045",  # `Optional[X]` in annotations — leave existing signatures alone.
+    # The following flake8-django rules flag pre-existing model design issues
+    # (nullable string fields, missing __str__, body ordering). Fixing them
+    # touches schema/migrations and is out of scope for the tooling PR — see
+    # ROADMAP.md and address in a dedicated cleanup PR.
+    "DJ001",
+    "DJ008",
+    "DJ012",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Settings module legitimately uses module-level magic / unused names from
+# the env (e.g. SECRET_KEY guarded by import-time logic).
+"config/settings.py" = ["E402", "F401", "F403", "F405", "N806"]
+# `__init__.py` re-exports.
+"**/__init__.py" = ["F401"]
+# Tests use long, descriptive function names and dynamic attribute setup.
+"**/tests*.py" = ["N802", "N803", "N806"]
+"**/tests/**" = ["N802", "N803", "N806"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "config",
+    "articles",
+    "gamification",
+    "ingredients",
+    "news",
+    "places",
+    "places_menu",
+    "rating",
+    "reviews",
+    "shwarma",
+    "users",
+]
+
+[tool.ruff.format]
+# Match the previous Black configuration (defaults are compatible).
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+# -----------------------------------------------------------------------------
+# mypy
+# -----------------------------------------------------------------------------
+# Lenient baseline: catches obvious bugs without forcing a sweep of the
+# existing codebase. CI fails on *new* errors that violate these rules; raise
+# strictness incrementally in follow-up PRs.
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["mypy_django_plugin.main"]
+ignore_missing_imports = true
+follow_imports = "silent"
+warn_unused_ignores = false
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = false
+disallow_untyped_defs = false
+exclude = [
+    "migrations/",
+    "manage\\.py$",
+    "wait_for_db\\.py$",
+    "logs/",
+    "media/",
+    "staticfiles/",
+]
+
+[[tool.mypy.overrides]]
+module = ["*.migrations.*"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["*.tests", "*.tests.*"]
+# Tests often rely on Django's dynamic ORM and DRF magic; don't gate CI on
+# strict typing inside test modules.
+ignore_errors = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings"

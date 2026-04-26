@@ -5,24 +5,41 @@ custom permissions in :mod:`users.permissions`. Business logic lives in
 :mod:`users.services` (SRP) and token operations go through the
 ``TokenIssuer`` abstraction in :mod:`users.token_issuer` (DIP).
 """
+
+import logging
+
+from django.contrib.auth.password_validation import validate_password
+from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import generics, status, viewsets
+from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from users.authentication import BanAwareJWTAuthentication as JWTAuthentication
+from users.email_service import EmailService
 from users.models import User
 from users.permissions import IsAdmin, IsSelfOrAdmin
 from users.serializers import (
     ChangePasswordSerializer,
     MeUpdateSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     RegisterSerializer,
     UserAdminSerializer,
     UserPublicSerializer,
+    VerifyEmailConfirmSerializer,
 )
 from users.services import UserRegistrationService
 from users.token_issuer import SimpleJWTTokenIssuer, TokenError
+from users.tokens import (
+    TokenInvalid,
+    read_password_reset_token,
+    read_verify_email_token,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -48,9 +65,7 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response(
-            UserPublicSerializer(user).data, status=status.HTTP_201_CREATED
-        )
+        return Response(UserPublicSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
 class MeView(APIView):
@@ -63,9 +78,7 @@ class MeView(APIView):
         return Response(UserPublicSerializer(request.user).data)
 
     def patch(self, request):
-        serializer = MeUpdateSerializer(
-            request.user, data=request.data, partial=True
-        )
+        serializer = MeUpdateSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(UserPublicSerializer(request.user).data)
@@ -182,3 +195,171 @@ class UserBanView(APIView):
             )
         target.save(update_fields=["is_banned"])
         return Response(UserAdminSerializer(target).data)
+
+
+# ---------------------------------------------------------------------------
+# Email verification + password reset
+# ---------------------------------------------------------------------------
+
+
+class VerifyEmailRequestView(APIView):
+    """Re-send the verification email to the *currently authenticated* user.
+
+    Throttled — must not be abused as a free email-sending oracle.
+    """
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "email_verify"
+
+    email_service = EmailService()
+
+    @extend_schema(
+        tags=["users"],
+        summary="Resend verification email to the current user",
+        request=None,
+        responses={
+            204: OpenApiResponse(description="Verification email sent (or already verified)."),
+            503: OpenApiResponse(description="Email transport failure."),
+        },
+    )
+    def post(self, request):
+        user = request.user
+        if user.is_verified:
+            # Idempotent — nothing to do, but don't reveal extra info either.
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        try:
+            self.email_service.send_verify_email(user)
+        except Exception:
+            logger.exception("verify-email send failed for %s", user.email)
+            return Response(
+                {"detail": "Could not send the verification email."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class VerifyEmailConfirmView(APIView):
+    """Public — confirms an email using a signed token."""
+
+    permission_classes = [AllowAny]
+    authentication_classes: list = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "email_verify"
+
+    @extend_schema(
+        tags=["users"],
+        summary="Confirm an email-verification token",
+        request=VerifyEmailConfirmSerializer,
+        responses={
+            200: UserPublicSerializer,
+            400: OpenApiResponse(description="Invalid or expired token."),
+        },
+    )
+    def post(self, request):
+        serializer = VerifyEmailConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.validated_data["token"]
+        try:
+            user = read_verify_email_token(token)
+        except TokenInvalid as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        if not user.is_verified:
+            user.is_verified = True
+            user.save(update_fields=["is_verified"])
+        return Response(UserPublicSerializer(user).data)
+
+
+class PasswordResetRequestView(APIView):
+    """Public — emails a password-reset link if the address is registered.
+
+    The response is identical regardless of whether the address exists, so
+    the endpoint cannot be used as a user-enumeration oracle.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes: list = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset"
+
+    email_service = EmailService()
+
+    @extend_schema(
+        tags=["users"],
+        summary="Request a password-reset email",
+        request=PasswordResetRequestSerializer,
+        responses={
+            204: OpenApiResponse(
+                description=(
+                    "Always 204 regardless of whether the address exists, "
+                    "so the endpoint cannot be used for user enumeration."
+                ),
+            ),
+        },
+    )
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            user = None
+        if user is not None:
+            try:
+                self.email_service.send_password_reset_email(user)
+            except Exception:
+                # Log and swallow: surfacing transport errors here would
+                # turn the endpoint back into an enumeration oracle.
+                logger.exception("password-reset send failed for %s", email)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PasswordResetConfirmView(APIView):
+    """Public — completes a password reset using a signed token."""
+
+    permission_classes = [AllowAny]
+    authentication_classes: list = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset"
+
+    @extend_schema(
+        tags=["users"],
+        summary="Confirm a password-reset token and set a new password",
+        request=PasswordResetConfirmSerializer,
+        responses={
+            204: OpenApiResponse(description="Password updated."),
+            400: OpenApiResponse(
+                response=inline_serializer(
+                    name="PasswordResetConfirmError",
+                    fields={
+                        "detail": drf_serializers.CharField(required=False),
+                        "new_password": drf_serializers.ListField(
+                            child=drf_serializers.CharField(), required=False
+                        ),
+                    },
+                ),
+                description="Invalid token or password validation failed.",
+            ),
+        },
+    )
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.validated_data["token"]
+        new_password = serializer.validated_data["new_password"]
+        try:
+            user = read_password_reset_token(token)
+        except TokenInvalid as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        # Re-run validators with the resolved user for similarity / common
+        # checks; surface as a serializer-style field error.
+        try:
+            validate_password(new_password, user=user)
+        except Exception as exc:  # django ValidationError
+            messages = getattr(exc, "messages", [str(exc)])
+            raise drf_serializers.ValidationError({"new_password": messages}) from exc
+        user.set_password(new_password)
+        user.save(update_fields=["password"])
+        return Response(status=status.HTTP_204_NO_CONTENT)

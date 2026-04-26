@@ -1,6 +1,12 @@
 import { browser } from '$app/environment';
 import { ApiError, type FieldErrors } from '$lib/types/auth';
 
+// Re-export schema-derived types from a single place so callers can import
+// strongly-typed DTOs as ``import { type Schemas } from '$lib/api/client'``.
+// This also ensures ``types.gen.ts`` is part of the import graph (so it is
+// emitted by the bundler and kept in sync via ``npm run generate:api*``).
+export type { paths, components, operations, Schemas } from './schema';
+
 const ACCESS_KEY = 'shava.access';
 const REFRESH_KEY = 'shava.refresh';
 
@@ -12,7 +18,10 @@ function resolveApiBase(): string {
 		const fromWindow = (window as unknown as { __API_BASE?: string }).__API_BASE;
 		if (fromWindow) return fromWindow;
 	}
-	return '/api';
+	// Versioned prefix — see ROADMAP 3.2. The legacy unversioned ``/api``
+	// mount is still served by Django for one release window with a
+	// ``Deprecation`` header but new clients target ``/api/v1`` directly.
+	return '/api/v1';
 }
 
 export const API_BASE: string = resolveApiBase();
@@ -99,7 +108,10 @@ async function parseError(resp: Response): Promise<ApiError> {
 	return new ApiError(message, resp.status, fieldErrors);
 }
 
-export async function apiFetch<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function apiFetch<T = unknown>(
+	path: string,
+	options: RequestOptions = {}
+): Promise<T> {
 	const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
 
 	const send = async (): Promise<Response> => {

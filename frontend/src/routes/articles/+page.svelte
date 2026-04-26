@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import ArticleCard from '$lib/components/articles/ArticleCard.svelte';
+	import Seo from '$lib/components/Seo.svelte';
 	import { articlesApi } from '$lib/api/places.api';
 	import type { Article } from '$lib/types';
 
@@ -25,6 +26,8 @@
 
 	onMount(load);
 </script>
+
+<Seo title="Articles" description="Reviews, guides, and recipes from the Shava community." />
 
 <section class="flex flex-col gap-6">
 	<header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

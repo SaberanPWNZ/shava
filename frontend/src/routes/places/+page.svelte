@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import PlaceCard from '$lib/components/places/PlaceCard.svelte';
 	import PlaceFilters from '$lib/components/places/PlaceFilters.svelte';
+	import Seo from '$lib/components/Seo.svelte';
 	import { placesApi } from '$lib/api/places.api';
 	import type { Place, PlaceFilters as Filters } from '$lib/types';
 
@@ -11,10 +12,14 @@
 	let places = $state<Place[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	// Set once the initial URL → state hydration finishes so the
+	// auto-debounce effect doesn't double-fire the first request.
+	let initialised = $state(false);
 
 	function readFiltersFromUrl() {
 		const params = page.url.searchParams;
 		filters.search = params.get('search') ?? '';
+		filters.city = params.get('city') ?? '';
 		filters.district = params.get('district') ?? '';
 		const minStars = params.get('min_stars');
 		filters.min_stars = minStars ? Number(minStars) : undefined;
@@ -27,6 +32,7 @@
 	function writeFiltersToUrl() {
 		const params = new URLSearchParams();
 		if (filters.search) params.set('search', filters.search);
+		if (filters.city) params.set('city', filters.city);
 		if (filters.district) params.set('district', filters.district);
 		if (filters.min_stars) params.set('min_stars', String(filters.min_stars));
 		if (filters.delivery) params.set('delivery', 'true');
@@ -52,18 +58,51 @@
 		}
 	}
 
+	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+
 	function applyFilters() {
+		// Manual flush from the Apply button — cancel any pending
+		// debounce so the request fires exactly once.
+		clearTimeout(debounceTimer);
 		writeFiltersToUrl();
 		void load();
 	}
 
+	// Debounced auto-apply: as the user types in search / city or
+	// flips a checkbox, schedule a single request 300 ms after the
+	// last change. Skips the very first run so we don't reload on
+	// hydration of the URL params.
+	$effect(() => {
+		// Read every filter so the effect tracks them all.
+		void filters.search;
+		void filters.city;
+		void filters.district;
+		void filters.min_stars;
+		void filters.delivery;
+		void filters.is_featured;
+		void filters.has_menu;
+		void filters.ordering;
+		if (!initialised) return;
+		clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => {
+			writeFiltersToUrl();
+			void load();
+		}, 300);
+		return () => clearTimeout(debounceTimer);
+	});
+
 	onMount(() => {
 		readFiltersFromUrl();
 		void load();
+		initialised = true;
 	});
 </script>
 
 <div class="grid gap-6 lg:grid-cols-[280px_1fr]">
+	<Seo
+		title="Places"
+		description="Browse and search shawarma places. Filter by city, district, rating, delivery and more."
+	/>
 	<aside>
 		<PlaceFilters bind:filters onapply={applyFilters} />
 	</aside>

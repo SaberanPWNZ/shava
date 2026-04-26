@@ -1,6 +1,8 @@
-from places.models import Place, PlaceRating
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
+
+from config.thumbnails import thumbnail_set
+from places.models import Place, PlaceRating
 
 
 class PlaceSerializer(ModelSerializer):
@@ -9,6 +11,7 @@ class PlaceSerializer(ModelSerializer):
     reviews_count = serializers.SerializerMethodField()
     stars = serializers.SerializerMethodField()
     ratings_count = serializers.SerializerMethodField()
+    main_image_thumbnails = serializers.SerializerMethodField()
 
     class Meta:
         model = Place
@@ -28,6 +31,7 @@ class PlaceSerializer(ModelSerializer):
             "stars",
             "ratings_count",
             "main_image",
+            "main_image_thumbnails",
             "additional_images",
             "created_at",
             "updated_at",
@@ -42,6 +46,11 @@ class PlaceSerializer(ModelSerializer):
             "average_rating",
             "reviews_count",
         ]
+
+    def get_main_image_thumbnails(self, obj):
+        return thumbnail_set(
+            obj.main_image, alias_group="photo", request=self.context.get("request")
+        )
 
     def get_google_maps_url(self, obj):
         return obj.google_maps_url()

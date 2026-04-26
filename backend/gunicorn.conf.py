@@ -49,11 +49,10 @@ forwarded_allow_ips = os.getenv("GUNICORN_FORWARDED_ALLOW_IPS", "*")
 
 # ----- Logging ---------------------------------------------------------------
 accesslog = os.getenv("GUNICORN_ACCESS_LOG", "-")  # stdout
-errorlog = os.getenv("GUNICORN_ERROR_LOG", "-")    # stderr
+errorlog = os.getenv("GUNICORN_ERROR_LOG", "-")  # stderr
 loglevel = os.getenv("GUNICORN_LOG_LEVEL", "info")
 access_log_format = (
-    '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s '
-    '"%(f)s" "%(a)s" %(D)sus'
+    '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)sus'
 )
 
 # ----- Process naming --------------------------------------------------------

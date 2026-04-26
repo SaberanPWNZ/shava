@@ -13,11 +13,22 @@ The serializers are intentionally split by responsibility (SRP/ISP):
 * :class:`UserAdminSerializer` — full set of fields, used **only** by
   admin-only endpoints.
 """
+
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
+from config.thumbnails import thumbnail_set
 from users.models import User
 from users.services import RegistrationData, UserRegistrationService
+
+
+def _avatar_thumbnails(serializer, obj):
+    """Shared resolver for the ``avatar_thumbnails`` SerializerMethodField."""
+
+    request = serializer.context.get("request")
+    return thumbnail_set(
+        getattr(obj, "avatar", None), alias_group="avatar", request=request
+    )
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -38,15 +49,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_email(self, value: str) -> str:
         value = value.strip().lower()
         if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError(
-                "A user with this email already exists."
-            )
+            raise serializers.ValidationError("A user with this email already exists.")
         return value
 
     def create(self, validated_data):
-        service: UserRegistrationService = self.context.get(
-            "registration_service"
-        ) or UserRegistrationService()
+        service: UserRegistrationService = (
+            self.context.get("registration_service") or UserRegistrationService()
+        )
         return service.register(
             RegistrationData(
                 email=validated_data["email"],
@@ -60,6 +69,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 class UserPublicSerializer(serializers.ModelSerializer):
     """Safe, read-only view of a user."""
 
+    avatar_thumbnails = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -68,9 +79,13 @@ class UserPublicSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "avatar",
+            "avatar_thumbnails",
             "is_verified",
         ]
         read_only_fields = fields
+
+    def get_avatar_thumbnails(self, obj):
+        return _avatar_thumbnails(self, obj)
 
 
 class MeUpdateSerializer(serializers.ModelSerializer):
@@ -110,6 +125,7 @@ class UserAdminSerializer(serializers.ModelSerializer):
         required=False,
         validators=[validate_password],
     )
+    avatar_thumbnails = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -124,6 +140,7 @@ class UserAdminSerializer(serializers.ModelSerializer):
             "is_superuser",
             "telegram_id",
             "avatar",
+            "avatar_thumbnails",
             "is_verified",
             "is_banned",
             "is_moderator",
@@ -131,6 +148,9 @@ class UserAdminSerializer(serializers.ModelSerializer):
             "password",
         ]
         read_only_fields = ["id"]
+
+    def get_avatar_thumbnails(self, obj):
+        return _avatar_thumbnails(self, obj)
 
     def update(self, instance, validated_data):
         password = validated_data.pop("password", None)
@@ -140,3 +160,37 @@ class UserAdminSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
+
+
+class VerifyEmailConfirmSerializer(serializers.Serializer):
+    """Public — accepts a signed token and marks the user as verified."""
+
+    token = serializers.CharField(required=True, write_only=True)
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """Public — requests a password-reset link by email.
+
+    Validation here is *deliberately* lenient: the view never reveals
+    whether the address is registered, so we only check the format.
+    """
+
+    email = serializers.EmailField(required=True)
+
+    def validate_email(self, value: str) -> str:
+        return value.strip().lower()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Public — completes a password reset using a signed token."""
+
+    token = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True)
+
+    def validate_new_password(self, value: str) -> str:
+        # The user is resolved from the token in the view, so we can only
+        # apply password validators that don't need a user instance here.
+        # The view runs ``validate_password(value, user=user)`` again with
+        # the resolved user for similarity checks.
+        validate_password(value)
+        return value

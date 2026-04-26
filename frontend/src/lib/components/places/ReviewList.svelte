@@ -7,9 +7,22 @@
 
 	let { reviews = [] } = $props<{ reviews?: Review[] }>();
 
-	const voted = $state<Record<number, boolean>>({});
+	// Seed local toggle state from the server's ``viewer_voted`` flag so
+	// the button reflects truth on first paint and survives re-render. We
+	// derive (rather than ``$state``-init) so re-runs after the parent
+	// refreshes the ``reviews`` prop pick up the new server values.
+	const voted = $derived<Record<number, boolean>>(
+		Object.fromEntries(reviews.map((r: Review) => [r.id, r.viewer_voted ?? false]))
+	);
+	// Override map populated only after the user clicks — takes precedence
+	// over the server-derived value above.
+	const overrides = $state<Record<number, boolean>>({});
 	const counts = $state<Record<number, number>>({});
 	let voting = $state<number | null>(null);
+
+	function isVoted(review: Review): boolean {
+		return overrides[review.id] ?? voted[review.id] ?? false;
+	}
 
 	function getCount(review: Review): number {
 		return counts[review.id] ?? review.helpful_count ?? 0;
@@ -20,11 +33,11 @@
 		if (review.author === authStore.user?.id) return;
 		voting = review.id;
 		try {
-			const result = voted[review.id]
+			const result = isVoted(review)
 				? await reviewsHelpfulApi.unvote(review.id)
 				: await reviewsHelpfulApi.vote(review.id);
 			counts[review.id] = result.helpful_count;
-			voted[review.id] = result.voted;
+			overrides[review.id] = result.voted;
 		} catch (error) {
 			// Surface 4xx (e.g. self-vote) silently — no UI flow for this in MVP.
 			if (!(error instanceof ApiError)) throw error;
@@ -78,7 +91,7 @@
 					<button
 						type="button"
 						class="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:border-orange-300 hover:text-orange-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:border-orange-500 dark:hover:text-orange-400"
-						aria-pressed={voted[review.id] ?? false}
+						aria-pressed={isVoted(review)}
 						aria-label="Mark this review as helpful"
 						disabled={!authStore.isAuthenticated ||
 							review.author === authStore.user?.id ||

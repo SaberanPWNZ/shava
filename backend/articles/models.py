@@ -3,7 +3,6 @@ from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 
-
 ARTICLE_CATEGORY_CHOICES = [
     ("guide", "Guide"),
     ("review", "Review"),

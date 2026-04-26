@@ -32,7 +32,7 @@ vi.mock('$app/navigation', () => ({
 
 vi.mock('$lib/api/auth.api', () => ({
 	authApi: authApiMock,
-	API_BASE: '/api'
+	API_BASE: '/api/v1'
 }));
 
 vi.mock('$lib/services/gamification.service', () => ({

@@ -1,12 +1,11 @@
 """Tests for the users app: registration, login, refresh, me, change password,
 logout, throttling, and privilege-escalation guards."""
+
 from django.test import override_settings
-from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from users.models import User
-
 
 # Disable throttling for most tests so they don't interfere; throttling has
 # its own dedicated test below.
@@ -18,17 +17,22 @@ NO_THROTTLE = {
 }
 
 
-@override_settings(REST_FRAMEWORK={**NO_THROTTLE, **{
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-    "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.ScopedRateThrottle",
-    ],
-}})
+@override_settings(
+    REST_FRAMEWORK={
+        **NO_THROTTLE,
+        **{
+            "DEFAULT_AUTHENTICATION_CLASSES": [
+                "rest_framework_simplejwt.authentication.JWTAuthentication",
+            ],
+            "DEFAULT_PERMISSION_CLASSES": [
+                "rest_framework.permissions.IsAuthenticated",
+            ],
+            "DEFAULT_THROTTLE_CLASSES": [
+                "rest_framework.throttling.ScopedRateThrottle",
+            ],
+        },
+    }
+)
 class AuthFlowTests(APITestCase):
     register_url = "/api/users/register/"
     login_url = "/api/users/login/"
@@ -187,9 +191,7 @@ class AuthFlowTests(APITestCase):
         access, refresh = login.data["access"], login.data["refresh"]
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
 
-        logout = self.client.post(
-            self.logout_url, {"refresh": refresh}, format="json"
-        )
+        logout = self.client.post(self.logout_url, {"refresh": refresh}, format="json")
         self.assertEqual(logout.status_code, status.HTTP_205_RESET_CONTENT)
 
         # The blacklisted refresh token can no longer be used.
@@ -200,23 +202,25 @@ class AuthFlowTests(APITestCase):
         self.assertEqual(refresh_resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
-@override_settings(REST_FRAMEWORK={
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-    "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.ScopedRateThrottle",
-    ],
-    "DEFAULT_THROTTLE_RATES": {"auth": "2/min", "register": "2/min"},
-})
+@override_settings(
+    REST_FRAMEWORK={
+        "DEFAULT_AUTHENTICATION_CLASSES": [
+            "rest_framework_simplejwt.authentication.JWTAuthentication",
+        ],
+        "DEFAULT_PERMISSION_CLASSES": [
+            "rest_framework.permissions.IsAuthenticated",
+        ],
+        "DEFAULT_THROTTLE_CLASSES": [
+            "rest_framework.throttling.ScopedRateThrottle",
+        ],
+        "DEFAULT_THROTTLE_RATES": {"auth": "2/min", "register": "2/min"},
+    }
+)
 class ThrottlingTests(APITestCase):
     def setUp(self):
         from django.core.cache import cache
-        from rest_framework.throttling import SimpleRateThrottle
         from rest_framework.settings import api_settings
+        from rest_framework.throttling import SimpleRateThrottle
 
         cache.clear()
         # ``SimpleRateThrottle.THROTTLE_RATES`` is captured at class definition
@@ -247,21 +251,23 @@ class ThrottlingTests(APITestCase):
         self.assertEqual(third.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
 
-@override_settings(REST_FRAMEWORK={
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "users.authentication.BanAwareJWTAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-    "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.ScopedRateThrottle",
-    ],
-    "DEFAULT_THROTTLE_RATES": {
-        "auth": "1000/min",
-        "register": "1000/min",
-    },
-})
+@override_settings(
+    REST_FRAMEWORK={
+        "DEFAULT_AUTHENTICATION_CLASSES": [
+            "users.authentication.BanAwareJWTAuthentication",
+        ],
+        "DEFAULT_PERMISSION_CLASSES": [
+            "rest_framework.permissions.IsAuthenticated",
+        ],
+        "DEFAULT_THROTTLE_CLASSES": [
+            "rest_framework.throttling.ScopedRateThrottle",
+        ],
+        "DEFAULT_THROTTLE_RATES": {
+            "auth": "1000/min",
+            "register": "1000/min",
+        },
+    }
+)
 class UserBanTests(APITestCase):
     """Ban/unban admin endpoints and authentication guard."""
 

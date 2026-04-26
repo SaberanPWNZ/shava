@@ -1,8 +1,8 @@
 """Tests for the new moderation, rating, menu and articles flows."""
+
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -89,9 +89,7 @@ class PlaceModerationFlowTest(APITestCase):
         Place.objects.create(
             name="P", address="x", main_image="x.jpg", status="On_moderation"
         )
-        Place.objects.create(
-            name="A", address="x", main_image="x.jpg", status="Active"
-        )
+        Place.objects.create(name="A", address="x", main_image="x.jpg", status="Active")
         self.client.force_authenticate(user=self.admin)
         resp = self.client.get("/api/places/moderation/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
@@ -206,9 +204,7 @@ class ReviewModerationFlowTest(APITestCase):
         )
         self.assertEqual(self.place.rating, Decimal("0.0"))
         self.client.force_authenticate(user=self.admin)
-        resp = self.client.patch(
-            f"/api/reviews/{review.pk}/approve/", format="json"
-        )
+        resp = self.client.patch(f"/api/reviews/{review.pk}/approve/", format="json")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         review.refresh_from_db()
         self.assertTrue(review.is_moderated)
@@ -224,9 +220,7 @@ class ReviewModerationFlowTest(APITestCase):
             is_moderated=False,
         )
         self.client.force_authenticate(user=self.admin)
-        resp = self.client.patch(
-            f"/api/reviews/{review.pk}/reject/", format="json"
-        )
+        resp = self.client.patch(f"/api/reviews/{review.pk}/reject/", format="json")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         review.refresh_from_db()
         self.assertTrue(review.is_deleted)

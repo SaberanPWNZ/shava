@@ -1,4 +1,4 @@
-from django.urls import path, include, re_path
+from django.urls import include, path, re_path
 from rest_framework.routers import SimpleRouter
 
 from gamification.views import ReviewHelpfulView
@@ -39,7 +39,11 @@ urlpatterns = [
         PlaceReviewsListCreateView.as_view(),
         name="place-reviews",
     ),
-    path("reviews/create/<int:place_pk>/", ReviewCreateView.as_view(), name="create-review"),
+    path(
+        "reviews/create/<int:place_pk>/",
+        ReviewCreateView.as_view(),
+        name="create-review",
+    ),
     # Back-compat URL kept from previous version
     path("reviews/create/", ReviewCreateView.as_view(), name="create-review-legacy"),
 ]

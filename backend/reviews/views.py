@@ -1,18 +1,40 @@
 import logging
 
+from django.db.models import Prefetch, QuerySet
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status, viewsets
-from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import ListAPIView, ListCreateAPIView, UpdateAPIView
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
 from places.models import Place
-from reviews.models import Review
+from reviews.models import Review, ReviewHelpfulVote
 from reviews.serializers import ReviewCreateSerializer, ReviewSerializer
 
 logger = logging.getLogger("reviews")
+
+
+def with_viewer_votes_prefetch(qs: QuerySet, request) -> QuerySet:
+    """Annotate ``qs`` so each ``Review`` exposes a ``viewer_votes`` list
+    containing only the helpful-vote rows belonging to the current user.
+
+    The prefetch is intentionally narrow (filtered by ``user_id``) so the
+    ``ReviewSerializer.get_viewer_voted`` lookup is O(1) per row instead of
+    issuing a query each. For anonymous requests we skip the prefetch — the
+    serializer short-circuits to ``False`` without touching the DB.
+    """
+
+    user = getattr(request, "user", None)
+    if user is None or not getattr(user, "is_authenticated", False):
+        return qs
+    return qs.prefetch_related(
+        Prefetch(
+            "helpful_votes",
+            queryset=ReviewHelpfulVote.objects.filter(user_id=user.id),
+            to_attr="viewer_votes",
+        )
+    )
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -24,9 +46,10 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # `place` and `author` are both rendered by the serializer →
         # join them in a single query to avoid N+1 on /reviews/.
-        return Review.objects.filter(
+        qs = Review.objects.filter(
             author=self.request.user, is_deleted=False
         ).select_related("place", "author")
+        return with_viewer_votes_prefetch(qs, self.request)
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -67,9 +90,10 @@ class PlaceReviewsListCreateView(ListCreateAPIView):
         place_id = self.kwargs.get("place_pk") or self.kwargs.get("place_id")
         # `author` is rendered via `author_username`; `place` via
         # `place_name`. Pull both in a single JOIN to avoid N+1.
-        qs = Review.objects.filter(
-            place_id=place_id, is_deleted=False
-        ).select_related("author", "place")
+        qs = Review.objects.filter(place_id=place_id, is_deleted=False).select_related(
+            "author", "place"
+        )
+        qs = with_viewer_votes_prefetch(qs, self.request)
         user = self.request.user
         if user.is_authenticated and user.is_staff:
             return qs
@@ -135,9 +159,7 @@ class ReviewModerationActionView(UpdateAPIView):
                 {"detail": "Unknown moderation action."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        logger.info(
-            "Review %s %sd by %s", review.id, action_name, request.user
-        )
+        logger.info("Review %s %sd by %s", review.id, action_name, request.user)
         return Response(self.get_serializer(review).data)
 
 

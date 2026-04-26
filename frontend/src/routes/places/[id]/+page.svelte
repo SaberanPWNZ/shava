@@ -5,6 +5,7 @@
 	import ReviewForm from '$lib/components/places/ReviewForm.svelte';
 	import ReviewList from '$lib/components/places/ReviewList.svelte';
 	import StarRating from '$lib/components/places/StarRating.svelte';
+	import Seo from '$lib/components/Seo.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import { placesApi, reviewsApi } from '$lib/api/places.api';
 	import { authStore } from '$lib/stores/auth.svelte';
@@ -57,6 +58,13 @@
 {:else if error}
 	<Alert variant="error">{error}</Alert>
 {:else if place}
+	<Seo
+		title={place.name}
+		description={place.description ??
+			`${place.name} — ${place.stars?.toFixed(1) ?? '?'}★ from ${place.ratings_count} ratings on Shava.`}
+		image={place.main_image ?? ''}
+		type="article"
+	/>
 	<article class="flex flex-col gap-6">
 		<header class="flex flex-col gap-3">
 			<h1 class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">{place.name}</h1>

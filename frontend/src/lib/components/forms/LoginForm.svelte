@@ -63,4 +63,9 @@
 		error={fieldError('password')}
 	/>
 	<Button type="submit" loading={submitting}>Sign in</Button>
+	<p class="text-center text-sm">
+		<a href="/forgot-password" class="font-medium text-orange-600 hover:underline"
+			>Forgot password?</a
+		>
+	</p>
 </form>

@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from places.models import City, Place, PlaceRating
 
 
@@ -25,14 +26,24 @@ class PlaceAdmin(admin.ModelAdmin):
         "updated_at",
     )
     search_fields = ("name", "city", "district", "address", "author__username")
-    list_filter = ("city", "district", "status", "is_featured", "created_at", "updated_at")
+    list_filter = (
+        "city",
+        "district",
+        "status",
+        "is_featured",
+        "created_at",
+        "updated_at",
+    )
     readonly_fields = ("created_at", "updated_at", "rating", "moderated_at")
     date_hierarchy = "created_at"
     ordering = ("-created_at",)
     list_per_page = 20
 
     fieldsets = (
-        (None, {"fields": ("name", "city", "city_ref", "district", "address", "author")}),
+        (
+            None,
+            {"fields": ("name", "city", "city_ref", "district", "address", "author")},
+        ),
         ("Location", {"fields": ("latitude", "longitude", "delivery")}),
         ("Content", {"fields": ("description", "main_image", "additional_images")}),
         ("Status & Rating", {"fields": ("status", "rating", "is_featured")}),

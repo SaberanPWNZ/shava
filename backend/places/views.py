@@ -1,5 +1,5 @@
-from decimal import Decimal, InvalidOperation
 import logging
+from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -39,8 +39,10 @@ def _apply_place_filters(queryset, params):
     if city:
         # Accept either a numeric City PK, a slug, or a free-text name and
         # match against both the FK and the legacy CharField for back-compat.
-        cond = Q(city__iexact=city) | Q(city_ref__slug__iexact=city) | Q(
-            city_ref__name__iexact=city
+        cond = (
+            Q(city__iexact=city)
+            | Q(city_ref__slug__iexact=city)
+            | Q(city_ref__name__iexact=city)
         )
         if str(city).isdigit():
             cond |= Q(city_ref_id=int(city))
@@ -52,7 +54,9 @@ def _apply_place_filters(queryset, params):
 
     delivery = params.get("delivery")
     if delivery is not None and delivery != "":
-        queryset = queryset.filter(delivery=str(delivery).lower() in ("1", "true", "yes"))
+        queryset = queryset.filter(
+            delivery=str(delivery).lower() in ("1", "true", "yes")
+        )
 
     is_featured = params.get("is_featured")
     if is_featured is not None and is_featured != "":
@@ -136,13 +140,14 @@ class PlaceCreateView(CreateAPIView):
             if instance.status not in ("On_moderation",):
                 instance.status = "On_moderation"
                 instance.save(update_fields=["status"])
-            logger.info(
-                "Place submitted: %s by %s", instance.name, self.request.user
-            )
+            logger.info("Place submitted: %s by %s", instance.name, self.request.user)
             return instance
         except ValidationError as e:
             logger.error("Validation error creating place: %s", e)
-            raise DRFValidationError({"detail": str(e)})
+            # Surface only the user-facing messages produced by model validators
+            # (a list of plain strings). Avoid `str(e)`, which leaks the
+            # internal repr of the exception (CodeQL py/stack-trace-exposure).
+            raise DRFValidationError({"detail": e.messages}) from e
 
 
 class PlaceDetailView(RetrieveAPIView):
@@ -217,9 +222,7 @@ class PlaceModerationActionView(UpdateAPIView):
                 {"detail": "Unknown moderation action."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        logger.info(
-            "Place %s %sd by %s", place.id, action_name, request.user
-        )
+        logger.info("Place %s %sd by %s", place.id, action_name, request.user)
         return Response(self.get_serializer(place).data)
 
 

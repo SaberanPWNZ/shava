@@ -19,7 +19,7 @@ env:
 
 jobs:
   backend-lint:
-    name: Backend lint (flake8)
+    name: Backend lint (ruff)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,8 +33,30 @@ jobs:
           cache-dependency-path: backend/requirements-dev.txt
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
-      - name: flake8
-        run: flake8 .
+      - name: ruff check
+        run: ruff check .
+      - name: ruff format --check
+        run: ruff format --check .
+
+  backend-typecheck:
+    name: Backend typecheck (mypy)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DJANGO_SECRET_KEY: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: mypy
+        run: mypy .
 
   backend-test:
     name: Backend test (Django)
@@ -44,6 +66,7 @@ jobs:
         working-directory: backend
     env:
       DJANGO_SECRET_KEY: test
+      GIT_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -98,6 +121,8 @@ jobs:
     defaults:
       run:
         working-directory: frontend
+    env:
+      PUBLIC_GIT_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -127,6 +152,44 @@ jobs:
         run: npm ci
       - name: Run unit tests
         run: npm run test:unit
+
+  api-types-fresh:
+    name: API types up-to-date
+    runs-on: ubuntu-latest
+    env:
+      DJANGO_SECRET_KEY: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install backend deps
+        working-directory: backend
+        run: pip install -r requirements.txt
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+      - name: Regenerate OpenAPI schema
+        working-directory: backend
+        run: python manage.py spectacular --file openapi-schema.yaml
+      - name: Regenerate TypeScript types
+        working-directory: frontend
+        run: npm run generate:api:offline
+      - name: Verify checked-in artefacts are up to date
+        run: |
+          if ! git diff --exit-code -- backend/openapi-schema.yaml frontend/src/lib/api/types.gen.ts; then
+            echo "::error::OpenAPI schema or generated TS types are out of date."
+            echo "Run 'python manage.py spectacular --file openapi-schema.yaml' in backend/"
+            echo "and 'npm run generate:api:offline' in frontend/, then commit the result."
+            exit 1
+          fi
 
   e2e:
     name: E2E (Playwright)

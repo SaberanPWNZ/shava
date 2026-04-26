@@ -16,7 +16,7 @@ from django.db import IntegrityError, transaction
 
 from .levels import level_for
 from .models import Badge, PointsTransaction, UserBadge, UserPointsBalance
-from .rules import RULES, points_for
+from .rules import points_for
 
 logger = logging.getLogger("gamification")
 
@@ -156,9 +156,7 @@ class TenReviewsBadge(BadgeStrategy):
     def is_satisfied(self, user) -> bool:
         from reviews.models import Review
 
-        return (
-            Review.objects.filter(author=user, is_deleted=False).count() >= 10
-        )
+        return Review.objects.filter(author=user, is_deleted=False).count() >= 10
 
 
 class FoodieLevelBadge(BadgeStrategy):
@@ -189,8 +187,9 @@ class HelpfulFiftyBadge(BadgeStrategy):
     code = "helpful_fifty"
 
     def is_satisfied(self, user) -> bool:
-        from reviews.models import Review
         from django.db.models import Sum
+
+        from reviews.models import Review
 
         agg = Review.objects.filter(author=user, is_deleted=False).aggregate(
             total=Sum("helpful_count")
@@ -218,10 +217,7 @@ class BadgeService:
         already = set(
             UserBadge.objects.filter(user=user).values_list("badge__code", flat=True)
         )
-        catalogue = {
-            b.code: b
-            for b in Badge.objects.filter(is_active=True)
-        }
+        catalogue = {b.code: b for b in Badge.objects.filter(is_active=True)}
 
         new_badges: list[Badge] = []
         for strategy in BadgeService._strategies_for(trigger):
