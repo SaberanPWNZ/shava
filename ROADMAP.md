@@ -274,12 +274,30 @@ Suggested closing comment template:
 **Labels:** `infra`, `P1`
 
 **Acceptance criteria.**
-- [ ] Gunicorn config (`backend/gunicorn.conf.py`) with sane workers.
-- [ ] `nginx.conf` updated to terminate TLS and serve static.
-- [ ] PostgreSQL used in prod (already in `docker-compose.prod.yml` —
-      verify and document).
-- [ ] Deployment runbook in `DOCKER_README.md`.
-- [ ] Closes #31.
+- [x] Gunicorn config (`backend/gunicorn.conf.py`) with sane workers.
+      Defaults to `(2 * CPU) + 1` sync workers (Gunicorn's own
+      recommendation), 60 s timeout, 30 s graceful timeout, 5 s
+      keep-alive, `max_requests=1000` with `jitter=100` to recycle
+      leaky workers, `preload_app=True`, trusts `X-Forwarded-Proto`
+      from nginx (`forwarded_allow_ips="*"`). Every knob is
+      env-overridable via `GUNICORN_*`.
+- [x] `nginx.conf` updated to terminate TLS and serve static.
+      `nginx.conf` listens on 80 (→ 301 to https), 443 with
+      `fullchain.pem` / `privkey.pem` mounted from `./certs/`,
+      reverse-proxies `/api/` and `/admin/` to the `web:8000`
+      gunicorn upstream and everything else to the `frontend:3000`
+      SvelteKit upstream, serves Django static / media directly from
+      shared volumes, rate-limits `/api/token/*` and `/admin/`, sets
+      HSTS / CSP / X-Content-Type-Options / Referrer-Policy /
+      Permissions-Policy headers.
+- [x] PostgreSQL used in prod (already in `docker-compose.prod.yml` —
+      verified): `db` service uses `postgres:15-alpine`, only `expose:
+      "5432"` (never `ports:`), healthchecked with `pg_isready`,
+      data persisted in the `postgres_data` named volume.
+- [x] Deployment runbook in `DOCKER_README.md` (`## 2. Production`
+      sections 2.1–2.5: prepare host / TLS, configure secrets,
+      launch, updating, backups; plus the security checklist in §3).
+- [x] Closes #31.
 
 ---
 
