@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import Alert from '$lib/components/ui/Alert.svelte';
+	import Seo from '$lib/components/Seo.svelte';
 	import { articlesApi } from '$lib/api/places.api';
 	import type { Article } from '$lib/types';
 
@@ -25,6 +26,12 @@
 {:else if error}
 	<Alert variant="error">{error}</Alert>
 {:else if article}
+	<Seo
+		title={article.title}
+		description={article.excerpt ?? `${article.category} article on Shava.`}
+		image={article.cover_image ?? ''}
+		type="article"
+	/>
 	<article class="mx-auto flex max-w-3xl flex-col gap-4 py-6">
 		<a href="/articles" class="text-sm text-orange-600 hover:underline">← Back to articles</a>
 		<span class="text-xs font-medium tracking-wide text-orange-600 uppercase">

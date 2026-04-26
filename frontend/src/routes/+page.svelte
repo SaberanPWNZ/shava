@@ -1,3 +1,12 @@
+<script lang="ts">
+	import Seo from '$lib/components/Seo.svelte';
+</script>
+
+<Seo
+	title="Shava"
+	description="Discover the best shawarma places in town, leave reviews, and keep your favourites at hand."
+/>
+
 <section class="flex flex-col items-start gap-6 py-12">
 	<h1
 		class="text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl dark:text-zinc-50"

@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import PlaceCard from '$lib/components/places/PlaceCard.svelte';
 	import PlaceFilters from '$lib/components/places/PlaceFilters.svelte';
+	import Seo from '$lib/components/Seo.svelte';
 	import { placesApi } from '$lib/api/places.api';
 	import type { Place, PlaceFilters as Filters } from '$lib/types';
 
@@ -98,6 +99,10 @@
 </script>
 
 <div class="grid gap-6 lg:grid-cols-[280px_1fr]">
+	<Seo
+		title="Places"
+		description="Browse and search shawarma places. Filter by city, district, rating, delivery and more."
+	/>
 	<aside>
 		<PlaceFilters bind:filters onapply={applyFilters} />
 	</aside>

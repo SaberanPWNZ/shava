@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
+	import Seo from '$lib/components/Seo.svelte';
 	import { gamificationApi } from '$lib/api/gamification.api';
 	import type { Leaderboard } from '$lib/types/gamification';
 
@@ -57,10 +58,7 @@
 	});
 </script>
 
-<svelte:head>
-	<title>Leaderboard · Shava</title>
-	<meta name="description" content="Top contributors on Shava ranked by points." />
-</svelte:head>
+<Seo title="Leaderboard" description="Top contributors on Shava ranked by points." />
 
 <section class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-8">
 	<header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
