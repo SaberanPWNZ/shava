@@ -31,7 +31,7 @@ COPY . .
 RUN addgroup --system app && adduser --system --group app && \
     mkdir -p /app/static /app/media /app/logs && \
     chown -R app:app /app && \
-    chmod +x /app/wait_for_db.py /app/entrypoint.sh
+    chmod +x /app/wait_for_db.py
 
 USER app
 

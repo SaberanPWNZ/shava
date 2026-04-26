@@ -34,6 +34,56 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    <<: *default-security
+
+  redis:
+    image: redis:7-alpine
+    # Internal network only — never publish the broker port in production.
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    <<: *default-security
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    command: celery -A config worker -l INFO
+    env_file:
+      - ./.env.prod
+    environment:
+      - DEBUG=False
+    volumes:
+      - media_volume:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    <<: *default-security
+
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    command: celery -A config beat -l INFO
+    env_file:
+      - ./.env.prod
+    environment:
+      - DEBUG=False
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     <<: *default-security
 
   frontend:
@@ -96,3 +146,4 @@ volumes:
   postgres_data:
   static_volume:
   media_volume:
+  redis_data:
