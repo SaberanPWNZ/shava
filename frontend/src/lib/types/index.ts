@@ -98,6 +98,7 @@ export interface Article {
 }
 
 export interface PlaceFilters {
+	city?: string;
 	district?: string;
 	delivery?: boolean;
 	is_featured?: boolean;

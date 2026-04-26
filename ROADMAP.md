@@ -344,9 +344,23 @@ Suggested closing comment template:
 **Labels:** `frontend`, `feature`, `P2`
 
 **Acceptance criteria.**
-- [ ] Text search by name; filters by city and minimum rating.
-- [ ] State synced with URL query params.
-- [ ] Debounced API calls.
+- [x] Text search by name; filters by city and minimum rating.
+      `PlaceFilters.svelte` exposes a `search` (name/description),
+      `city` (free-text — backend matches FK city slug/PK or the legacy
+      `city` CharField, see §8.1), `district` dropdown, `min_stars`
+      select (1+ … 5), plus `delivery`/`featured`/`has_menu`
+      checkboxes and an ordering select. `PlaceFilters` type in
+      `frontend/src/lib/types/index.ts` got the new `city?: string`
+      field and the API client passes it through.
+- [x] State synced with URL query params. `places/+page.svelte`
+      hydrates state from `?search=…&city=…&district=…&min_stars=…&…`
+      on mount and calls `goto(..., { replaceState: true })` after
+      every change so the URL stays shareable / back-button friendly.
+- [x] Debounced API calls. A `$effect` watches every filter field and
+      schedules a single request 300 ms after the last change, with
+      the previous timer cleared. The "Apply" button now flushes the
+      pending debounce (cancels the timer + fires immediately) so
+      power users aren't penalised by the debounce.
 
 #### 7.2 User profile: my reviews / my places / points history
 **Labels:** `frontend`, `feature`, `P2`
