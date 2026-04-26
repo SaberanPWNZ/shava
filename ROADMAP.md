@@ -540,10 +540,17 @@ Suggested closing comment template:
 **Labels:** `frontend`, `admin`, `P3`
 
 **Acceptance criteria.**
-- [ ] `/admin/moderation` lists pending places and reported reviews.
-- [ ] Approve / reject with reason; uses existing
+- [x] `/admin/moderation` lists pending places and reported reviews.
+      Three tabs (Places / Reviews / Activity log) backed by the existing
+      moderation list endpoints.
+- [x] Approve / reject with reason; uses existing
       `place-moderation-action` endpoint.
-- [ ] Audit log entry for each action.
+      Reason is prompted before each action and forwarded as the
+      request body (`reviewsApi.approve/reject` now accept it too).
+- [x] Audit log entry for each action.
+      New `ModerationLog` model + admin-only paginated
+      `/api/v1/places/moderation/log/` endpoint; the dashboard's
+      "Activity log" tab renders the most recent entries.
 
 ---
 
