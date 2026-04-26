@@ -68,15 +68,25 @@ class RegisterView(generics.CreateAPIView):
         return Response(UserPublicSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(tags=["users"])
 class MeView(APIView):
     """``/me/`` — get or partially update the current user's profile."""
 
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 
+    @extend_schema(
+        summary="Get the current user's profile",
+        responses={200: UserPublicSerializer},
+    )
     def get(self, request):
         return Response(UserPublicSerializer(request.user).data)
 
+    @extend_schema(
+        summary="Partially update the current user's profile",
+        request=MeUpdateSerializer,
+        responses={200: UserPublicSerializer},
+    )
     def patch(self, request):
         serializer = MeUpdateSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -84,12 +94,21 @@ class MeView(APIView):
         return Response(UserPublicSerializer(request.user).data)
 
 
+@extend_schema(tags=["users"])
 class ChangePasswordView(APIView):
     """Change the password of the authenticated user."""
 
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 
+    @extend_schema(
+        summary="Change the current user's password",
+        request=ChangePasswordSerializer,
+        responses={
+            204: OpenApiResponse(description="Password changed."),
+            400: OpenApiResponse(description="Validation error."),
+        },
+    )
     def post(self, request):
         serializer = ChangePasswordSerializer(
             data=request.data, context={"user": request.user}
@@ -100,6 +119,7 @@ class ChangePasswordView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(tags=["users"])
 class LogoutView(APIView):
     """Blacklist the supplied refresh token to log the user out."""
 
@@ -108,6 +128,17 @@ class LogoutView(APIView):
 
     token_issuer = SimpleJWTTokenIssuer()
 
+    @extend_schema(
+        summary="Log out — blacklist the supplied refresh token",
+        request=inline_serializer(
+            name="LogoutRequest",
+            fields={"refresh": drf_serializers.CharField()},
+        ),
+        responses={
+            205: OpenApiResponse(description="Logged out."),
+            400: OpenApiResponse(description="Missing or invalid refresh token."),
+        },
+    )
     def post(self, request):
         refresh = request.data.get("refresh")
         if not refresh:
@@ -158,6 +189,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return UserAdminSerializer
 
 
+@extend_schema(tags=["users"])
 class UserBanView(APIView):
     """Admin-only: ban or unban a user.
 
@@ -170,6 +202,18 @@ class UserBanView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
     authentication_classes = [JWTAuthentication]
 
+    @extend_schema(
+        summary="Ban or unban a user (admin only)",
+        request=inline_serializer(
+            name="UserBanRequest",
+            fields={"reason": drf_serializers.CharField(required=False)},
+        ),
+        responses={
+            200: UserAdminSerializer,
+            400: OpenApiResponse(description="Invalid action or self-target."),
+            404: OpenApiResponse(description="User not found."),
+        },
+    )
     def post(self, request, pk: int, action: str):
         try:
             target = User.objects.get(pk=pk)

@@ -4,11 +4,17 @@ from .views import (
     BadgeCatalogueView,
     LeaderboardView,
     MeGamificationView,
+    MyPointsTransactionsView,
     PublicUserGamificationView,
 )
 
 urlpatterns = [
     path("me/", MeGamificationView.as_view(), name="gamification-me"),
+    path(
+        "me/transactions/",
+        MyPointsTransactionsView.as_view(),
+        name="gamification-me-transactions",
+    ),
     path(
         "users/<int:pk>/public/",
         PublicUserGamificationView.as_view(),

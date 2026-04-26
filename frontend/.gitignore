@@ -2,6 +2,9 @@ test-results
 node_modules
 coverage
 
+# Lighthouse CI
+.lighthouseci
+
 # Output
 .output
 .vercel

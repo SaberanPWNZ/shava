@@ -11,7 +11,7 @@
 	<h1
 		class="text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl dark:text-zinc-50"
 	>
-		Order shawarma you'll <span class="text-orange-600">love</span>.
+		Order shawarma you'll <span class="text-orange-700">love</span>.
 	</h1>
 	<p class="max-w-2xl text-lg text-zinc-600 dark:text-zinc-300">
 		Discover the best shawarma places in town, leave reviews, and keep your favourites at hand.
@@ -19,7 +19,7 @@
 	<div class="flex flex-wrap gap-3">
 		<a
 			href="/register"
-			class="rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700"
+			class="rounded-lg bg-orange-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-800"
 		>
 			Get started
 		</a>

@@ -114,3 +114,14 @@ export interface Paginated<T> {
 	previous: string | null;
 	results: T[];
 }
+
+export interface ModerationLogEntry {
+	id: number;
+	actor: number | null;
+	actor_username: string;
+	target_type: 'place' | 'review';
+	target_id: number;
+	action: 'approve' | 'reject';
+	reason: string;
+	created_at: string;
+}

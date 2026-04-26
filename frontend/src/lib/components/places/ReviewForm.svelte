@@ -3,10 +3,13 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import StarRating from '$lib/components/places/StarRating.svelte';
 	import { reviewsApi } from '$lib/api/places.api';
+	import { authStore } from '$lib/stores/auth.svelte';
+	import { toasts } from '$lib/stores/toasts.svelte';
 	import { gamificationService } from '$lib/services/gamification.service';
 	import { ApiError } from '$lib/types/auth';
+	import type { Review } from '$lib/types';
 
-	let { placeId, oncreated } = $props<{ placeId: number; oncreated?: () => void }>();
+	let { placeId, oncreated } = $props<{ placeId: number; oncreated?: (review: Review) => void }>();
 
 	const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 	const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -58,20 +61,37 @@
 			if (comment) form.append('comment', comment);
 			if (dishImage) form.append('dish_image', dishImage);
 			if (receiptImage) form.append('receipt_image', receiptImage);
-			await reviewsApi.create(placeId, form);
+			const created = await reviewsApi.create(placeId, form);
 			success = receiptImage
 				? 'Thanks! Your review is awaiting moderation. The receipt photo will be checked for verification.'
 				: 'Thanks! Your review is awaiting moderation.';
+			toasts.success('Review submitted — pending moderation.');
+			// Optimistic UI: parent inserts the new review into the list before
+			// the network round-trip completes. We pass the server's response
+			// when available, falling back to a synthetic record if needed.
+			const optimistic: Review =
+				(created as Review) ??
+				({
+					id: Date.now() * -1,
+					place: placeId,
+					author: authStore.user?.id ?? 0,
+					author_username: authStore.user?.username,
+					score: (stars * 2).toFixed(1),
+					comment: comment || null,
+					created_at: new Date().toISOString(),
+					is_moderated: false
+				} as Review);
 			comment = '';
 			stars = 5;
 			dishImage = null;
 			receiptImage = null;
 			// Refresh gamification state so the user sees the awarded points / badges.
 			void gamificationService.refreshMe();
-			oncreated?.();
+			oncreated?.(optimistic);
 		} catch (error) {
 			formError =
 				error instanceof ApiError ? error.message : 'Could not submit the review.';
+			toasts.error(formError);
 		} finally {
 			submitting = false;
 		}

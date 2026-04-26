@@ -96,6 +96,67 @@ class PlaceModerationFlowTest(APITestCase):
         names = [p["name"] for p in resp.data["results"]]
         self.assertEqual(names, ["P"])
 
+    def test_approve_writes_moderation_log(self):
+        from places.models import ModerationLog
+
+        place = Place.objects.create(
+            name="P", address="x", main_image="x.jpg", status="On_moderation"
+        )
+        self.client.force_authenticate(user=self.admin)
+        resp = self.client.patch(
+            f"/api/places/{place.pk}/approve/",
+            {"reason": "looks good"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        log = ModerationLog.objects.get(target_type="place", target_id=place.pk)
+        self.assertEqual(log.action, "approve")
+        self.assertEqual(log.reason, "looks good")
+        self.assertEqual(log.actor, self.admin)
+
+    def test_reject_writes_moderation_log(self):
+        from places.models import ModerationLog
+
+        place = Place.objects.create(
+            name="P", address="x", main_image="x.jpg", status="On_moderation"
+        )
+        self.client.force_authenticate(user=self.admin)
+        resp = self.client.patch(
+            f"/api/places/{place.pk}/reject/",
+            {"reason": "spam"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        log = ModerationLog.objects.get(target_type="place", target_id=place.pk)
+        self.assertEqual(log.action, "reject")
+        self.assertEqual(log.reason, "spam")
+
+    def test_moderation_log_list_admin_only(self):
+        from places.models import ModerationLog
+
+        ModerationLog.objects.create(
+            actor=self.admin,
+            target_type=ModerationLog.TARGET_PLACE,
+            target_id=1,
+            action="approve",
+            reason="ok",
+        )
+        # Anonymous → 401
+        resp = self.client.get("/api/places/moderation/log/")
+        self.assertIn(resp.status_code, (401, 403))
+        # Non-admin → 403
+        self.client.force_authenticate(user=self.user)
+        resp = self.client.get("/api/places/moderation/log/")
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        # Admin → 200 with our entry
+        self.client.force_authenticate(user=self.admin)
+        resp = self.client.get("/api/places/moderation/log/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        results = resp.data["results"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["action"], "approve")
+        self.assertEqual(results[0]["actor_username"], self.admin.username)
+
     def test_filtering_by_district(self):
         Place.objects.create(
             name="Dnipro Place",
@@ -220,11 +281,36 @@ class ReviewModerationFlowTest(APITestCase):
             is_moderated=False,
         )
         self.client.force_authenticate(user=self.admin)
-        resp = self.client.patch(f"/api/reviews/{review.pk}/reject/", format="json")
+        resp = self.client.patch(
+            f"/api/reviews/{review.pk}/reject/",
+            {"reason": "spam"},
+            format="json",
+        )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         review.refresh_from_db()
         self.assertTrue(review.is_deleted)
         self.assertFalse(review.is_moderated)
+
+    def test_review_moderation_writes_log(self):
+        from places.models import ModerationLog
+
+        review = Review.objects.create(
+            place=self.place,
+            author=self.user,
+            score=Decimal("8.0"),
+            is_moderated=False,
+        )
+        self.client.force_authenticate(user=self.admin)
+        resp = self.client.patch(
+            f"/api/reviews/{review.pk}/approve/",
+            {"reason": "verified"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        log = ModerationLog.objects.get(target_type="review", target_id=review.pk)
+        self.assertEqual(log.action, "approve")
+        self.assertEqual(log.reason, "verified")
+        self.assertEqual(log.actor, self.admin)
 
 
 class MenuApiTest(APITestCase):

@@ -4,7 +4,13 @@ from decimal import Decimal, InvalidOperation
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from rest_framework import permissions, status, viewsets
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    inline_serializer,
+)
+from rest_framework import permissions, serializers as drf_serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import (
@@ -17,9 +23,10 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
-from places.models import Place, PlaceRating
+from places.models import ModerationLog, Place, PlaceRating
 from places.permissions import IsAuthorOrAdminOrReadOnly
 from places.serializers import (
+    ModerationLogSerializer,
     PlaceCreateSerializer,
     PlaceDetailSerializer,
     PlaceRatingSerializer,
@@ -104,6 +111,40 @@ def _apply_place_filters(queryset, params):
     return queryset
 
 
+@extend_schema(
+    tags=["places"],
+    parameters=[
+        OpenApiParameter("search", str, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter("city", str, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter("district", str, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter("delivery", bool, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter("is_featured", bool, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter("min_stars", float, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter("min_rating", float, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter("has_menu", bool, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter(
+            "ordering",
+            str,
+            OpenApiParameter.QUERY,
+            required=False,
+            enum=[
+                "rating",
+                "-rating",
+                "created_at",
+                "-created_at",
+                "name",
+                "-name",
+            ],
+        ),
+        OpenApiParameter(
+            "author",
+            str,
+            OpenApiParameter.QUERY,
+            required=False,
+            description="Filter to a specific author user id, or 'me' for the current user.",
+        ),
+    ],
+)
 class PlaceListView(ListAPIView):
     """Public list of approved/active places, with filters."""
 
@@ -119,6 +160,22 @@ class PlaceListView(ListAPIView):
             qs = Place.objects.filter(status=status_filter)
         else:
             qs = Place.objects.filter(status__in=PUBLIC_VISIBLE_STATUSES)
+        # ``?author=me`` (or ?author=<id>) — used by the profile "my places"
+        # tab. ``me`` is resolved to the authenticated user's PK; when used
+        # by an authenticated owner we widen the queryset back to *all*
+        # statuses so pending submissions are visible too.
+        author = params.get("author")
+        if author:
+            if author == "me":
+                if user.is_authenticated:
+                    qs = Place.objects.filter(author=user)
+                else:
+                    qs = Place.objects.none()
+            else:
+                try:
+                    qs = qs.filter(author_id=int(author))
+                except (TypeError, ValueError):
+                    qs = qs.none()
         # Annotate aggregate columns the serializer would otherwise compute
         # one-place-at-a-time. Keeps the list endpoint at constant query
         # count regardless of page size.
@@ -126,6 +183,7 @@ class PlaceListView(ListAPIView):
         return _apply_place_filters(qs, params)
 
 
+@extend_schema(tags=["places"], summary="Submit a new place (goes to moderation)")
 class PlaceCreateView(CreateAPIView):
     """Authenticated users submit a new place; always created on moderation."""
 
@@ -150,6 +208,7 @@ class PlaceCreateView(CreateAPIView):
             raise DRFValidationError({"detail": e.messages}) from e
 
 
+@extend_schema(tags=["places"])
 class PlaceDetailView(RetrieveAPIView):
     """Public detail view; non-public statuses only visible to author or staff."""
 
@@ -175,6 +234,7 @@ class PlaceDetailView(RetrieveAPIView):
         return obj
 
 
+@extend_schema(tags=["places"])
 class PlaceUpdateView(UpdateAPIView, RetrieveAPIView):
     """Author or admin can edit a place."""
 
@@ -186,6 +246,7 @@ class PlaceUpdateView(UpdateAPIView, RetrieveAPIView):
         return Place.objects.all()
 
 
+@extend_schema(tags=["places"], summary="List places pending moderation (admin)")
 class PlaceModerationListView(ListAPIView):
     """Admin-only list of places pending moderation."""
 
@@ -201,6 +262,15 @@ class PlaceModerationListView(ListAPIView):
         )
 
 
+@extend_schema(
+    tags=["places"],
+    summary="Approve or reject a place (admin)",
+    request=inline_serializer(
+        name="PlaceModerationActionRequest",
+        fields={"reason": drf_serializers.CharField(required=False, allow_blank=True)},
+    ),
+    responses={200: PlaceSerializer},
+)
 class PlaceModerationActionView(UpdateAPIView):
     """Admin endpoint to approve/reject a place. Action is taken from URL kwargs."""
 
@@ -222,10 +292,44 @@ class PlaceModerationActionView(UpdateAPIView):
                 {"detail": "Unknown moderation action."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        ModerationLog.objects.create(
+            actor=request.user,
+            target_type=ModerationLog.TARGET_PLACE,
+            target_id=place.id,
+            action=action_name,
+            reason=reason or "",
+        )
         logger.info("Place %s %sd by %s", place.id, action_name, request.user)
         return Response(self.get_serializer(place).data)
 
 
+@extend_schema(
+    tags=["places"],
+    summary="List recent moderation actions (admin)",
+    responses={200: ModerationLogSerializer(many=True)},
+)
+class ModerationLogListView(ListAPIView):
+    """Admin-only paginated list of recent moderation actions."""
+
+    permission_classes = [IsAdminUser]
+    serializer_class = ModerationLogSerializer
+
+    def get_queryset(self):
+        return ModerationLog.objects.select_related("actor").all()
+
+
+@extend_schema(
+    tags=["places"],
+    summary="Submit a 1–5 star rating",
+    request=inline_serializer(
+        name="PlaceRateRequest",
+        fields={"rating": drf_serializers.DecimalField(max_digits=3, decimal_places=1)},
+    ),
+    responses={
+        201: PlaceRatingSerializer,
+        400: OpenApiResponse(description="Invalid rating value."),
+    },
+)
 class PlaceRateView(CreateAPIView):
     """Star-rating endpoint: accepts {rating: 1..5}, stored on 0-10 scale."""
 
@@ -262,6 +366,7 @@ class PlaceRateView(CreateAPIView):
         )
 
 
+@extend_schema(tags=["places"])
 class PlaceRatingViewSet(viewsets.ModelViewSet):
     """A user's own ratings (for management UI)."""
 

@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import PlaceCard from '$lib/components/places/PlaceCard.svelte';
 	import PlaceFilters from '$lib/components/places/PlaceFilters.svelte';
+	import Skeleton from '$lib/components/ui/Skeleton.svelte';
 	import Seo from '$lib/components/Seo.svelte';
 	import { placesApi } from '$lib/api/places.api';
 	import type { Place, PlaceFilters as Filters } from '$lib/types';
@@ -30,6 +31,9 @@
 	}
 
 	function writeFiltersToUrl() {
+		// Local, non-reactive scratch object — Svelte's prefer-svelte-reactivity
+		// rule doesn't apply here.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
 		const params = new URLSearchParams();
 		if (filters.search) params.set('search', filters.search);
 		if (filters.city) params.set('city', filters.city);
@@ -107,22 +111,32 @@
 		<PlaceFilters bind:filters onapply={applyFilters} />
 	</aside>
 	<section>
-		<header class="mb-4 flex items-center justify-between">
+		<header class="mb-4 flex flex-wrap items-center justify-between gap-3">
 			<h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Places</h1>
 			<a
 				href="/places/new"
-				class="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700"
+				class="inline-flex min-h-11 items-center rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-zinc-950"
 			>
 				+ Submit a place
 			</a>
 		</header>
 
 		{#if error}
-			<p class="text-sm text-red-600">{error}</p>
+			<p class="text-sm text-red-600" role="alert">{error}</p>
 		{/if}
 
 		{#if loading}
-			<p class="text-sm text-zinc-500">Loading…</p>
+			<ul class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+				{#each Array.from({ length: 6 }, (_, i) => i) as i (i)}
+					<li
+						class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+					>
+						<Skeleton class="h-32 w-full" rounded="lg" />
+						<Skeleton class="h-4 w-2/3" />
+						<Skeleton class="h-3 w-full" lines={2} />
+					</li>
+				{/each}
+			</ul>
 		{:else if places.length === 0}
 			<p class="text-sm text-zinc-500">No places match your filters.</p>
 		{:else}

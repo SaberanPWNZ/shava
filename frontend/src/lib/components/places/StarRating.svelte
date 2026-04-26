@@ -20,17 +20,24 @@
 	}
 </script>
 
-<div class="inline-flex items-center gap-1" role={interactive ? 'radiogroup' : undefined} aria-label={`${value} out of 5 stars`}>
+<div
+	class="inline-flex items-center gap-1"
+	role={interactive ? 'group' : undefined}
+	aria-label={interactive ? 'Rate this place' : `${value} out of 5 stars`}
+>
 	{#each stars as n (n)}
 		{@const filled = n <= Math.round(value)}
 		{#if interactive}
 			<button
 				type="button"
-				class="cursor-pointer text-zinc-300 transition hover:text-amber-400 focus:outline-none {filled ? 'text-amber-400' : ''}"
-				aria-label={`${n} stars`}
+				class="cursor-pointer rounded text-zinc-300 transition hover:text-amber-400 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-zinc-900 {filled
+					? 'text-amber-400'
+					: ''}"
+				aria-label={`Rate ${n} ${n === 1 ? 'star' : 'stars'}`}
+				aria-pressed={filled}
 				onclick={() => clickStar(n)}
 			>
-				<svg viewBox="0 0 24 24" fill="currentColor" class={dims[size as 'sm' | 'md' | 'lg']}>
+				<svg viewBox="0 0 24 24" fill="currentColor" class={dims[size as 'sm' | 'md' | 'lg']} aria-hidden="true">
 					<path d="M12 17.3l-6.18 3.7 1.64-7.03L2 9.24l7.19-.61L12 2l2.81 6.63 7.19.61-5.46 4.73 1.64 7.03z" />
 				</svg>
 			</button>
@@ -39,6 +46,7 @@
 				viewBox="0 0 24 24"
 				fill="currentColor"
 				class="{dims[size as 'sm' | 'md' | 'lg']} {filled ? 'text-amber-400' : 'text-zinc-300'}"
+				aria-hidden="true"
 			>
 				<path d="M12 17.3l-6.18 3.7 1.64-7.03L2 9.24l7.19-.61L12 2l2.81 6.63 7.19.61-5.46 4.73 1.64 7.03z" />
 			</svg>
