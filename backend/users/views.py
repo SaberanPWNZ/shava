@@ -9,7 +9,13 @@ custom permissions in :mod:`users.permissions`. Business logic lives in
 import logging
 
 from django.contrib.auth.password_validation import validate_password
-from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    OpenApiTypes,
+    extend_schema,
+    inline_serializer,
+)
 from rest_framework import generics, status, viewsets
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -42,6 +48,17 @@ from users.tokens import (
 logger = logging.getLogger(__name__)
 
 
+@extend_schema(
+    tags=["users"],
+    summary="Register a new user",
+    description=(
+        "Creates a new user account. Privileged fields are stripped: only "
+        "``email``, ``password``, ``first_name`` and ``last_name`` are "
+        "honoured. Throttled under the ``register`` scope."
+    ),
+    request=RegisterSerializer,
+    responses={201: UserPublicSerializer},
+)
 class RegisterView(generics.CreateAPIView):
     """Public user registration.
 
@@ -74,9 +91,24 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 
+    @extend_schema(
+        tags=["users"],
+        summary="Get the authenticated user's profile",
+        responses={200: UserPublicSerializer},
+    )
     def get(self, request):
         return Response(UserPublicSerializer(request.user).data)
 
+    @extend_schema(
+        tags=["users"],
+        summary="Update the authenticated user's profile",
+        description=(
+            "Partial update — only the writable fields exposed by "
+            "``MeUpdateSerializer`` are accepted."
+        ),
+        request=MeUpdateSerializer,
+        responses={200: UserPublicSerializer},
+    )
     def patch(self, request):
         serializer = MeUpdateSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -90,6 +122,20 @@ class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 
+    @extend_schema(
+        tags=["users"],
+        summary="Change the authenticated user's password",
+        description=(
+            "Requires the current password (``old_password``) and a new "
+            "one (``new_password``) which is run through Django's password "
+            "validators. Returns ``204 No Content`` on success."
+        ),
+        request=ChangePasswordSerializer,
+        responses={
+            204: OpenApiResponse(description="Password updated."),
+            400: OpenApiResponse(description="Validation failed."),
+        },
+    )
     def post(self, request):
         serializer = ChangePasswordSerializer(
             data=request.data, context={"user": request.user}
@@ -108,6 +154,27 @@ class LogoutView(APIView):
 
     token_issuer = SimpleJWTTokenIssuer()
 
+    @extend_schema(
+        tags=["users"],
+        summary="Log out by blacklisting a refresh token",
+        description=(
+            "Adds the supplied refresh token to the SimpleJWT blacklist so "
+            "it can no longer be used to mint new access tokens. The "
+            "client should also discard its locally-stored access token."
+        ),
+        request=inline_serializer(
+            name="LogoutRequest",
+            fields={
+                "refresh": drf_serializers.CharField(
+                    help_text="The refresh token to blacklist.",
+                ),
+            },
+        ),
+        responses={
+            205: OpenApiResponse(description="Refresh token blacklisted."),
+            400: OpenApiResponse(description="Missing or invalid refresh token."),
+        },
+    )
     def post(self, request):
         refresh = request.data.get("refresh")
         if not refresh:
@@ -125,6 +192,7 @@ class LogoutView(APIView):
         return Response(status=status.HTTP_205_RESET_CONTENT)
 
 
+@extend_schema(tags=["users"])
 class UserViewSet(viewsets.ModelViewSet):
     """Admin-only CRUD for users.
 
@@ -170,6 +238,36 @@ class UserBanView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
     authentication_classes = [JWTAuthentication]
 
+    @extend_schema(
+        tags=["users"],
+        summary="Ban or unban a user (admin)",
+        description=(
+            "Toggles the ``is_banned`` flag on the target user. The ``action`` "
+            "URL kwarg is bound by the URL conf — there are two routes, "
+            "``/users/<id>/ban/`` and ``/users/<id>/unban/`` — so callers "
+            "never specify it in the body. ``reason`` is optional and is "
+            "only echoed back in the response."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="id",
+                location=OpenApiParameter.PATH,
+                type=OpenApiTypes.INT,
+                description="Primary key of the target user.",
+            ),
+        ],
+        request=inline_serializer(
+            name="UserBanRequest",
+            fields={
+                "reason": drf_serializers.CharField(required=False, allow_blank=True),
+            },
+        ),
+        responses={
+            200: UserAdminSerializer,
+            400: OpenApiResponse(description="Cannot ban yourself."),
+            404: OpenApiResponse(description="User not found."),
+        },
+    )
     def post(self, request, pk: int, action: str):
         try:
             target = User.objects.get(pk=pk)

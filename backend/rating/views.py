@@ -1,3 +1,4 @@
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -11,6 +12,7 @@ from .serializers import (
 )
 
 
+@extend_schema(tags=["rating"])
 class AchievementViewSet(viewsets.ModelViewSet):
     """ViewSet for managing achievements."""
 
@@ -27,6 +29,7 @@ class AchievementViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
 
 
+@extend_schema(tags=["rating"])
 class UserRatingViewSet(viewsets.ModelViewSet):
     """ViewSet for managing user ratings."""
 
@@ -68,6 +71,17 @@ class UserRatingViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+@extend_schema(
+    tags=["rating"],
+    parameters=[
+        OpenApiParameter(
+            name="user",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            description="Filter the list to achievements held by the given user PK.",
+        ),
+    ],
+)
 class UserAchievementViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet for viewing user achievements."""
 

@@ -66,7 +66,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description `GET /api/gamification/leaderboard/?period=week|month|all`. */
+        /**
+         * Top users by points
+         * @description Returns the top 50 users by aggregated points. ``?period=week`` restricts to points earned in the last 7 days, ``month`` to 30 days, ``all`` (default) returns the all-time totals. Public endpoint.
+         */
         get: operations["gamification_leaderboard_retrieve"];
         put?: never;
         post?: never;
@@ -83,7 +86,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description `GET /api/gamification/me/` — current user's points/level/badges. */
+        /**
+         * Get the authenticated user's gamification profile
+         * @description Returns the caller's current points balance, derived level and earned badges. Creates an empty balance row on first call so newly-registered users see zero rather than a 404.
+         */
         get: operations["gamification_me_retrieve"];
         put?: never;
         post?: never;
@@ -100,7 +106,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description `GET /api/gamification/users/<id>/public/`. */
+        /**
+         * Get a user's public gamification stats
+         * @description Returns the public subset of a user's gamification profile: points, level, badges. Safe to expose to anonymous callers.
+         */
         get: operations["gamification_users_public_retrieve"];
         put?: never;
         post?: never;
@@ -159,7 +168,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Admin endpoint to approve/reject a place. Action is taken from URL kwargs. */
+        /**
+         * Approve or reject a pending place (admin)
+         * @description Routes ending in ``/approve/`` or ``/reject/`` flip the place moderation status. ``reason`` is optional and is recorded on the moderation audit trail when supplied.
+         */
         patch: operations["places_partial_update_2"];
         trace?: never;
     };
@@ -172,7 +184,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Star-rating endpoint: accepts {rating: 1..5}, stored on 0-10 scale. */
+        /**
+         * Rate a place (1-5 stars)
+         * @description Upserts the caller's rating for the place. Accepts a number between 1 and 5; stored internally on a 0-10 scale (``stored = stars * 2``). Repeated calls overwrite the previous rating rather than creating duplicates.
+         */
         post: operations["places_rate_create"];
         delete?: never;
         options?: never;
@@ -372,7 +387,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Admin endpoint to approve/reject a review (action_name from URL). */
+        /**
+         * Approve or reject a pending review (admin)
+         * @description Routes ending in ``/approve/`` or ``/reject/`` flip the review moderation flags. Approving a review re-aggregates the parent place's rating; rejecting soft-deletes the review.
+         */
         patch: operations["reviews_partial_update"];
         trace?: never;
     };
@@ -516,7 +534,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Login endpoint with rate-limiting (``auth`` scope). */
+        /**
+         * Obtain an access/refresh token pair (login)
+         * @description Authenticate using ``email`` + ``password``. Returns a SimpleJWT access/refresh pair. Throttled under the ``auth`` scope and additionally rate-limited per IP/user by ``django-axes``.
+         */
         post: operations["token_create"];
         delete?: never;
         options?: never;
@@ -594,12 +615,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description Admin-only: ban or unban a user.
-         *
-         *     ``POST /api/users/<id>/ban/``    — set ``is_banned=True``.
-         *     ``POST /api/users/<id>/unban/``  — set ``is_banned=False``.
-         *     Optional JSON body: ``{"reason": "..."}`` (informational, not stored
-         *     server-side in MVP — surfaced in the response only).
+         * Ban or unban a user (admin)
+         * @description Toggles the ``is_banned`` flag on the target user. The ``action`` URL kwarg is bound by the URL conf — there are two routes, ``/users/<id>/ban/`` and ``/users/<id>/unban/`` — so callers never specify it in the body. ``reason`` is optional and is only echoed back in the response.
          */
         post: operations["users_ban_create"];
         delete?: never;
@@ -618,12 +635,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description Admin-only: ban or unban a user.
-         *
-         *     ``POST /api/users/<id>/ban/``    — set ``is_banned=True``.
-         *     ``POST /api/users/<id>/unban/``  — set ``is_banned=False``.
-         *     Optional JSON body: ``{"reason": "..."}`` (informational, not stored
-         *     server-side in MVP — surfaced in the response only).
+         * Ban or unban a user (admin)
+         * @description Toggles the ``is_banned`` flag on the target user. The ``action`` URL kwarg is bound by the URL conf — there are two routes, ``/users/<id>/ban/`` and ``/users/<id>/unban/`` — so callers never specify it in the body. ``reason`` is optional and is only echoed back in the response.
          */
         post: operations["users_unban_create"];
         delete?: never;
@@ -642,10 +655,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description Public user registration.
-         *
-         *     Accepts only the whitelisted fields from :class:`RegisterSerializer`,
-         *     so privilege-escalation via extra payload fields is impossible.
+         * Register a new user
+         * @description Creates a new user account. Privileged fields are stripped: only ``email``, ``password``, ``first_name`` and ``last_name`` are honoured. Throttled under the ``register`` scope.
          */
         post: operations["users_create_create"];
         delete?: never;
@@ -685,7 +696,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Login endpoint with rate-limiting (``auth`` scope). */
+        /**
+         * Obtain an access/refresh token pair (login)
+         * @description Authenticate using ``email`` + ``password``. Returns a SimpleJWT access/refresh pair. Throttled under the ``auth`` scope and additionally rate-limited per IP/user by ``django-axes``.
+         */
         post: operations["users_login_create"];
         delete?: never;
         options?: never;
@@ -702,7 +716,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Blacklist the supplied refresh token to log the user out. */
+        /**
+         * Log out by blacklisting a refresh token
+         * @description Adds the supplied refresh token to the SimpleJWT blacklist so it can no longer be used to mint new access tokens. The client should also discard its locally-stored access token.
+         */
         post: operations["users_logout_create"];
         delete?: never;
         options?: never;
@@ -717,14 +734,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description ``/me/`` — get or partially update the current user's profile. */
+        /**
+         * Get the authenticated user's profile
+         * @description ``/me/`` — get or partially update the current user's profile.
+         */
         get: operations["users_me_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** @description ``/me/`` — get or partially update the current user's profile. */
+        /**
+         * Update the authenticated user's profile
+         * @description Partial update — only the writable fields exposed by ``MeUpdateSerializer`` are accepted.
+         */
         patch: operations["users_me_partial_update"];
         trace?: never;
     };
@@ -737,7 +760,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Change the password of the authenticated user. */
+        /**
+         * Change the authenticated user's password
+         * @description Requires the current password (``old_password``) and a new one (``new_password``) which is run through Django's password validators. Returns ``204 No Content`` on success.
+         */
         post: operations["users_me_change_password_create"];
         delete?: never;
         options?: never;
@@ -798,10 +824,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description Public user registration.
-         *
-         *     Accepts only the whitelisted fields from :class:`RegisterSerializer`,
-         *     so privilege-escalation via extra payload fields is impossible.
+         * Register a new user
+         * @description Creates a new user account. Privileged fields are stripped: only ``email``, ``password``, ``first_name`` and ``last_name`` are honoured. Throttled under the ``register`` scope.
          */
         post: operations["users_register_create"];
         delete?: never;
@@ -940,6 +964,10 @@ export interface components {
          * @enum {string}
          */
         Category9f0Enum: "guide" | "review" | "news" | "recipe" | "other";
+        ChangePasswordRequest: {
+            old_password: string;
+            new_password: string;
+        };
         /**
          * @description * `Unknown` - Unknown
          *     * `Dnipro` - Дніпровський
@@ -958,6 +986,31 @@ export interface components {
         EmailTokenObtainPairRequest: {
             email: string;
             password: string;
+        };
+        LeaderboardEntry: {
+            user_id: number;
+            username: string;
+            points: number;
+            level: number;
+            level_title: string;
+        };
+        LeaderboardResponse: {
+            period: string;
+            results: components["schemas"]["LeaderboardEntry"][];
+        };
+        LogoutRequestRequest: {
+            /** @description The refresh token to blacklist. */
+            refresh: string;
+        };
+        /** @description Adds level-derived read-only fields to a serializer payload. */
+        MeGamification: {
+            readonly points: number;
+            readonly level: string;
+            readonly level_title: string;
+            readonly next_threshold: string;
+            readonly progress_pct: string;
+            readonly badges: string;
+            readonly recent_transactions: string;
         };
         MenuItem: {
             readonly id: number;
@@ -1118,6 +1171,13 @@ export interface components {
             published_at?: string;
             is_published?: boolean;
         };
+        /** @description Fields a user is allowed to change about themselves. */
+        PatchedMeUpdateRequest: {
+            first_name?: string | null;
+            last_name?: string | null;
+            /** Format: binary */
+            avatar?: string | null;
+        };
         PatchedMenuItemRequest: {
             name?: string;
             description?: string | null;
@@ -1129,45 +1189,13 @@ export interface components {
             is_available?: boolean;
             item?: number | null;
         };
+        PatchedPlaceModerationActionRequestRequest: {
+            reason?: string;
+        };
         PatchedPlaceRatingRequest: {
             place?: number;
             /** Format: decimal */
             rating?: string;
-        };
-        PatchedPlaceRequest: {
-            name?: string;
-            city?: string;
-            /** @description Optional reference to the canonical City row. The free-text `city` field above is preserved for legacy/back-compat reads. */
-            city_ref?: number | null;
-            district?: components["schemas"]["DistrictEnum"];
-            address?: string;
-            delivery?: boolean;
-            /** Format: decimal */
-            latitude?: string | null;
-            /** Format: decimal */
-            longitude?: string | null;
-            description?: string | null;
-            status?: components["schemas"]["StatusEnum"];
-            /**
-             * Format: decimal
-             * @description Average rating calculated from reviews
-             */
-            rating?: string;
-            /** Format: binary */
-            main_image?: string;
-            /** Format: binary */
-            additional_images?: string | null;
-            /** Format: date-time */
-            created_at?: string;
-            /** Format: uri */
-            website?: string | null;
-            opening_hours?: string | null;
-            is_featured?: boolean;
-            author?: number | null;
-            moderated_by?: number | null;
-            moderation_reason?: string | null;
-            /** Format: date-time */
-            moderated_at?: string | null;
         };
         PatchedPlaceUpdateRequest: {
             name?: string;
@@ -1356,6 +1384,13 @@ export interface components {
             readonly ratings: components["schemas"]["PlaceRating"][];
             readonly menu: string;
         };
+        PlaceRateRequestRequest: {
+            /**
+             * Format: double
+             * @description Star rating between 1 and 5 (half-stars accepted).
+             */
+            rating: number;
+        };
         PlaceRating: {
             readonly id: number;
             place: number;
@@ -1411,12 +1446,15 @@ export interface components {
             opening_hours?: string | null;
             status?: components["schemas"]["StatusEnum"];
         };
-        /** @description Public registration input. Whitelists fields explicitly. */
-        Register: {
-            /** Format: email */
-            email: string;
-            first_name?: string | null;
-            last_name?: string | null;
+        /** @description Public-facing subset (no transaction log). */
+        PublicGamification: {
+            readonly user_id: number;
+            readonly points: number;
+            readonly level: string;
+            readonly level_title: string;
+            readonly next_threshold: string;
+            readonly progress_pct: string;
+            readonly badges: string;
         };
         /** @description Public registration input. Whitelists fields explicitly. */
         RegisterRequest: {
@@ -1592,6 +1630,9 @@ export interface components {
             is_admin?: boolean;
             password?: string;
         };
+        UserBanRequestRequest: {
+            reason?: string;
+        };
         /** @description Safe, read-only view of a user. */
         UserPublic: {
             readonly id: number;
@@ -1620,6 +1661,8 @@ export interface operations {
     articles_list: {
         parameters: {
             query?: {
+                /** @description Filter list responses to a single article category. */
+                category?: string;
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
@@ -1645,7 +1688,10 @@ export interface operations {
     };
     articles_create: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filter list responses to a single article category. */
+                category?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1670,7 +1716,10 @@ export interface operations {
     };
     articles_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filter list responses to a single article category. */
+                category?: string;
+            };
             header?: never;
             path: {
                 slug: string;
@@ -1691,7 +1740,10 @@ export interface operations {
     };
     articles_update: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filter list responses to a single article category. */
+                category?: string;
+            };
             header?: never;
             path: {
                 slug: string;
@@ -1718,7 +1770,10 @@ export interface operations {
     };
     articles_destroy: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filter list responses to a single article category. */
+                category?: string;
+            };
             header?: never;
             path: {
                 slug: string;
@@ -1738,7 +1793,10 @@ export interface operations {
     };
     articles_partial_update: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filter list responses to a single article category. */
+                category?: string;
+            };
             header?: never;
             path: {
                 slug: string;
@@ -1789,15 +1847,26 @@ export interface operations {
     };
     gamification_leaderboard_retrieve: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Window over which to aggregate points. */
+                period?: "all" | "month" | "week";
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaderboardResponse"];
+                };
+            };
+            /** @description Unknown period. */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1814,12 +1883,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MeGamification"];
+                };
             };
         };
     };
@@ -1828,14 +1898,23 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Primary key of the user being inspected. */
                 id: number;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicGamification"];
+                };
+            };
+            /** @description User not found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1846,12 +1925,28 @@ export interface operations {
     places_list: {
         parameters: {
             query?: {
-                /** @description Which field to use when ordering the results. */
-                ordering?: string;
+                /** @description Filter by city. Accepts either a numeric ``City`` PK, a city slug or a free-text name; matched against both the FK and the legacy ``city`` CharField for back-compat. */
+                city?: string;
+                /** @description Only places that offer delivery (1/true/yes). */
+                delivery?: boolean;
+                /** @description Exact match on the district field. */
+                district?: string;
+                /** @description Only places that have at least one menu attached. */
+                has_menu?: boolean;
+                /** @description Only featured places (1/true/yes). */
+                is_featured?: boolean;
+                /** @description Minimum rating on the internal 0-10 scale. Use ``min_stars`` if you're working in 1-5 stars. */
+                min_rating?: number;
+                /** @description Minimum rating expressed in 1-5 stars. */
+                min_stars?: number;
+                /** @description Sort order; values outside the allowed set are ignored. */
+                ordering?: "-created_at" | "-name" | "-rating" | "created_at" | "name" | "rating";
                 /** @description A page number within the paginated result set. */
                 page?: number;
-                /** @description A search term. */
+                /** @description Substring match on place name or description (case-insensitive). */
                 search?: string;
+                /** @description Staff-only override: include places with the supplied status instead of the default Active/Approved set. Ignored for non-staff callers. */
+                status?: string;
             };
             header?: never;
             path?: never;
@@ -1949,16 +2044,17 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                action_name: string;
+                /** @description Moderation verb baked into the URL. */
+                action_name: "approve" | "reject";
                 id: string;
             };
             cookie?: never;
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["PatchedPlaceRequest"];
-                "multipart/form-data": components["schemas"]["PatchedPlaceRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedPlaceRequest"];
+                "application/json": components["schemas"]["PatchedPlaceModerationActionRequestRequest"];
+                "multipart/form-data": components["schemas"]["PatchedPlaceModerationActionRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedPlaceModerationActionRequestRequest"];
             };
         };
         responses: {
@@ -1969,6 +2065,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Place"];
                 };
+            };
+            /** @description Unknown moderation action. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -1983,9 +2086,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PlaceRatingRequest"];
-                "multipart/form-data": components["schemas"]["PlaceRatingRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PlaceRatingRequest"];
+                "application/json": components["schemas"]["PlaceRateRequestRequest"];
+                "multipart/form-data": components["schemas"]["PlaceRateRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PlaceRateRequestRequest"];
             };
         };
         responses: {
@@ -1996,6 +2099,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PlaceRating"];
                 };
+            };
+            /** @description Validation failed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2489,18 +2599,13 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                action_name: string;
+                /** @description Moderation verb baked into the URL. */
+                action_name: "approve" | "reject";
                 id: string;
             };
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedReviewRequest"];
-                "multipart/form-data": components["schemas"]["PatchedReviewRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedReviewRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
@@ -2509,6 +2614,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Review"];
                 };
+            };
+            /** @description Unknown moderation action. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3025,14 +3137,36 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Primary key of the target user. */
                 id: number;
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UserBanRequestRequest"];
+                "multipart/form-data": components["schemas"]["UserBanRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["UserBanRequestRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserAdmin"];
+                };
+            };
+            /** @description Cannot ban yourself. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User not found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3045,14 +3179,36 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Primary key of the target user. */
                 id: number;
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UserBanRequestRequest"];
+                "multipart/form-data": components["schemas"]["UserBanRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["UserBanRequestRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserAdmin"];
+                };
+            };
+            /** @description Cannot ban yourself. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User not found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3080,7 +3236,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Register"];
+                    "application/json": components["schemas"]["UserPublic"];
                 };
             };
         };
@@ -3142,10 +3298,23 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LogoutRequestRequest"];
+                "multipart/form-data": components["schemas"]["LogoutRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["LogoutRequestRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
-            200: {
+            /** @description Refresh token blacklisted. */
+            205: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid refresh token. */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3162,12 +3331,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UserPublic"];
+                };
             };
         };
     };
@@ -3178,14 +3348,21 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedMeUpdateRequest"];
+                "multipart/form-data": components["schemas"]["PatchedMeUpdateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedMeUpdateRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UserPublic"];
+                };
             };
         };
     };
@@ -3196,10 +3373,23 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+                "multipart/form-data": components["schemas"]["ChangePasswordRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
-            200: {
+            /** @description Password updated. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed. */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3284,7 +3474,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Register"];
+                    "application/json": components["schemas"]["UserPublic"];
                 };
             };
         };

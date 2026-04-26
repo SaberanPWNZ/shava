@@ -13,7 +13,13 @@ from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    OpenApiTypes,
+    extend_schema,
+    inline_serializer,
+)
 from rest_framework import generics, status, views
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -37,6 +43,16 @@ class MeGamificationView(views.APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        tags=["gamification"],
+        summary="Get the authenticated user's gamification profile",
+        description=(
+            "Returns the caller's current points balance, derived level and "
+            "earned badges. Creates an empty balance row on first call so "
+            "newly-registered users see zero rather than a 404."
+        ),
+        responses={200: MeGamificationSerializer},
+    )
     def get(self, request):
         balance, _ = UserPointsBalance.objects.get_or_create(user=request.user)
         return Response(MeGamificationSerializer(balance).data)
@@ -47,6 +63,26 @@ class PublicUserGamificationView(views.APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        tags=["gamification"],
+        summary="Get a user's public gamification stats",
+        description=(
+            "Returns the public subset of a user's gamification profile: "
+            "points, level, badges. Safe to expose to anonymous callers."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="id",
+                location=OpenApiParameter.PATH,
+                type=OpenApiTypes.INT,
+                description="Primary key of the user being inspected.",
+            ),
+        ],
+        responses={
+            200: PublicGamificationSerializer,
+            404: OpenApiResponse(description="User not found."),
+        },
+    )
     def get(self, request, pk: int):
         user = get_object_or_404(User, pk=pk)
         balance, _ = UserPointsBalance.objects.get_or_create(user=user)
@@ -56,6 +92,7 @@ class PublicUserGamificationView(views.APIView):
         return Response(data)
 
 
+@extend_schema(tags=["gamification"])
 class BadgeCatalogueView(generics.ListAPIView):
     """`GET /api/gamification/badges/` — full catalogue (public)."""
 
@@ -73,6 +110,37 @@ class LeaderboardView(views.APIView):
     permission_classes = [AllowAny]
     PERIODS = {"week": 7, "month": 30, "all": None}
 
+    @extend_schema(
+        tags=["gamification"],
+        summary="Top users by points",
+        description=(
+            "Returns the top 50 users by aggregated points. "
+            "``?period=week`` restricts to points earned in the last "
+            "7 days, ``month`` to 30 days, ``all`` (default) returns "
+            "the all-time totals. Public endpoint."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="period",
+                location=OpenApiParameter.QUERY,
+                type=OpenApiTypes.STR,
+                enum=list(PERIODS.keys()),
+                required=False,
+                default="all",
+                description="Window over which to aggregate points.",
+            ),
+        ],
+        responses={
+            200: inline_serializer(
+                name="LeaderboardResponse",
+                fields={
+                    "period": drf_serializers.CharField(),
+                    "results": LeaderboardEntrySerializer(many=True),
+                },
+            ),
+            400: OpenApiResponse(description="Unknown period."),
+        },
+    )
     def get(self, request):
         period = request.query_params.get("period", "all")
         if period not in self.PERIODS:

@@ -1,3 +1,4 @@
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny, IsAdminUser
 
@@ -5,6 +6,17 @@ from articles.models import Article
 from articles.serializers import ArticleDetailSerializer, ArticleListSerializer
 
 
+@extend_schema(
+    tags=["articles"],
+    parameters=[
+        OpenApiParameter(
+            name="category",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Filter list responses to a single article category.",
+        ),
+    ],
+)
 class ArticleViewSet(viewsets.ModelViewSet):
     """Articles are publicly readable (when published); admin-only for writes."""
 

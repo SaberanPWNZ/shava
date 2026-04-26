@@ -4,7 +4,15 @@ from decimal import Decimal, InvalidOperation
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    OpenApiTypes,
+    extend_schema,
+    inline_serializer,
+)
 from rest_framework import permissions, status, viewsets
+from rest_framework import serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import (
@@ -104,6 +112,90 @@ def _apply_place_filters(queryset, params):
     return queryset
 
 
+_PLACE_LIST_PARAMS = [
+    OpenApiParameter(
+        name="search",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        description="Substring match on place name or description (case-insensitive).",
+    ),
+    OpenApiParameter(
+        name="city",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        description=(
+            "Filter by city. Accepts either a numeric ``City`` PK, a "
+            "city slug or a free-text name; matched against both the FK "
+            "and the legacy ``city`` CharField for back-compat."
+        ),
+    ),
+    OpenApiParameter(
+        name="district",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        description="Exact match on the district field.",
+    ),
+    OpenApiParameter(
+        name="delivery",
+        type=OpenApiTypes.BOOL,
+        location=OpenApiParameter.QUERY,
+        description="Only places that offer delivery (1/true/yes).",
+    ),
+    OpenApiParameter(
+        name="is_featured",
+        type=OpenApiTypes.BOOL,
+        location=OpenApiParameter.QUERY,
+        description="Only featured places (1/true/yes).",
+    ),
+    OpenApiParameter(
+        name="min_rating",
+        type=OpenApiTypes.NUMBER,
+        location=OpenApiParameter.QUERY,
+        description=(
+            "Minimum rating on the internal 0-10 scale. Use ``min_stars`` "
+            "if you're working in 1-5 stars."
+        ),
+    ),
+    OpenApiParameter(
+        name="min_stars",
+        type=OpenApiTypes.NUMBER,
+        location=OpenApiParameter.QUERY,
+        description="Minimum rating expressed in 1-5 stars.",
+    ),
+    OpenApiParameter(
+        name="has_menu",
+        type=OpenApiTypes.BOOL,
+        location=OpenApiParameter.QUERY,
+        description="Only places that have at least one menu attached.",
+    ),
+    OpenApiParameter(
+        name="status",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        description=(
+            "Staff-only override: include places with the supplied status "
+            "instead of the default Active/Approved set. Ignored for "
+            "non-staff callers."
+        ),
+    ),
+    OpenApiParameter(
+        name="ordering",
+        type=OpenApiTypes.STR,
+        location=OpenApiParameter.QUERY,
+        enum=[
+            "rating",
+            "-rating",
+            "created_at",
+            "-created_at",
+            "name",
+            "-name",
+        ],
+        description="Sort order; values outside the allowed set are ignored.",
+    ),
+]
+
+
+@extend_schema(tags=["places"], parameters=_PLACE_LIST_PARAMS)
 class PlaceListView(ListAPIView):
     """Public list of approved/active places, with filters."""
 
@@ -126,6 +218,7 @@ class PlaceListView(ListAPIView):
         return _apply_place_filters(qs, params)
 
 
+@extend_schema(tags=["places"])
 class PlaceCreateView(CreateAPIView):
     """Authenticated users submit a new place; always created on moderation."""
 
@@ -150,6 +243,7 @@ class PlaceCreateView(CreateAPIView):
             raise DRFValidationError({"detail": e.messages}) from e
 
 
+@extend_schema(tags=["places"])
 class PlaceDetailView(RetrieveAPIView):
     """Public detail view; non-public statuses only visible to author or staff."""
 
@@ -175,6 +269,7 @@ class PlaceDetailView(RetrieveAPIView):
         return obj
 
 
+@extend_schema(tags=["places"])
 class PlaceUpdateView(UpdateAPIView, RetrieveAPIView):
     """Author or admin can edit a place."""
 
@@ -186,6 +281,7 @@ class PlaceUpdateView(UpdateAPIView, RetrieveAPIView):
         return Place.objects.all()
 
 
+@extend_schema(tags=["places"])
 class PlaceModerationListView(ListAPIView):
     """Admin-only list of places pending moderation."""
 
@@ -201,6 +297,34 @@ class PlaceModerationListView(ListAPIView):
         )
 
 
+@extend_schema(
+    tags=["places"],
+    summary="Approve or reject a pending place (admin)",
+    description=(
+        "Routes ending in ``/approve/`` or ``/reject/`` flip the place "
+        "moderation status. ``reason`` is optional and is recorded on the "
+        "moderation audit trail when supplied."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="action_name",
+            location=OpenApiParameter.PATH,
+            type=OpenApiTypes.STR,
+            enum=["approve", "reject"],
+            description="Moderation verb baked into the URL.",
+        ),
+    ],
+    request=inline_serializer(
+        name="PlaceModerationActionRequest",
+        fields={
+            "reason": drf_serializers.CharField(required=False, allow_blank=True),
+        },
+    ),
+    responses={
+        200: PlaceSerializer,
+        400: OpenApiResponse(description="Unknown moderation action."),
+    },
+)
 class PlaceModerationActionView(UpdateAPIView):
     """Admin endpoint to approve/reject a place. Action is taken from URL kwargs."""
 
@@ -226,6 +350,30 @@ class PlaceModerationActionView(UpdateAPIView):
         return Response(self.get_serializer(place).data)
 
 
+@extend_schema(
+    tags=["places"],
+    summary="Rate a place (1-5 stars)",
+    description=(
+        "Upserts the caller's rating for the place. Accepts a number "
+        "between 1 and 5; stored internally on a 0-10 scale "
+        "(``stored = stars * 2``). Repeated calls overwrite the previous "
+        "rating rather than creating duplicates."
+    ),
+    request=inline_serializer(
+        name="PlaceRateRequest",
+        fields={
+            "rating": drf_serializers.FloatField(
+                min_value=1.0,
+                max_value=5.0,
+                help_text="Star rating between 1 and 5 (half-stars accepted).",
+            ),
+        },
+    ),
+    responses={
+        201: PlaceRatingSerializer,
+        400: OpenApiResponse(description="Validation failed."),
+    },
+)
 class PlaceRateView(CreateAPIView):
     """Star-rating endpoint: accepts {rating: 1..5}, stored on 0-10 scale."""
 
@@ -262,6 +410,7 @@ class PlaceRateView(CreateAPIView):
         )
 
 
+@extend_schema(tags=["places"])
 class PlaceRatingViewSet(viewsets.ModelViewSet):
     """A user's own ratings (for management UI)."""
 

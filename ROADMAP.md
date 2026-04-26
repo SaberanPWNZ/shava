@@ -153,11 +153,19 @@ Suggested closing comment template:
 
 **Acceptance criteria.**
 - [x] `drf-spectacular` exposing `/api/schema/` and `/api/docs/`.
-- [ ] All public endpoints documented (tags, request/response examples).
-      Partial: `users` email-flow endpoints annotated; the auth extension
-      now resolves bearer auth on every operation. Remaining APIView-based
-      endpoints (`MeView`, `LogoutView`, `UserBanView`, …) still need
-      `@extend_schema` decorators — tracked separately.
+- [x] All public endpoints documented (tags, request/response examples).
+      Every APIView/`@api_view`/ViewSet under `users`, `places`, `reviews`,
+      `articles`, `gamification` and `rating` now carries `@extend_schema`
+      with `tags` (grouped per app), summaries / descriptions and explicit
+      `request` / `responses` for non-trivial bodies. Query parameters on
+      `PlaceListView` (search/city/district/min_stars/…) and
+      `LeaderboardView` (period), the `action_name` URL kwarg on the
+      moderation routes, and the `{rating: 1..5}` body of `PlaceRateView`
+      are all annotated. The four previously-unschemafiable APIViews
+      (`MeView`, `LogoutView`, `UserBanView`, `ChangePasswordView`,
+      plus `MeGamificationView` / `PublicUserGamificationView` /
+      `LeaderboardView`) now resolve cleanly — `manage.py spectacular
+      --validate` reports zero errors (down from 36).
 - [x] `npm run generate:api` calls `openapi-typescript` and writes
       `frontend/src/lib/api/types.gen.ts`; checked-in and re-exported
       via `$lib/api/client` (`paths`, `components`, `operations`,
