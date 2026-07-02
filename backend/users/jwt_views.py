@@ -9,6 +9,5 @@ from .jwt_serializers import EmailTokenObtainPairSerializer
 class EmailTokenObtainPairView(TokenObtainPairView):
     """Login endpoint with rate-limiting (``auth`` scope)."""
 
-    serializer_class = EmailTokenObtainPairSerializer  # type: ignore[assignment]
-    throttle_classes = [ScopedRateThrottle]
+    serializer_class = EmailTokenObtainPairSerializer
     throttle_scope = "auth"
