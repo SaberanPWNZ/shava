@@ -573,11 +573,18 @@ Suggested closing comment template:
 **Labels:** `frontend`, `i18n`, `P3`
 
 **Acceptance criteria.**
-- [ ] `@inlang/paraglide-sveltekit` configured.
-- [ ] All UI strings extracted; `uk` (default) + `en` locales.
-- [ ] Locale switcher in header; persisted in cookie.
-- [ ] No hard-coded strings remain in components (eslint rule
-      `svelte/no-raw-text` or equivalent).
+- [x] `@inlang/paraglide-js` 2.x configured (successor of the deprecated
+      `@inlang/paraglide-sveltekit`): `project.inlang/` + vite plugin +
+      `paraglideMiddleware` in `hooks.server.ts`; `<html lang>` is set
+      per request via the `%paraglide.lang%` placeholder.
+- [x] All UI strings extracted to `messages/uk.json` / `messages/en.json`
+      (~230 keys); `uk` is the base locale, negotiated as
+      cookie → `Accept-Language` → `uk`.
+- [x] Locale switcher in header (`setLocale`); persisted in the
+      `PARAGLIDE_LOCALE` cookie.
+- [x] No hard-coded strings remain in components — enforced by the local
+      `local/no-raw-text` ESLint rule (`frontend/eslint-rules/no-raw-text.js`),
+      since `eslint-plugin-svelte` ships no `svelte/no-raw-text`.
 
 ---
 
