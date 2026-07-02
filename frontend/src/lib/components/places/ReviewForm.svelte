@@ -8,10 +8,11 @@
 	import { gamificationService } from '$lib/services/gamification.service';
 	import { ApiError } from '$lib/types/auth';
 	import type { Review } from '$lib/types';
+	import { m } from '$lib/paraglide/messages';
 
 	let { placeId, oncreated } = $props<{ placeId: number; oncreated?: (review: Review) => void }>();
 
-	const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
+	const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 	const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 	let stars = $state(5);
@@ -25,10 +26,10 @@
 	function validateImage(file: File | null): string | null {
 		if (!file) return null;
 		if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-			return 'Image must be JPEG, PNG or WebP.';
+			return m.review_image_type_error();
 		}
 		if (file.size > MAX_IMAGE_SIZE) {
-			return 'Image must be 5 MB or smaller.';
+			return m.review_image_size_error();
 		}
 		return null;
 	}
@@ -56,19 +57,13 @@
 		success = null;
 		try {
 			const form = new FormData();
-			// Backend stores 1-10 score; multiply stars (1-5) by 2.
 			form.append('score', (stars * 2).toFixed(1));
 			if (comment) form.append('comment', comment);
 			if (dishImage) form.append('dish_image', dishImage);
 			if (receiptImage) form.append('receipt_image', receiptImage);
 			const created = await reviewsApi.create(placeId, form);
-			success = receiptImage
-				? 'Thanks! Your review is awaiting moderation. The receipt photo will be checked for verification.'
-				: 'Thanks! Your review is awaiting moderation.';
-			toasts.success('Review submitted — pending moderation.');
-			// Optimistic UI: parent inserts the new review into the list before
-			// the network round-trip completes. We pass the server's response
-			// when available, falling back to a synthetic record if needed.
+			success = receiptImage ? m.review_success_with_receipt() : m.review_success();
+			toasts.success(m.review_toast_submitted());
 			const optimistic: Review =
 				(created as Review) ??
 				({
@@ -85,12 +80,10 @@
 			stars = 5;
 			dishImage = null;
 			receiptImage = null;
-			// Refresh gamification state so the user sees the awarded points / badges.
 			void gamificationService.refreshMe();
 			oncreated?.(optimistic);
 		} catch (error) {
-			formError =
-				error instanceof ApiError ? error.message : 'Could not submit the review.';
+			formError = error instanceof ApiError ? error.message : m.review_submit_failed();
 			toasts.error(formError);
 		} finally {
 			submitting = false;
@@ -99,10 +92,12 @@
 </script>
 
 <form
-	class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+	class="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-4 dark:border-stone-800 dark:bg-stone-900"
 	onsubmit={submit}
 >
-	<h3 class="text-base font-semibold text-zinc-900 dark:text-zinc-100">Add a review</h3>
+	<h3 class="text-base font-semibold text-stone-900 dark:text-stone-100">
+		{m.review_form_title()}
+	</h3>
 
 	{#if formError}
 		<Alert variant="error">{formError}</Alert>
@@ -112,22 +107,25 @@
 	{/if}
 
 	<div class="flex items-center gap-2">
-		<span class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Your rating</span>
+		<span class="text-sm font-medium text-stone-700 dark:text-stone-300"
+			>{m.review_your_rating()}</span
+		>
 		<StarRating value={stars} interactive onchange={(n) => (stars = n)} />
 	</div>
 
 	<label class="flex flex-col gap-1 text-sm">
-		<span class="font-medium text-zinc-700 dark:text-zinc-300">Comment</span>
+		<span class="font-medium text-stone-700 dark:text-stone-300">{m.review_comment()}</span>
 		<textarea
 			rows="3"
 			bind:value={comment}
-			class="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+			class="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900"
 		></textarea>
 	</label>
 
 	<label class="flex flex-col gap-1 text-sm">
-		<span class="font-medium text-zinc-700 dark:text-zinc-300">
-			Dish photo <span class="text-xs text-zinc-500">(optional, +5 pts)</span>
+		<span class="font-medium text-stone-700 dark:text-stone-300">
+			{m.review_dish_photo()}
+			<span class="text-xs text-stone-500">{m.review_dish_photo_hint()}</span>
 		</span>
 		<input
 			type="file"
@@ -138,8 +136,9 @@
 	</label>
 
 	<label class="flex flex-col gap-1 text-sm">
-		<span class="font-medium text-zinc-700 dark:text-zinc-300">
-			Receipt photo <span class="text-xs text-zinc-500">(optional, +30 pts after verification)</span>
+		<span class="font-medium text-stone-700 dark:text-stone-300">
+			{m.review_receipt_photo()}
+			<span class="text-xs text-stone-500">{m.review_receipt_photo_hint()}</span>
 		</span>
 		<input
 			type="file"
@@ -149,5 +148,5 @@
 		/>
 	</label>
 
-	<Button type="submit" loading={submitting}>Submit review</Button>
+	<Button type="submit" loading={submitting}>{m.review_submit()}</Button>
 </form>

@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { gamificationStore } from '$lib/stores/gamification.svelte';
+	import { m } from '$lib/paraglide/messages';
 
 	const variantClass: Record<string, string> = {
-		points: 'bg-orange-700 text-white',
+		points: 'bg-amber-700 text-white',
 		level: 'bg-amber-500 text-white',
 		badge: 'bg-emerald-600 text-white'
 	};
@@ -17,7 +18,7 @@
 			<div
 				class="pointer-events-auto flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold shadow-lg {variantClass[
 					toast.kind
-				] ?? 'bg-zinc-800 text-white'}"
+				] ?? 'bg-stone-800 text-white'}"
 				role="status"
 			>
 				<span aria-hidden="true">{toast.icon ?? '⭐'}</span>
@@ -25,7 +26,7 @@
 				<button
 					type="button"
 					class="ml-2 text-white/80 hover:text-white"
-					aria-label="Dismiss notification"
+					aria-label={m.toast_dismiss()}
 					onclick={() => gamificationStore.dismissToast(toast.id)}
 				>
 					×

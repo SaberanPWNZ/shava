@@ -2,5 +2,13 @@
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
-/* Use a class on <html> to opt-in to dark mode (toggled by ThemeToggle). */
 @custom-variant dark (&:where(.dark, .dark *));
+
+html {
+	scroll-behavior: smooth;
+}
+
+::selection {
+	background-color: var(--color-amber-200);
+	color: var(--color-stone-900);
+}

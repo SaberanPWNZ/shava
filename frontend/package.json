@@ -23,6 +23,7 @@
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
+		"@inlang/paraglide-js": "^2.20.2",
 		"@lhci/cli": "^0.14.0",
 		"@playwright/test": "^1.49.1",
 		"@rollup/rollup-linux-x64-gnu": "4.6.1",
@@ -45,8 +46,8 @@
 		"lightningcss": "^1.21.0",
 		"openapi-typescript": "^7.13.0",
 		"prettier": "^3.4.2",
-		"prettier-plugin-svelte": "^3.3.3",
-		"prettier-plugin-tailwindcss": "^0.6.11",
+		"prettier-plugin-svelte": "^4.1.1",
+		"prettier-plugin-tailwindcss": "^0.8.0",
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
 		"tailwindcss": "^4.1.11",

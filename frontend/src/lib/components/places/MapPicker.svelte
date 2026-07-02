@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import 'leaflet/dist/leaflet.css';
+	import { m } from '$lib/paraglide/messages';
 
 	type LatLng = { lat: number; lng: number };
 
@@ -21,12 +22,8 @@
 	onMount(async () => {
 		const L = (await import('leaflet')).default;
 
-		// Default Leaflet marker icons rely on assets bundled by Webpack/Vite,
-		// which the runtime can't locate. Use a CDN fallback so the marker
-		// always renders correctly without extra build configuration.
 		const iconUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png';
-		const iconRetinaUrl =
-			'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png';
+		const iconRetinaUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png';
 		const shadowUrl = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
 		const DefaultIcon = L.icon({
 			iconUrl,
@@ -63,8 +60,6 @@
 			value = { lat: event.latlng.lat, lng: event.latlng.lng };
 		});
 
-		// If we don't yet have a value, default to the centre to expose
-		// coordinates immediately.
 		if (!value) {
 			value = { lat: initial.lat, lng: initial.lng };
 		}
@@ -89,7 +84,7 @@
 
 <div
 	bind:this={containerEl}
-	class="h-72 w-full overflow-hidden rounded-lg border border-zinc-300 dark:border-zinc-700"
+	class="h-72 w-full overflow-hidden rounded-lg border border-stone-300 dark:border-stone-700"
 	role="application"
-	aria-label="Map: drag the marker or click to choose a location"
+	aria-label={m.map_picker_label()}
 ></div>

@@ -7,6 +7,7 @@
 	import { placesApi, reviewsApi } from '$lib/api/places.api';
 	import { toasts } from '$lib/stores/toasts.svelte';
 	import type { ModerationLogEntry, Paginated, Place, Review } from '$lib/types';
+	import { m } from '$lib/paraglide/messages';
 
 	let tab = $state<string>('places');
 
@@ -53,12 +54,10 @@
 	}
 
 	function promptReason(action: 'approve' | 'reject'): string | null {
-		// `prompt()` is the smallest accessible way to capture a short reason
-		// without introducing a modal component. Returns null if cancelled.
 		const message =
 			action === 'reject'
-				? 'Reason for rejection (visible in the audit log):'
-				: 'Optional note (visible in the audit log):';
+				? m.moderation_reject_reason_prompt()
+				: m.moderation_approve_note_prompt();
 		const value = typeof window !== 'undefined' ? window.prompt(message, '') : '';
 		if (value === null) return null;
 		return value;
@@ -70,7 +69,11 @@
 		try {
 			if (action === 'approve') await placesApi.approve(id, reason);
 			else await placesApi.reject(id, reason);
-			toasts.success(`Place ${id} ${action}d.`);
+			toasts.success(
+				action === 'approve'
+					? m.moderation_place_approved({ id })
+					: m.moderation_place_rejected({ id })
+			);
 			await Promise.all([loadQueues(), loadLog(1)]);
 		} catch (e) {
 			toasts.error((e as Error).message);
@@ -83,7 +86,11 @@
 		try {
 			if (action === 'approve') await reviewsApi.approve(id, reason);
 			else await reviewsApi.reject(id, reason);
-			toasts.success(`Review ${id} ${action}d.`);
+			toasts.success(
+				action === 'approve'
+					? m.moderation_review_approved({ id })
+					: m.moderation_review_rejected({ id })
+			);
 			await Promise.all([loadQueues(), loadLog(1)]);
 		} catch (e) {
 			toasts.error((e as Error).message);
@@ -96,18 +103,18 @@
 	});
 
 	const tabs = $derived([
-		{ id: 'places', label: `Places (${pendingPlaces.length})` },
-		{ id: 'reviews', label: `Reviews (${pendingReviews.length})` },
-		{ id: 'log', label: 'Activity log' }
+		{ id: 'places', label: `${m.places_title()} (${pendingPlaces.length})` },
+		{ id: 'reviews', label: `${m.place_reviews_title()} (${pendingReviews.length})` },
+		{ id: 'log', label: m.moderation_activity_log() }
 	]);
 </script>
 
 <section class="flex flex-col gap-4">
 	<header class="flex flex-wrap items-center justify-between gap-2">
-		<h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Moderation</h1>
+		<h1 class="text-2xl font-bold text-stone-900 dark:text-stone-100">{m.nav_moderation()}</h1>
 	</header>
 
-	<Tabs {tabs} bind:value={tab} ariaLabel="Moderation sections">
+	<Tabs {tabs} bind:value={tab} ariaLabel={m.moderation_sections_label()}>
 		{#snippet panel(id)}
 			{#if error}
 				<Alert variant="error">{error}</Alert>
@@ -115,30 +122,30 @@
 
 			{#if id === 'places'}
 				{#if loading}
-					<p class="text-sm text-zinc-500">Loading…</p>
+					<p class="text-sm text-stone-500">{m.loading_ellipsis()}</p>
 				{:else if pendingPlaces.length === 0}
-					<p class="text-sm text-zinc-500">Nothing to moderate.</p>
+					<p class="text-sm text-stone-500">{m.moderation_empty()}</p>
 				{:else}
 					<ul class="flex flex-col gap-3">
 						{#each pendingPlaces as place (place.id)}
 							<li
-								class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-900"
+								class="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between dark:border-stone-800 dark:bg-stone-900"
 							>
 								<div>
-									<p class="font-semibold text-zinc-900 dark:text-zinc-100">{place.name}</p>
-									<p class="text-sm text-zinc-600 dark:text-zinc-400">{place.address}</p>
+									<p class="font-semibold text-stone-900 dark:text-stone-100">{place.name}</p>
+									<p class="text-sm text-stone-600 dark:text-stone-400">{place.address}</p>
 									{#if place.description}
-										<p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+										<p class="mt-1 text-sm text-stone-500 dark:text-stone-400">
 											{place.description}
 										</p>
 									{/if}
 								</div>
 								<div class="flex gap-2">
 									<Button variant="primary" onclick={() => handlePlace(place.id, 'approve')}>
-										Approve
+										{m.moderation_approve()}
 									</Button>
 									<Button variant="danger" onclick={() => handlePlace(place.id, 'reject')}>
-										Reject
+										{m.moderation_reject()}
 									</Button>
 								</div>
 							</li>
@@ -147,31 +154,33 @@
 				{/if}
 			{:else if id === 'reviews'}
 				{#if loading}
-					<p class="text-sm text-zinc-500">Loading…</p>
+					<p class="text-sm text-stone-500">{m.loading_ellipsis()}</p>
 				{:else if pendingReviews.length === 0}
-					<p class="text-sm text-zinc-500">Nothing to moderate.</p>
+					<p class="text-sm text-stone-500">{m.moderation_empty()}</p>
 				{:else}
 					<ul class="flex flex-col gap-3">
 						{#each pendingReviews as review (review.id)}
 							<li
-								class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+								class="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-4 dark:border-stone-800 dark:bg-stone-900"
 							>
 								<div class="flex items-center justify-between">
-									<p class="font-semibold text-zinc-900 dark:text-zinc-100">
-										{review.author_username ?? 'Anonymous'} on {review.place_name ??
-											`Place ${review.place}`}
+									<p class="font-semibold text-stone-900 dark:text-stone-100">
+										{review.author_username ?? m.reviews_anonymous()} — {review.place_name ??
+											m.place_fallback_ref({ id: review.place })}
 									</p>
-									<span class="text-sm text-zinc-500">Score: {review.score}</span>
+									<span class="text-sm text-stone-500"
+										>{m.moderation_score({ score: review.score })}</span
+									>
 								</div>
 								{#if review.comment}
-									<p class="text-sm text-zinc-700 dark:text-zinc-300">{review.comment}</p>
+									<p class="text-sm text-stone-700 dark:text-stone-300">{review.comment}</p>
 								{/if}
 								<div class="flex gap-2">
 									<Button variant="primary" onclick={() => handleReview(review.id, 'approve')}>
-										Approve
+										{m.moderation_approve()}
 									</Button>
 									<Button variant="danger" onclick={() => handleReview(review.id, 'reject')}>
-										Reject
+										{m.moderation_reject()}
 									</Button>
 								</div>
 							</li>
@@ -180,36 +189,35 @@
 				{/if}
 			{:else if id === 'log'}
 				{#if logLoading && logEntries.length === 0}
-					<p class="text-sm text-zinc-500">Loading…</p>
+					<p class="text-sm text-stone-500">{m.loading_ellipsis()}</p>
 				{:else if logEntries.length === 0}
-					<p class="text-sm text-zinc-500">No moderation actions recorded yet.</p>
+					<p class="text-sm text-stone-500">{m.moderation_log_empty()}</p>
 				{:else}
 					<ul class="flex flex-col gap-2">
 						{#each logEntries as entry (entry.id)}
 							<li
-								class="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900"
+								class="flex flex-col gap-1 rounded-xl border border-stone-200 bg-white p-3 text-sm dark:border-stone-800 dark:bg-stone-900"
 							>
 								<div class="flex flex-wrap items-center gap-2">
 									<span
-										class="rounded-md px-2 py-0.5 text-xs font-semibold {entry.action ===
-										'approve'
+										class="rounded-md px-2 py-0.5 text-xs font-semibold {entry.action === 'approve'
 											? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200'
 											: 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200'}"
 									>
-										{entry.action}
+										{entry.action === 'approve' ? m.moderation_approve() : m.moderation_reject()}
 									</span>
-									<span class="text-zinc-700 dark:text-zinc-200">
+									<span class="text-stone-700 dark:text-stone-200">
 										{entry.target_type} #{entry.target_id}
 									</span>
-									<span class="text-zinc-500">
-										by {entry.actor_username || 'system'}
+									<span class="text-stone-500">
+										{m.moderation_by({ actor: entry.actor_username || m.moderation_system() })}
 									</span>
-									<time class="ml-auto text-xs text-zinc-500" datetime={entry.created_at}>
+									<time class="ml-auto text-xs text-stone-500" datetime={entry.created_at}>
 										{new Date(entry.created_at).toLocaleString()}
 									</time>
 								</div>
 								{#if entry.reason}
-									<p class="text-zinc-600 dark:text-zinc-300">{entry.reason}</p>
+									<p class="text-stone-600 dark:text-stone-300">{entry.reason}</p>
 								{/if}
 							</li>
 						{/each}
@@ -225,4 +233,3 @@
 		{/snippet}
 	</Tabs>
 </section>
-

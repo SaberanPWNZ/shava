@@ -6,6 +6,7 @@
 	import MapPicker from '$lib/components/places/MapPicker.svelte';
 	import { placesApi } from '$lib/api/places.api';
 	import { ApiError, type FieldErrors } from '$lib/types/auth';
+	import { m } from '$lib/paraglide/messages';
 
 	let name = $state('');
 	let city = $state('Київ');
@@ -37,7 +38,7 @@
 		success = false;
 
 		if (!coords) {
-			formError = 'Please pick a location on the map.';
+			formError = m.new_place_location_required();
 			submitting = false;
 			return;
 		}
@@ -66,7 +67,7 @@
 				fieldErrors = error.fieldErrors;
 				formError = Object.keys(error.fieldErrors).length ? null : error.message;
 			} else {
-				formError = 'Could not submit the place.';
+				formError = m.new_place_submit_failed();
 			}
 		} finally {
 			submitting = false;
@@ -75,10 +76,10 @@
 </script>
 
 <div class="mx-auto max-w-2xl py-8">
-	<Card title="Submit a new place">
+	<Card title={m.new_place_title()}>
 		{#if success}
 			<Alert variant="success">
-				Thanks! Your place has been submitted and is awaiting moderation.
+				{m.new_place_success()}
 			</Alert>
 		{/if}
 		{#if formError}
@@ -86,45 +87,53 @@
 		{/if}
 
 		<form class="flex flex-col gap-4" onsubmit={submit} novalidate>
-			<Input id="place-name" label="Name" required bind:value={name} error={fieldError('name')} />
+			<Input
+				id="place-name"
+				label={m.new_place_name()}
+				required
+				bind:value={name}
+				error={fieldError('name')}
+			/>
 			<Input
 				id="place-city"
-				label="City"
+				label={m.filters_city()}
 				required
 				bind:value={city}
 				error={fieldError('city')}
 			/>
 			<Input
 				id="place-address"
-				label="Address"
+				label={m.new_place_address()}
 				required
 				bind:value={address}
 				error={fieldError('address')}
 			/>
 			<label class="flex flex-col gap-1 text-sm">
-				<span class="font-medium text-zinc-700 dark:text-zinc-300">Description</span>
+				<span class="font-medium text-stone-700 dark:text-stone-300"
+					>{m.new_place_description()}</span
+				>
 				<textarea
 					rows="4"
 					bind:value={description}
-					class="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+					class="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-900"
 				></textarea>
 			</label>
-			<label class="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+			<label class="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
 				<input type="checkbox" bind:checked={delivery} class="rounded" />
-				Delivery available
+				{m.filters_delivery_available()}
 			</label>
 
 			<div class="flex flex-col gap-1 text-sm">
-				<span class="font-medium text-zinc-700 dark:text-zinc-300">
-					Location <span class="text-red-600">*</span>
+				<span class="font-medium text-stone-700 dark:text-stone-300">
+					{m.new_place_location()} <span class="text-red-600">*</span>
 				</span>
-				<p class="text-xs text-zinc-500 dark:text-zinc-400">
-					Click on the map or drag the marker to pin the exact spot.
+				<p class="text-xs text-stone-500 dark:text-stone-400">
+					{m.new_place_location_hint()}
 				</p>
 				<MapPicker bind:value={coords} />
 				{#if coords}
-					<p class="text-xs text-zinc-600 dark:text-zinc-400">
-						Selected: {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
+					<p class="text-xs text-stone-600 dark:text-stone-400">
+						{m.new_place_selected({ coords: `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}` })}
 					</p>
 				{/if}
 				{#if fieldError('latitude') || fieldError('longitude')}
@@ -135,13 +144,15 @@
 			</div>
 
 			<label class="flex flex-col gap-1 text-sm">
-				<span class="font-medium text-zinc-700 dark:text-zinc-300">Main image</span>
+				<span class="font-medium text-stone-700 dark:text-stone-300"
+					>{m.new_place_main_image()}</span
+				>
 				<input type="file" accept="image/*" onchange={onFile} class="text-sm" />
 				{#if fieldError('main_image')}
 					<p class="text-sm text-red-600">{fieldError('main_image')}</p>
 				{/if}
 			</label>
-			<Button type="submit" loading={submitting}>Submit place</Button>
+			<Button type="submit" loading={submitting}>{m.new_place_submit()}</Button>
 		</form>
 	</Card>
 </div>

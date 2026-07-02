@@ -6,6 +6,7 @@
 	import Input from '$lib/components/ui/Input.svelte';
 	import { authService } from '$lib/services/auth.service';
 	import { ApiError, type FieldErrors } from '$lib/types/auth';
+	import { m } from '$lib/paraglide/messages';
 
 	let email = $state('');
 	let password = $state('');
@@ -27,7 +28,7 @@
 				fieldErrors = error.fieldErrors;
 				formError = Object.keys(error.fieldErrors).length ? null : error.message;
 			} else {
-				formError = 'Could not sign in.';
+				formError = m.login_failed();
 			}
 		} finally {
 			submitting = false;
@@ -43,29 +44,36 @@
 	<Alert variant="error">{formError}</Alert>
 {/if}
 
-<form class="flex flex-col gap-4" onsubmit={submit} novalidate>
+<form class="flex flex-col gap-5" onsubmit={submit} novalidate>
 	<Input
 		id="login-email"
-		label="Email"
+		label={m.field_email()}
 		type="email"
+		placeholder={m.field_email_placeholder()}
 		autocomplete="email"
 		required
 		bind:value={email}
 		error={fieldError('email')}
 	/>
-	<Input
-		id="login-password"
-		label="Password"
-		type="password"
-		autocomplete="current-password"
-		required
-		bind:value={password}
-		error={fieldError('password')}
-	/>
-	<Button type="submit" loading={submitting}>Sign in</Button>
-	<p class="text-center text-sm">
-		<a href="/forgot-password" class="font-medium text-orange-700 hover:underline"
-			>Forgot password?</a
-		>
-	</p>
+	<div class="flex flex-col gap-1.5">
+		<Input
+			id="login-password"
+			label={m.field_password()}
+			type="password"
+			placeholder="••••••••"
+			autocomplete="current-password"
+			required
+			bind:value={password}
+			error={fieldError('password')}
+		/>
+		<p class="text-right text-sm">
+			<a
+				href="/forgot-password"
+				class="font-medium text-amber-700 hover:underline dark:text-amber-400"
+			>
+				{m.login_forgot_password()}
+			</a>
+		</p>
+	</div>
+	<Button type="submit" size="lg" block loading={submitting}>{m.login_submit()}</Button>
 </form>

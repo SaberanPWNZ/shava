@@ -49,15 +49,7 @@ screen.
 </script>
 
 {#if resolved}
-	<img
-		src={resolved}
-		srcset={srcset ?? undefined}
-		{sizes}
-		{alt}
-		{loading}
-		{decoding}
-		class={cls}
-	/>
+	<img src={resolved} srcset={srcset ?? undefined} {sizes} {alt} {loading} {decoding} class={cls} />
 {:else if fallback}
 	{@render fallback()}
 {/if}

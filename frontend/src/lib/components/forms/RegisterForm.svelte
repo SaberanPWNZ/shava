@@ -6,6 +6,7 @@
 	import { authApi } from '$lib/api/auth.api';
 	import { authService } from '$lib/services/auth.service';
 	import { ApiError, type FieldErrors } from '$lib/types/auth';
+	import { m } from '$lib/paraglide/messages';
 
 	let email = $state('');
 	let firstName = $state('');
@@ -22,7 +23,7 @@
 		formError = null;
 		fieldErrors = {};
 		if (password !== confirmPassword) {
-			fieldErrors = { confirm_password: 'Passwords do not match.' };
+			fieldErrors = { confirm_password: m.register_passwords_mismatch() };
 			submitting = false;
 			return;
 		}
@@ -40,7 +41,7 @@
 				fieldErrors = error.fieldErrors;
 				formError = Object.keys(error.fieldErrors).length ? null : error.message;
 			} else {
-				formError = 'Could not register.';
+				formError = m.register_failed();
 			}
 		} finally {
 			submitting = false;
@@ -56,27 +57,30 @@
 	<Alert variant="error">{formError}</Alert>
 {/if}
 
-<form class="flex flex-col gap-4" onsubmit={submit} novalidate>
+<form class="flex flex-col gap-5" onsubmit={submit} novalidate>
 	<Input
 		id="register-email"
-		label="Email"
+		label={m.field_email()}
 		type="email"
+		placeholder={m.field_email_placeholder()}
 		autocomplete="email"
 		required
 		bind:value={email}
 		error={fieldError('email')}
 	/>
-	<div class="grid gap-4 sm:grid-cols-2">
+	<div class="grid gap-5 sm:grid-cols-2">
 		<Input
 			id="register-first-name"
-			label="First name"
+			label={m.field_first_name()}
+			placeholder={m.field_first_name_placeholder()}
 			autocomplete="given-name"
 			bind:value={firstName}
 			error={fieldError('first_name')}
 		/>
 		<Input
 			id="register-last-name"
-			label="Last name"
+			label={m.field_last_name()}
+			placeholder={m.field_last_name_placeholder()}
 			autocomplete="family-name"
 			bind:value={lastName}
 			error={fieldError('last_name')}
@@ -84,21 +88,24 @@
 	</div>
 	<Input
 		id="register-password"
-		label="Password"
+		label={m.field_password()}
 		type="password"
+		placeholder={m.register_password_placeholder()}
 		autocomplete="new-password"
 		required
+		hint={m.register_password_hint()}
 		bind:value={password}
 		error={fieldError('password')}
 	/>
 	<Input
 		id="register-confirm-password"
-		label="Confirm password"
+		label={m.field_confirm_password()}
 		type="password"
+		placeholder={m.register_confirm_placeholder()}
 		autocomplete="new-password"
 		required
 		bind:value={confirmPassword}
 		error={fieldError('confirm_password')}
 	/>
-	<Button type="submit" loading={submitting}>Create account</Button>
+	<Button type="submit" size="lg" block loading={submitting}>{m.register_submit()}</Button>
 </form>

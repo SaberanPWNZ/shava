@@ -1,17 +1,11 @@
 <script lang="ts">
-	/**
-	 * A bare-bones loading placeholder. Animated `pulse` background + Tailwind
-	 * sizing classes via `class`. Use `lines={n}` for a multi-line text block,
-	 * or pass a single instance for a custom shape.
-	 *
-	 * Always rendered with `aria-hidden="true"` and an off-screen "Loading…"
-	 * label so assistive tech doesn't flag the placeholder as content.
-	 */
+	import { m } from '$lib/paraglide/messages';
+
 	let {
 		class: className = '',
 		lines = 1,
 		rounded = 'md',
-		label = 'Loading'
+		label = m.loading()
 	}: {
 		class?: string;
 		lines?: number;
@@ -35,14 +29,14 @@
 	<div class="flex flex-col gap-2" aria-hidden="true">
 		{#each Array.from({ length: lines }, (_, i) => i) as i (i)}
 			<div
-				class="h-3 animate-pulse bg-zinc-200/80 dark:bg-zinc-800 {roundedClass} {className}"
+				class="h-3 animate-pulse bg-stone-200/80 dark:bg-stone-800 {roundedClass} {className}"
 				style:width={i === lines - 1 ? '60%' : '100%'}
 			></div>
 		{/each}
 	</div>
 {:else}
 	<div
-		class="animate-pulse bg-zinc-200/80 dark:bg-zinc-800 {roundedClass} {className}"
+		class="animate-pulse bg-stone-200/80 dark:bg-stone-800 {roundedClass} {className}"
 		aria-hidden="true"
 	></div>
 {/if}

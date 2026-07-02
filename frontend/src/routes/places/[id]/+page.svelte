@@ -12,6 +12,7 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { toasts } from '$lib/stores/toasts.svelte';
 	import type { PlaceDetail, Review } from '$lib/types';
+	import { m } from '$lib/paraglide/messages';
 
 	let place = $state<PlaceDetail | null>(null);
 	let reviews = $state<Review[]>([]);
@@ -38,18 +39,16 @@
 	async function rate(stars: number) {
 		rateError = null;
 		if (!authStore.isAuthenticated) {
-			rateError = 'Please sign in to rate places.';
+			rateError = m.rate_sign_in_required();
 			toasts.error(rateError);
 			return;
 		}
 		if (!place) return;
-		// Optimistic: reflect the new star count immediately; rollback on error.
 		const previous = { stars: place.stars, ratings_count: place.ratings_count };
 		place = { ...place, stars, ratings_count: place.ratings_count + 1 };
 		try {
 			await placesApi.rate(id, stars);
-			toasts.success(`Rated ${stars} stars.`);
-			// Refresh aggregate values from the server (other ratings may have shifted them).
+			toasts.success(m.rate_success({ stars }));
 			place = await placesApi.detail(id);
 		} catch (e) {
 			place = place ? { ...place, ...previous } : place;
@@ -59,8 +58,6 @@
 	}
 
 	function onReviewCreated(optimistic: Review) {
-		// Show the user's pending review immediately at the top; the
-		// authoritative server copy is fetched in the background.
 		reviews = [optimistic, ...reviews];
 		void load();
 	}
@@ -69,11 +66,15 @@
 </script>
 
 <Seo
-	title={place?.name ?? 'Place'}
+	title={place?.name ?? m.place_fallback_title()}
 	description={place?.description ??
 		(place
-			? `${place.name} — ${place.stars?.toFixed(1) ?? '?'}★ from ${place.ratings_count} ratings on Shava.`
-			: 'Place details on Shava.')}
+			? m.place_seo_description({
+					name: place.name,
+					stars: place.stars?.toFixed(1) ?? '?',
+					count: place.ratings_count
+				})
+			: m.place_seo_fallback())}
 	image={place?.main_image ?? ''}
 	type="article"
 />
@@ -90,13 +91,15 @@
 {:else if place}
 	<article class="flex flex-col gap-6">
 		<header class="flex flex-col gap-3">
-			<h1 class="text-2xl font-bold text-zinc-900 sm:text-3xl dark:text-zinc-100">
+			<h1 class="text-2xl font-bold text-stone-900 sm:text-3xl dark:text-stone-100">
 				{place.name}
 			</h1>
-			<p class="text-zinc-600 dark:text-zinc-300">{place.address}</p>
+			<p class="text-stone-600 dark:text-stone-300">{place.address}</p>
 			<div class="flex flex-wrap items-center gap-3">
 				<StarRating value={place.stars ?? 0} size="md" />
-				<span class="text-sm text-zinc-500">{place.ratings_count} ratings</span>
+				<span class="text-sm text-stone-500"
+					>{m.place_ratings_count({ count: place.ratings_count })}</span
+				>
 			</div>
 		</header>
 
@@ -109,13 +112,13 @@
 		{/if}
 
 		{#if place.description}
-			<p class="text-zinc-700 dark:text-zinc-300">{place.description}</p>
+			<p class="text-stone-700 dark:text-stone-300">{place.description}</p>
 		{/if}
 
 		<section
-			class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+			class="rounded-xl border border-stone-200 bg-white p-4 dark:border-stone-800 dark:bg-stone-900"
 		>
-			<h2 class="mb-3 text-lg font-semibold">Rate this place</h2>
+			<h2 class="mb-3 text-lg font-semibold">{m.rating_rate_this_place()}</h2>
 			{#if rateError}
 				<Alert variant="error">{rateError}</Alert>
 			{/if}
@@ -123,20 +126,20 @@
 		</section>
 
 		<section>
-			<h2 class="mb-3 text-xl font-semibold">Menu</h2>
+			<h2 class="mb-3 text-xl font-semibold">{m.place_menu_title()}</h2>
 			<MenuList items={place.menu ?? []} />
 		</section>
 
 		<section class="flex flex-col gap-4">
-			<h2 class="text-xl font-semibold">Reviews</h2>
+			<h2 class="text-xl font-semibold">{m.place_reviews_title()}</h2>
 			{#if authStore.isAuthenticated}
 				<ReviewForm placeId={id} oncreated={onReviewCreated} />
 			{:else}
-				<p class="text-sm text-zinc-500">
-					<a class="text-orange-700 hover:underline" href={`/login?next=/places/${id}`}>
-						Sign in
+				<p class="text-sm text-stone-500">
+					<a class="text-amber-700 hover:underline" href={`/login?next=/places/${id}`}>
+						{m.place_sign_in_link()}
 					</a>
-					to leave a review.
+					{m.place_sign_in_to_review()}
 				</p>
 			{/if}
 			<ReviewList {reviews} />

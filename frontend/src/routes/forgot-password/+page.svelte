@@ -5,6 +5,7 @@
 	import Input from '$lib/components/ui/Input.svelte';
 	import { authApi } from '$lib/api/auth.api';
 	import { ApiError, type FieldErrors } from '$lib/types/auth';
+	import { m } from '$lib/paraglide/messages';
 
 	let email = $state('');
 	let submitting = $state(false);
@@ -25,7 +26,7 @@
 				fieldErrors = error.fieldErrors;
 				formError = Object.keys(error.fieldErrors).length ? null : error.message;
 			} else {
-				formError = 'Не вдалося надіслати запит.';
+				formError = m.forgot_request_failed();
 			}
 		} finally {
 			submitting = false;
@@ -38,14 +39,14 @@
 </script>
 
 <div class="mx-auto max-w-md py-12">
-	<Card title="Скидання пароля">
+	<Card title={m.forgot_title()}>
 		{#if submitted}
 			<Alert variant="success">
-				Якщо адреса зареєстрована — на неї надіслано лист із посиланням для скидання пароля.
+				{m.forgot_success()}
 			</Alert>
 			<p class="mt-4 text-center text-sm">
-				<a href="/login" class="font-medium text-orange-700 hover:underline"
-					>Повернутися до входу</a
+				<a href="/login" class="font-medium text-amber-700 hover:underline"
+					>{m.forgot_back_to_login()}</a
 				>
 			</p>
 		{:else}
@@ -55,18 +56,18 @@
 			<form class="flex flex-col gap-4" onsubmit={submit} novalidate>
 				<Input
 					id="forgot-email"
-					label="Email"
+					label={m.field_email()}
 					type="email"
 					autocomplete="email"
 					required
 					bind:value={email}
 					error={fieldError('email')}
 				/>
-				<Button type="submit" loading={submitting}>Надіслати посилання</Button>
+				<Button type="submit" loading={submitting}>{m.forgot_submit()}</Button>
 			</form>
-			<p class="mt-4 text-center text-sm text-zinc-600 dark:text-zinc-400">
-				<a href="/login" class="font-medium text-orange-700 hover:underline"
-					>Повернутися до входу</a
+			<p class="mt-4 text-center text-sm text-stone-600 dark:text-stone-400">
+				<a href="/login" class="font-medium text-amber-700 hover:underline"
+					>{m.forgot_back_to_login()}</a
 				>
 			</p>
 		{/if}

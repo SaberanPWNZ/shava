@@ -2,19 +2,19 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import PlaceCard from '$lib/components/places/PlaceCard.svelte';
 	import PlaceFilters from '$lib/components/places/PlaceFilters.svelte';
 	import Skeleton from '$lib/components/ui/Skeleton.svelte';
 	import Seo from '$lib/components/Seo.svelte';
 	import { placesApi } from '$lib/api/places.api';
 	import type { Place, PlaceFilters as Filters } from '$lib/types';
+	import { m } from '$lib/paraglide/messages';
 
 	let filters = $state<Filters>({});
 	let places = $state<Place[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
-	// Set once the initial URL → state hydration finishes so the
-	// auto-debounce effect doesn't double-fire the first request.
 	let initialised = $state(false);
 
 	function readFiltersFromUrl() {
@@ -31,10 +31,7 @@
 	}
 
 	function writeFiltersToUrl() {
-		// Local, non-reactive scratch object — Svelte's prefer-svelte-reactivity
-		// rule doesn't apply here.
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity
-		const params = new URLSearchParams();
+		const params = new SvelteURLSearchParams();
 		if (filters.search) params.set('search', filters.search);
 		if (filters.city) params.set('city', filters.city);
 		if (filters.district) params.set('district', filters.district);
@@ -65,19 +62,12 @@
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
 	function applyFilters() {
-		// Manual flush from the Apply button — cancel any pending
-		// debounce so the request fires exactly once.
 		clearTimeout(debounceTimer);
 		writeFiltersToUrl();
 		void load();
 	}
 
-	// Debounced auto-apply: as the user types in search / city or
-	// flips a checkbox, schedule a single request 300 ms after the
-	// last change. Skips the very first run so we don't reload on
-	// hydration of the URL params.
 	$effect(() => {
-		// Read every filter so the effect tracks them all.
 		void filters.search;
 		void filters.city;
 		void filters.district;
@@ -102,22 +92,21 @@
 	});
 </script>
 
-<div class="grid gap-6 lg:grid-cols-[280px_1fr]">
-	<Seo
-		title="Places"
-		description="Browse and search shawarma places. Filter by city, district, rating, delivery and more."
-	/>
-	<aside>
+<div class="grid gap-6 lg:grid-cols-[300px_1fr] 2xl:grid-cols-[320px_1fr]">
+	<Seo title={m.places_title()} description={m.places_seo_description()} />
+	<aside class="lg:sticky lg:top-20 lg:self-start">
 		<PlaceFilters bind:filters onapply={applyFilters} />
 	</aside>
 	<section>
 		<header class="mb-4 flex flex-wrap items-center justify-between gap-3">
-			<h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Places</h1>
+			<h1 class="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
+				{m.places_title()}
+			</h1>
 			<a
 				href="/places/new"
-				class="inline-flex min-h-11 items-center rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-zinc-950"
+				class="inline-flex min-h-11 items-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-amber-600 hover:to-orange-700 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-stone-950"
 			>
-				+ Submit a place
+				{m.nav_submit_place()}
 			</a>
 		</header>
 
@@ -126,10 +115,10 @@
 		{/if}
 
 		{#if loading}
-			<ul class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+			<ul class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" aria-busy="true">
 				{#each Array.from({ length: 6 }, (_, i) => i) as i (i)}
 					<li
-						class="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+						class="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-4 dark:border-stone-800 dark:bg-stone-900"
 					>
 						<Skeleton class="h-32 w-full" rounded="lg" />
 						<Skeleton class="h-4 w-2/3" />
@@ -138,9 +127,9 @@
 				{/each}
 			</ul>
 		{:else if places.length === 0}
-			<p class="text-sm text-zinc-500">No places match your filters.</p>
+			<p class="text-sm text-stone-500">{m.places_empty()}</p>
 		{:else}
-			<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+			<div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
 				{#each places as place (place.id)}
 					<PlaceCard {place} />
 				{/each}

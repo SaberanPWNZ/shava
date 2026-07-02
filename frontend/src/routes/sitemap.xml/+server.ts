@@ -45,8 +45,7 @@ function renderSitemap(entries: ReadonlyArray<SitemapEntry>): string {
 			const parts = [`    <loc>${xmlEscape(e.loc)}</loc>`];
 			if (e.lastmod) parts.push(`    <lastmod>${xmlEscape(e.lastmod)}</lastmod>`);
 			if (e.changefreq) parts.push(`    <changefreq>${e.changefreq}</changefreq>`);
-			if (e.priority !== undefined)
-				parts.push(`    <priority>${e.priority.toFixed(1)}</priority>`);
+			if (e.priority !== undefined) parts.push(`    <priority>${e.priority.toFixed(1)}</priority>`);
 			return `  <url>\n${parts.join('\n')}\n  </url>`;
 		})
 		.join('\n');
@@ -79,15 +78,6 @@ async function fetchAllPages<T>(
 	return out;
 }
 
-/**
- * `GET /sitemap.xml` — XML sitemap covering static pages plus every
- * approved place and every published article. Indexed by search
- * engines so users can find content without crawling auth-walled
- * navigation.
- *
- * Soft-fails on backend errors: if the API is unreachable we still
- * serve the static portion of the sitemap rather than 5xx-ing.
- */
 export const GET: RequestHandler = async ({ url, fetch }) => {
 	const origin = (pubEnv.PUBLIC_SITE_URL ?? '').replace(/\/$/, '') || url.origin;
 	const apiBase = resolveApiBase();
@@ -101,8 +91,6 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 			fetch
 		);
 		placeEntries = places
-			// Only surface approved places — drafts / rejected ones must not
-			// leak into the sitemap.
 			.filter((p) => !p.status || p.status === 'approved')
 			.map((p) => ({
 				loc: `${origin}/places/${p.id}`,
@@ -111,7 +99,7 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 				priority: 0.7
 			}));
 	} catch {
-		// Soft-fail: backend down should not 5xx the sitemap.
+		placeEntries = [];
 	}
 
 	try {
@@ -123,7 +111,7 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 			priority: 0.6
 		}));
 	} catch {
-		// Soft-fail.
+		articleEntries = [];
 	}
 
 	const staticEntries: SitemapEntry[] = STATIC_PATHS.map((s) => ({
@@ -137,7 +125,6 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 	return new Response(body, {
 		headers: {
 			'Content-Type': 'application/xml; charset=utf-8',
-			// Sitemap is moderately expensive to build; cache 15 min.
 			'Cache-Control': 'public, max-age=900'
 		}
 	});

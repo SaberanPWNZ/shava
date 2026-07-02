@@ -11,6 +11,7 @@ import { env } from '$env/dynamic/public';
 import { handleErrorWithSentry, sentryHandle } from '@sentry/sveltekit';
 import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle, HandleServerError } from '@sveltejs/kit';
+import { paraglideMiddleware } from '$lib/paraglide/server';
 
 const dsn = env.PUBLIC_SENTRY_DSN;
 
@@ -26,6 +27,14 @@ if (dsn) {
 
 // ``sentryHandle`` is safe to install even when the SDK isn't configured —
 // it just falls through to the next handler.
-export const handle: Handle = sequence(sentryHandle());
+const paraglideHandle: Handle = ({ event, resolve }) =>
+	paraglideMiddleware(event.request, ({ request, locale }) => {
+		event.request = request;
+		return resolve(event, {
+			transformPageChunk: ({ html }) => html.replace('%paraglide.lang%', locale)
+		});
+	});
+
+export const handle: Handle = sequence(sentryHandle(), paraglideHandle);
 
 export const handleError: HandleServerError = handleErrorWithSentry();

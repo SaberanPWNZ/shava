@@ -19,14 +19,10 @@
 	// Source of truth for the public origin used in canonical / OG URLs.
 	// Falls back to the request origin so SSR works without configuration
 	// in dev / preview environments.
-	const siteUrl = $derived(
-		(env.PUBLIC_SITE_URL ?? '').replace(/\/$/, '') || page.url.origin
-	);
+	const siteUrl = $derived((env.PUBLIC_SITE_URL ?? '').replace(/\/$/, '') || page.url.origin);
 	const fullTitle = $derived(title.endsWith('Shava') ? title : `${title} · Shava`);
 	const canonicalUrl = $derived(canonical || `${siteUrl}${page.url.pathname}`);
-	const ogImage = $derived(
-		image ? (image.startsWith('http') ? image : `${siteUrl}${image}`) : ''
-	);
+	const ogImage = $derived(image ? (image.startsWith('http') ? image : `${siteUrl}${image}`) : '');
 </script>
 
 <svelte:head>

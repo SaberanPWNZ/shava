@@ -1,15 +1,16 @@
 <script lang="ts">
 	import Seo from '$lib/components/Seo.svelte';
+	import { m } from '$lib/paraglide/messages';
 </script>
 
-<Seo title="You are offline" description="No network connection — Shava is offline." />
+<Seo title={m.offline_title()} description={m.offline_seo_description()} />
 
 <section
 	class="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 text-center"
 >
 	<svg
 		aria-hidden="true"
-		class="h-16 w-16 text-orange-500"
+		class="h-16 w-16 text-amber-500"
 		viewBox="0 0 24 24"
 		fill="none"
 		stroke="currentColor"
@@ -23,16 +24,15 @@
 		<line x1="3" y1="3" x2="21" y2="21" />
 		<line x1="12" y1="20" x2="12" y2="20" />
 	</svg>
-	<h1 class="text-2xl font-semibold">You are offline</h1>
-	<p class="text-sm text-zinc-600 dark:text-zinc-400">
-		It looks like your device lost its connection. Some pages you visited
-		recently may still be available.
+	<h1 class="text-2xl font-semibold">{m.offline_title()}</h1>
+	<p class="text-sm text-stone-600 dark:text-stone-400">
+		{m.offline_text()}
 	</p>
 	<button
 		type="button"
-		class="rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500"
+		class="rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-amber-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
 		onclick={() => location.reload()}
 	>
-		Try again
+		{m.offline_retry()}
 	</button>
 </section>

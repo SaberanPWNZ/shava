@@ -7,7 +7,7 @@
 
 <a
 	href={`/articles/${article.slug}`}
-	class="block overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+	class="block overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
 >
 	<ResponsiveImage
 		thumbnails={article.cover_image_thumbnails}
@@ -17,18 +17,18 @@
 		class="h-44 w-full object-cover"
 	/>
 	<div class="p-4">
-		<span class="text-xs font-medium tracking-wide text-orange-700 uppercase">
+		<span class="text-xs font-medium tracking-wide text-amber-700 uppercase">
 			{article.category}
 		</span>
-		<h3 class="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+		<h3 class="mt-1 text-lg font-semibold text-stone-900 dark:text-stone-100">
 			{article.title}
 		</h3>
 		{#if article.excerpt}
-			<p class="mt-1 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-400">
+			<p class="mt-1 line-clamp-3 text-sm text-stone-600 dark:text-stone-400">
 				{article.excerpt}
 			</p>
 		{/if}
-		<p class="mt-3 text-xs text-zinc-500 dark:text-zinc-500">
+		<p class="mt-3 text-xs text-stone-500 dark:text-stone-500">
 			{new Date(article.published_at).toLocaleDateString()}
 			{#if article.author_name}· {article.author_name}{/if}
 		</p>

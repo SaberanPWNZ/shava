@@ -5,6 +5,7 @@
 	import Seo from '$lib/components/Seo.svelte';
 	import { articlesApi } from '$lib/api/places.api';
 	import type { Article } from '$lib/types';
+	import { m } from '$lib/paraglide/messages';
 
 	let article = $state<Article | null>(null);
 	let error = $state<string | null>(null);
@@ -22,23 +23,23 @@
 </script>
 
 {#if loading}
-	<p class="text-sm text-zinc-500">Loading…</p>
+	<p class="text-sm text-stone-500">{m.loading_ellipsis()}</p>
 {:else if error}
 	<Alert variant="error">{error}</Alert>
 {:else if article}
 	<Seo
 		title={article.title}
-		description={article.excerpt ?? `${article.category} article on Shava.`}
+		description={article.excerpt ?? m.article_seo_fallback({ category: article.category })}
 		image={article.cover_image ?? ''}
 		type="article"
 	/>
 	<article class="mx-auto flex max-w-3xl flex-col gap-4 py-6">
-		<a href="/articles" class="text-sm text-orange-700 hover:underline">← Back to articles</a>
-		<span class="text-xs font-medium tracking-wide text-orange-700 uppercase">
+		<a href="/articles" class="text-sm text-amber-700 hover:underline">{m.article_back()}</a>
+		<span class="text-xs font-medium tracking-wide text-amber-700 uppercase">
 			{article.category}
 		</span>
-		<h1 class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">{article.title}</h1>
-		<p class="text-sm text-zinc-500">
+		<h1 class="text-3xl font-bold text-stone-900 dark:text-stone-100">{article.title}</h1>
+		<p class="text-sm text-stone-500">
 			{new Date(article.published_at).toLocaleDateString()}
 			{#if article.author_name}· {article.author_name}{/if}
 		</p>

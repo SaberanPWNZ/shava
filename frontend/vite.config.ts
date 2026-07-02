@@ -1,11 +1,17 @@
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
+import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
+		paraglideVitePlugin({
+			project: './project.inlang',
+			outdir: './src/lib/paraglide',
+			strategy: ['cookie', 'preferredLanguage', 'baseLocale']
+		}),
 		sveltekit(),
 		SvelteKitPWA({
 			registerType: 'autoUpdate',
@@ -16,9 +22,8 @@ export default defineConfig({
 			manifest: {
 				name: 'Shava — find great shawarma near you',
 				short_name: 'Shava',
-				description:
-					'Discover, rate and review the best shawarma places in your city.',
-				theme_color: '#ea580c',
+				description: 'Discover, rate and review the best shawarma places in your city.',
+				theme_color: '#d97706',
 				background_color: '#fafaf9',
 				display: 'standalone',
 				orientation: 'portrait',
@@ -45,9 +50,7 @@ export default defineConfig({
 				clientsClaim: true,
 				runtimeCaching: [
 					{
-						// Static assets shipped by SvelteKit (immutable, hashed file names).
-						urlPattern: ({ url }) =>
-							url.pathname.startsWith('/_app/immutable/'),
+						urlPattern: ({ url }) => url.pathname.startsWith('/_app/immutable/'),
 						handler: 'CacheFirst',
 						options: {
 							cacheName: 'sveltekit-immutable',
@@ -55,7 +58,6 @@ export default defineConfig({
 						}
 					},
 					{
-						// Other static assets in /static.
 						urlPattern: ({ request }) =>
 							['style', 'script', 'image', 'font'].includes(request.destination),
 						handler: 'StaleWhileRevalidate',
@@ -65,7 +67,6 @@ export default defineConfig({
 						}
 					},
 					{
-						// GET API requests — keep working when offline / on flaky networks.
 						urlPattern: ({ url, request }) =>
 							request.method === 'GET' && url.pathname.startsWith('/api/'),
 						handler: 'NetworkFirst',
@@ -79,8 +80,6 @@ export default defineConfig({
 				]
 			},
 			devOptions: {
-				// Disabled in dev to avoid surprising HMR behaviour;
-				// the service worker still ships in the production build.
 				enabled: false,
 				type: 'module',
 				navigateFallback: '/'

@@ -19,6 +19,7 @@
 	import { ApiError, type FieldErrors } from '$lib/types/auth';
 	import type { Place, Review, Paginated } from '$lib/types';
 	import type { PointsTransactionRecord } from '$lib/types/gamification';
+	import { m } from '$lib/paraglide/messages';
 
 	const PAGE_SIZE = 10;
 
@@ -32,33 +33,30 @@
 	let fieldErrors = $state<FieldErrors>({});
 	let formError = $state<string | null>(null);
 
-	// My reviews tab
 	let reviewsPage = $state(1);
 	let reviewsData = $state<Paginated<Review> | null>(null);
 	let reviewsLoading = $state(false);
 	let reviewsError = $state<string | null>(null);
 
-	// My places tab
 	let placesPage = $state(1);
 	let placesData = $state<Paginated<Place> | null>(null);
 	let placesLoading = $state(false);
 	let placesError = $state<string | null>(null);
 
-	// Points history tab
 	let pointsPage = $state(1);
 	let pointsData = $state<Paginated<PointsTransactionRecord> | null>(null);
 	let pointsLoading = $state(false);
 	let pointsError = $state<string | null>(null);
 
-	const REASON_LABELS: Record<string, string> = {
-		REVIEW_CREATED: 'Posted a review',
-		REVIEW_FIRST_FOR_PLACE: 'First review for a place',
-		REVIEW_PHOTO: 'Added a dish photo',
-		REVIEW_VERIFIED: 'Review verified',
-		REVIEW_HELPFUL_VOTE: 'Marked as helpful',
-		BADGE_AWARDED: 'Badge bonus',
-		MANUAL_ADJUSTMENT: 'Adjustment'
-	};
+	const REASON_LABELS = $derived<Record<string, string>>({
+		REVIEW_CREATED: m.points_reason_review_created(),
+		REVIEW_FIRST_FOR_PLACE: m.points_reason_first_review(),
+		REVIEW_PHOTO: m.points_reason_photo(),
+		REVIEW_VERIFIED: m.points_reason_verified(),
+		REVIEW_HELPFUL_VOTE: m.points_reason_helpful(),
+		BADGE_AWARDED: m.points_reason_badge(),
+		MANUAL_ADJUSTMENT: m.points_reason_adjustment()
+	});
 
 	onMount(() => {
 		void gamificationService.refreshMe();
@@ -71,7 +69,7 @@
 			reviewsData = await reviewsApi.myList(p);
 			reviewsPage = p;
 		} catch (e) {
-			reviewsError = e instanceof Error ? e.message : 'Could not load reviews.';
+			reviewsError = e instanceof Error ? e.message : m.profile_reviews_load_failed();
 		} finally {
 			reviewsLoading = false;
 		}
@@ -84,7 +82,7 @@
 			placesData = await placesApi.myList(p);
 			placesPage = p;
 		} catch (e) {
-			placesError = e instanceof Error ? e.message : 'Could not load places.';
+			placesError = e instanceof Error ? e.message : m.profile_places_load_failed();
 		} finally {
 			placesLoading = false;
 		}
@@ -97,13 +95,12 @@
 			pointsData = await gamificationApi.myTransactions(p);
 			pointsPage = p;
 		} catch (e) {
-			pointsError = e instanceof Error ? e.message : 'Could not load points history.';
+			pointsError = e instanceof Error ? e.message : m.profile_points_load_failed();
 		} finally {
 			pointsLoading = false;
 		}
 	}
 
-	// Lazy-load each tab's data on first activation.
 	$effect(() => {
 		if (activeTab === 'reviews' && reviewsData === null && !reviewsLoading) {
 			void loadReviews(1);
@@ -125,16 +122,16 @@
 		try {
 			const updated = await authApi.updateMe({ first_name: firstName, last_name: lastName });
 			authStore.setUser(updated);
-			savedMessage = 'Profile updated.';
-			toasts.success('Profile updated.');
+			savedMessage = m.profile_updated();
+			toasts.success(m.profile_updated());
 		} catch (error) {
 			if (error instanceof ApiError) {
 				fieldErrors = error.fieldErrors;
 				formError = Object.keys(error.fieldErrors).length ? null : error.message;
 			} else {
-				formError = 'Could not update profile.';
+				formError = m.profile_update_failed();
 			}
-			toasts.error(formError ?? 'Could not update profile.');
+			toasts.error(formError ?? m.profile_update_failed());
 		} finally {
 			saving = false;
 		}
@@ -144,34 +141,38 @@
 		return fieldErrors[key] ?? null;
 	}
 
-	const tabs = [
-		{ id: 'overview', label: 'Overview' },
-		{ id: 'reviews', label: 'My reviews' },
-		{ id: 'places', label: 'My places' },
-		{ id: 'points', label: 'Points history' }
-	];
+	const tabs = $derived([
+		{ id: 'overview', label: m.profile_tab_overview() },
+		{ id: 'reviews', label: m.profile_tab_reviews() },
+		{ id: 'places', label: m.profile_tab_places() },
+		{ id: 'points', label: m.profile_tab_points() }
+	]);
 </script>
 
 <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 py-6 sm:py-8">
-	<h1 class="text-2xl font-bold text-zinc-900 sm:text-3xl dark:text-zinc-100">Your profile</h1>
+	<h1 class="text-2xl font-bold text-stone-900 sm:text-3xl dark:text-stone-100">
+		{m.profile_title()}
+	</h1>
 
-	<Tabs {tabs} bind:value={activeTab} ariaLabel="Profile sections">
+	<Tabs {tabs} bind:value={activeTab} ariaLabel={m.profile_sections_label()}>
 		{#snippet panel(id)}
 			{#if id === 'overview'}
 				<div class="flex flex-col gap-6">
-					<Card title="Account">
+					<Card title={m.profile_account_title()}>
 						{#if authStore.user}
 							<dl class="mb-6 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
 								<div>
-									<dt class="font-medium text-zinc-500 dark:text-zinc-400">Email</dt>
-									<dd class="break-words text-zinc-900 dark:text-zinc-100">
+									<dt class="font-medium text-stone-500 dark:text-stone-400">{m.field_email()}</dt>
+									<dd class="break-words text-stone-900 dark:text-stone-100">
 										{authStore.user.email}
 									</dd>
 								</div>
 								<div>
-									<dt class="font-medium text-zinc-500 dark:text-zinc-400">Verified</dt>
-									<dd class="text-zinc-900 dark:text-zinc-100">
-										{authStore.user.is_verified ? 'Yes' : 'No'}
+									<dt class="font-medium text-stone-500 dark:text-stone-400">
+										{m.profile_verified()}
+									</dt>
+									<dd class="text-stone-900 dark:text-stone-100">
+										{authStore.user.is_verified ? m.yes() : m.no()}
 									</dd>
 								</div>
 							</dl>
@@ -188,31 +189,31 @@
 							<div class="grid gap-4 sm:grid-cols-2">
 								<Input
 									id="profile-first-name"
-									label="First name"
+									label={m.field_first_name()}
 									autocomplete="given-name"
 									bind:value={firstName}
 									error={fieldError('first_name')}
 								/>
 								<Input
 									id="profile-last-name"
-									label="Last name"
+									label={m.field_last_name()}
 									autocomplete="family-name"
 									bind:value={lastName}
 									error={fieldError('last_name')}
 								/>
 							</div>
-							<Button type="submit" loading={saving}>Save changes</Button>
+							<Button type="submit" loading={saving}>{m.profile_save()}</Button>
 						</form>
 					</Card>
 
-					<Card title="Achievements">
+					<Card title={m.profile_achievements_title()}>
 						{#if gamificationStore.me}
 							<div class="flex flex-col gap-6">
 								<LevelProgressBar profile={gamificationStore.me} />
 
 								<section class="flex flex-col gap-3">
-									<h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-										Badges
+									<h3 class="text-sm font-semibold text-stone-900 dark:text-stone-100">
+										{m.profile_badges_title()}
 									</h3>
 									<BadgeGrid earned={gamificationStore.me.badges} />
 								</section>
@@ -224,14 +225,14 @@
 								<Skeleton class="h-20 w-full" rounded="lg" />
 							</div>
 						{:else}
-							<p class="text-sm text-zinc-500 dark:text-zinc-400">
-								Sign in and post a review to start earning points.
+							<p class="text-sm text-stone-500 dark:text-stone-400">
+								{m.profile_gamification_empty()}
 							</p>
 						{/if}
 					</Card>
 				</div>
 			{:else if id === 'reviews'}
-				<Card title="My reviews">
+				<Card title={m.profile_tab_reviews()}>
 					{#if reviewsError}
 						<Alert variant="error">{reviewsError}</Alert>
 					{/if}
@@ -242,34 +243,34 @@
 							{/each}
 						</div>
 					{:else if reviewsData && reviewsData.results.length === 0}
-						<p class="text-sm text-zinc-500 dark:text-zinc-400">
-							You haven't posted any reviews yet.
+						<p class="text-sm text-stone-500 dark:text-stone-400">
+							{m.profile_reviews_empty()}
 						</p>
 					{:else if reviewsData}
 						<ul class="flex flex-col gap-3">
 							{#each reviewsData.results as review (review.id)}
 								<li
-									class="flex flex-col gap-1 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
+									class="flex flex-col gap-1 rounded-lg border border-stone-200 bg-white p-3 dark:border-stone-800 dark:bg-stone-900"
 								>
 									<div class="flex items-center justify-between gap-2 text-sm">
 										<a
-											class="font-medium text-orange-700 hover:underline dark:text-orange-400"
+											class="font-medium text-amber-700 hover:underline dark:text-amber-400"
 											href={`/places/${review.place}`}
 										>
-											{review.place_name ?? `Place #${review.place}`}
+											{review.place_name ?? m.place_fallback_ref({ id: review.place })}
 										</a>
-										<span class="text-xs text-zinc-500">
+										<span class="text-xs text-stone-500">
 											{new Date(review.created_at).toLocaleDateString()}
 										</span>
 									</div>
-									<p class="text-sm text-zinc-700 dark:text-zinc-300">
-										{review.score}★ — {review.comment ?? '(no comment)'}
+									<p class="text-sm text-stone-700 dark:text-stone-300">
+										{review.score}★ — {review.comment ?? m.profile_no_comment()}
 									</p>
 									{#if !review.is_moderated}
 										<span
 											class="self-start rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900 dark:text-amber-200"
 										>
-											Pending moderation
+											{m.reviews_awaiting_moderation()}
 										</span>
 									{/if}
 								</li>
@@ -284,7 +285,7 @@
 					{/if}
 				</Card>
 			{:else if id === 'places'}
-				<Card title="My places">
+				<Card title={m.profile_tab_places()}>
 					{#if placesError}
 						<Alert variant="error">{placesError}</Alert>
 					{/if}
@@ -295,30 +296,32 @@
 							{/each}
 						</div>
 					{:else if placesData && placesData.results.length === 0}
-						<p class="text-sm text-zinc-500 dark:text-zinc-400">
-							You haven't submitted any places yet.
-							<a class="text-orange-700 hover:underline" href="/places/new">Submit one</a>.
+						<p class="text-sm text-stone-500 dark:text-stone-400">
+							{m.profile_places_empty()}
+							<a class="text-amber-700 hover:underline" href="/places/new"
+								>{m.profile_places_submit_one()}</a
+							>.
 						</p>
 					{:else if placesData}
 						<ul class="flex flex-col gap-3">
 							{#each placesData.results as place (place.id)}
 								<li
-									class="flex flex-col gap-1 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
+									class="flex flex-col gap-1 rounded-lg border border-stone-200 bg-white p-3 dark:border-stone-800 dark:bg-stone-900"
 								>
 									<div class="flex items-center justify-between gap-2">
 										<a
-											class="font-medium text-orange-700 hover:underline dark:text-orange-400"
+											class="font-medium text-amber-700 hover:underline dark:text-amber-400"
 											href={`/places/${place.id}`}
 										>
 											{place.name}
 										</a>
 										<span
-											class="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+											class="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-700 dark:bg-stone-800 dark:text-stone-300"
 										>
 											{place.status}
 										</span>
 									</div>
-									<p class="text-xs text-zinc-500">{place.address}</p>
+									<p class="text-xs text-stone-500">{place.address}</p>
 								</li>
 							{/each}
 						</ul>
@@ -331,7 +334,7 @@
 					{/if}
 				</Card>
 			{:else if id === 'points'}
-				<Card title="Points history">
+				<Card title={m.profile_tab_points()}>
 					{#if pointsError}
 						<Alert variant="error">{pointsError}</Alert>
 					{/if}
@@ -342,18 +345,18 @@
 							{/each}
 						</div>
 					{:else if pointsData && pointsData.results.length === 0}
-						<p class="text-sm text-zinc-500 dark:text-zinc-400">No activity yet.</p>
+						<p class="text-sm text-stone-500 dark:text-stone-400">{m.profile_points_empty()}</p>
 					{:else if pointsData}
 						<ul class="flex flex-col gap-2 text-sm">
 							{#each pointsData.results as tx (tx.id)}
 								<li
-									class="flex items-center justify-between gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900"
+									class="flex items-center justify-between gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 dark:border-stone-800 dark:bg-stone-900"
 								>
 									<div class="flex flex-col">
-										<span class="text-zinc-900 dark:text-zinc-100">
+										<span class="text-stone-900 dark:text-stone-100">
 											{REASON_LABELS[tx.reason] ?? tx.reason}
 										</span>
-										<span class="text-xs text-zinc-500 dark:text-zinc-400">
+										<span class="text-xs text-stone-500 dark:text-stone-400">
 											{new Date(tx.created_at).toLocaleString()}
 										</span>
 									</div>
@@ -379,4 +382,3 @@
 		{/snippet}
 	</Tabs>
 </div>
-

@@ -1,4 +1,5 @@
 import type { AwardedBadge, MeGamification } from '$lib/types/gamification';
+import { m } from '$lib/paraglide/messages';
 
 interface ToastEvent {
 	id: number;
@@ -27,7 +28,6 @@ function createGamificationStore() {
 	function pushToast(toast: Omit<ToastEvent, 'id'>) {
 		const t: ToastEvent = { id: ++toastSeq, ...toast };
 		state.toasts = [...state.toasts, t];
-		// Auto-dismiss after 4s.
 		setTimeout(() => dismissToast(t.id), 4000);
 	}
 
@@ -57,14 +57,14 @@ function createGamificationStore() {
 				if (delta > 0) {
 					pushToast({
 						kind: 'points',
-						message: `+${delta} points`,
+						message: m.gamification_points_gained({ delta }),
 						icon: '⭐'
 					});
 				}
 				if (me.level > previous.level) {
 					pushToast({
 						kind: 'level',
-						message: `Level up — ${me.level_title}!`,
+						message: m.gamification_level_up({ title: me.level_title }),
 						icon: '🏆'
 					});
 				}
@@ -73,7 +73,7 @@ function createGamificationStore() {
 					if (!previousCodes.has(badge.code)) {
 						pushToast({
 							kind: 'badge',
-							message: `New badge: ${badge.title}`,
+							message: m.gamification_new_badge({ title: badge.title }),
 							icon: badge.icon || '🏅'
 						});
 					}
@@ -90,7 +90,11 @@ function createGamificationStore() {
 		},
 		notifyBadges(badges: AwardedBadge[]) {
 			for (const b of badges) {
-				pushToast({ kind: 'badge', message: `New badge: ${b.title}`, icon: b.icon || '🏅' });
+				pushToast({
+					kind: 'badge',
+					message: m.gamification_new_badge({ title: b.title }),
+					icon: b.icon || '🏅'
+				});
 			}
 		},
 		dismissToast

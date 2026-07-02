@@ -6,6 +6,7 @@ import globals from 'globals';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript-eslint';
 import svelteConfig from './svelte.config.js';
+import noRawText from './eslint-rules/no-raw-text.js';
 
 const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
 
@@ -37,6 +38,15 @@ export default ts.config(
 				parser: ts.parser,
 				svelteConfig
 			}
+		}
+	},
+	{
+		files: ['src/**/*.svelte'],
+		plugins: {
+			local: { rules: { 'no-raw-text': noRawText } }
+		},
+		rules: {
+			'local/no-raw-text': 'error'
 		}
 	}
 );
