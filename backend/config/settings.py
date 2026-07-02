@@ -4,7 +4,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
-from dotenv import load_dotenv  # type: ignore
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -32,7 +32,6 @@ def _resolve_secret_key(*, debug: bool, running_tests: bool) -> str:
     if key:
         return key
     if debug or running_tests:
-        # Insecure fallback used only for local development / test runs.
         return "django-insecure-dev-only-do-not-use-in-production"
     raise ImproperlyConfigured(
         "DJANGO_SECRET_KEY is required when DEBUG is False. "
@@ -40,7 +39,6 @@ def _resolve_secret_key(*, debug: bool, running_tests: bool) -> str:
     )
 
 
-# Detect the test runner early so we don't enforce production-grade secrets in CI.
 _RUNNING_TESTS = "test" in sys.argv
 
 DEBUG = _env_bool("DEBUG", False)
@@ -87,76 +85,47 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # Stamp Deprecation / Sunset / Link headers on legacy /api/ responses
-    # so API consumers see the nudge to migrate to /api/v1/. Cheap, runs
-    # last on the response so it sees the final status code regardless.
     "config.middleware.LegacyApiDeprecationMiddleware",
-    # AxesMiddleware must be the *last* entry so that the request reaches
-    # auth views first; it then increments the failure counter on
-    # ``user_login_failed`` and serves a 403 Forbidden lockout response
-    # once the configured threshold is exceeded.
     "axes.middleware.AxesMiddleware",
 ]
 
-# Sunset date advertised on legacy /api/ responses (RFC 8594). Override via
-# env if you want to push the deadline; ``None`` omits the header.
 API_LEGACY_SUNSET_DATE = (
     os.getenv("API_LEGACY_SUNSET_DATE", "Wed, 01 Oct 2026 00:00:00 GMT") or None
 )
 
-# django-axes — brute-force protection. Layered on top of the existing DRF
-# ScopedRateThrottle (which limits *rate*) by tracking *failures* per
-# (username, ip) tuple. Disabled inside the test runner so unrelated tests
-# don't hit the lockout state; enable explicitly with ``override_settings``
-# in the dedicated lockout test.
 AUTHENTICATION_BACKENDS = [
-    # AxesStandaloneBackend must come before any other backend so it can
-    # short-circuit authentication once the user is locked out.
     "axes.backends.AxesStandaloneBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 AXES_ENABLED = _env_bool("AXES_ENABLED", default=not _RUNNING_TESTS)
 AXES_FAILURE_LIMIT = int(os.getenv("AXES_FAILURE_LIMIT", "5"))
-# Cooloff window after which the lockout is automatically lifted. Express as
-# a ``timedelta`` (django-axes also accepts plain hours, but the explicit
-# type avoids any ambiguity for floats / sub-hour windows).
 _axes_cooloff_hours = float(os.getenv("AXES_COOLOFF_TIME_HOURS", "1"))
 AXES_COOLOFF_TIME = (
     timedelta(hours=_axes_cooloff_hours) if _axes_cooloff_hours > 0 else None
 )
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_PARAMETERS = ["username", "ip_address"]
-# Trust the standard X-Forwarded-For chain (single proxy = nginx).
 AXES_IPWARE_PROXY_COUNT = int(os.getenv("AXES_PROXY_COUNT", "1"))
-AXES_LOCKOUT_TEMPLATE = None  # JSON 403 from the API is fine.
+AXES_LOCKOUT_TEMPLATE = None
 
-# debug_toolbar is only enabled when DEBUG is True. It must never be active in
-# production because it can leak settings, SQL, and request data.
 if DEBUG:
     INSTALLED_APPS.append("debug_toolbar")
     MIDDLEWARE.append("debug_toolbar.middleware.DebugToolbarMiddleware")
 
-# CORS
 CORS_ALLOWED_ORIGINS = _env_list(
     "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
 )
 CORS_ALLOW_CREDENTIALS = True
 
-# CSRF trusted origins must include the scheme (https://...) and are required
-# when serving the frontend from a different origin than the Django backend.
 CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS", "")
 
-# ----- Production security hardening -----
-# When DEBUG is False the app is assumed to run behind nginx terminating TLS.
-# nginx passes the scheme via X-Forwarded-Proto so Django can correctly
-# generate https URLs and enforce secure cookies.
 if not DEBUG and not _RUNNING_TESTS:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", True)
     SESSION_COOKIE_SECURE = _env_bool("SESSION_COOKIE_SECURE", True)
     CSRF_COOKIE_SECURE = _env_bool("CSRF_COOKIE_SECURE", True)
     SESSION_COOKIE_HTTPONLY = True
-    CSRF_COOKIE_HTTPONLY = False  # JS clients need to read the CSRF cookie.
+    CSRF_COOKIE_HTTPONLY = False
     SESSION_COOKIE_SAMESITE = "Lax"
     CSRF_COOKIE_SAMESITE = "Lax"
     SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000"))
@@ -186,10 +155,6 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-# Use SQLite for testing
 if _RUNNING_TESTS:
     DATABASES = {
         "default": {
@@ -235,11 +200,6 @@ USE_I18N = True
 USE_TZ = True
 
 
-# ----- Email -----------------------------------------------------------------
-# Default to the console backend so local development and the initial VPS
-# rollout don't need any SMTP credentials — verification / reset emails will
-# print to stdout / container logs. Override via `EMAIL_BACKEND` env var (e.g.
-# `django.core.mail.backends.smtp.EmailBackend` once an SMTP relay is wired).
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
 )
@@ -252,14 +212,8 @@ EMAIL_USE_SSL = _env_bool("EMAIL_USE_SSL", False)
 EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "10"))
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@shava.local")
 
-# Single-domain deployment: the frontend (SvelteKit) is served from the same
-# origin as the API in production. Verification / reset links embed this URL
-# so we don't have to parse `Origin` headers and can build canonical links
-# from CLI / Celery contexts as well.
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
 
-# Lifetimes (in seconds) for signed email tokens. Both default to 24h —
-# long enough to survive a delayed inbox, short enough to limit replay risk.
 EMAIL_VERIFY_TOKEN_MAX_AGE = int(os.getenv("EMAIL_VERIFY_TOKEN_MAX_AGE", "86400"))
 PASSWORD_RESET_TOKEN_MAX_AGE = int(os.getenv("PASSWORD_RESET_TOKEN_MAX_AGE", "86400"))
 
@@ -273,14 +227,6 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 
-# ----- File storage (django-storages, S3/MinIO when enabled) -----------------
-# By default we use Django's FileSystemStorage so dev / tests stay fully
-# self-contained. Flip ``USE_S3_STORAGE=True`` to route every model
-# ``ImageField`` / ``FileField`` (and easy-thumbnails) through the S3
-# backend — works against AWS S3 or any S3-compatible service (MinIO,
-# Cloudflare R2, DigitalOcean Spaces) by setting ``AWS_S3_ENDPOINT_URL``.
-# Static assets keep the default ``StaticFilesStorage`` because we serve
-# them from nginx in production; only user uploads need the object store.
 USE_S3_STORAGE = _env_bool("USE_S3_STORAGE", False)
 if USE_S3_STORAGE:
     AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "").strip()
@@ -288,25 +234,13 @@ if USE_S3_STORAGE:
         raise ImproperlyConfigured(
             "USE_S3_STORAGE=True but AWS_STORAGE_BUCKET_NAME is empty."
         )
-    # Build the S3Storage option dict, dropping empty strings so
-    # ``django-storages`` falls back to its own defaults (e.g. region
-    # ``us-east-1`` and the AWS endpoint when no MinIO is configured).
     _s3_options: dict[str, object] = {
         "bucket_name": AWS_STORAGE_BUCKET_NAME,
         "region_name": os.getenv("AWS_S3_REGION_NAME", "us-east-1"),
-        # MinIO / Cloudflare R2 / Backblaze B2 etc. require ``path`` style
-        # addressing; AWS itself accepts both. ``path`` is the safe default.
         "addressing_style": os.getenv("AWS_S3_ADDRESSING_STYLE", "path"),
-        # Don't generate a fresh signed URL on every render — uploads are
-        # public-read in this app (place photos, avatars, review images)
-        # and signed URLs would defeat CDN caching.
         "querystring_auth": _env_bool("AWS_S3_QUERYSTRING_AUTH", default=False),
-        # Keep historical filenames; uploads are content-hashed by the
-        # caller when uniqueness matters (see ``common.thumbnails``).
         "file_overwrite": _env_bool("AWS_S3_FILE_OVERWRITE", default=False),
         "use_ssl": _env_bool("AWS_S3_USE_SSL", default=True),
-        # Optional prefix inside the bucket so static and media can share
-        # one bucket if needed; defaults to no prefix.
         "location": os.getenv("AWS_S3_LOCATION", ""),
     }
     _endpoint = os.getenv("AWS_S3_ENDPOINT_URL", "").strip()
@@ -333,30 +267,18 @@ if USE_S3_STORAGE:
             "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
         },
     }
-    # Public URL prefix used by serializers when surfacing image URLs to
-    # the API. Override with ``AWS_S3_PUBLIC_URL`` when fronting MinIO
-    # with a CDN; otherwise we let ``S3Storage.url()`` synthesize it.
     _public_url = os.getenv("AWS_S3_PUBLIC_URL", "").strip()
     if _public_url:
         MEDIA_URL = _public_url.rstrip("/") + "/"
 
 
-# ----- Image thumbnails (easy-thumbnails) ------------------------------------
-# Aliases consumed by ``common.thumbnails.thumbnail_set`` so every API
-# field exposing an image returns the same shape:
-# ``{"src": original_url, "srcset": "...64w, ...256w, ...512w, ...1024w"}``.
-# Using ``crop=smart`` for square avatars (so faces stay centred) and a
-# plain scaled width for landscape-style place / article photos so we
-# don't distort wide compositions.
 THUMBNAIL_ALIASES = {
-    # Square crops (avatars / small place tiles).
     "avatar": {
         "xs": {"size": (64, 64), "crop": "smart", "quality": 80},
         "sm": {"size": (128, 128), "crop": "smart", "quality": 80},
         "md": {"size": (256, 256), "crop": "smart", "quality": 85},
         "lg": {"size": (512, 512), "crop": "smart", "quality": 85},
     },
-    # Landscape photos (place hero, review dish, article cover).
     "photo": {
         "xs": {"size": (64, 0), "quality": 80},
         "sm": {"size": (256, 0), "quality": 80},
@@ -364,19 +286,11 @@ THUMBNAIL_ALIASES = {
         "lg": {"size": (1024, 0), "quality": 85},
     },
 }
-# Sizes for ``srcset`` width descriptors — keep in sync with the alias
-# widths above. Stored as tuples of (alias, width-px).
 THUMBNAIL_SRCSET_SIZES = (("xs", 64), ("sm", 256), ("md", 512), ("lg", 1024))
-# Don't fail a request if a thumbnail can't be generated (corrupt source,
-# missing file): emit ``None`` for that thumbnail and let the client fall
-# back to the original ``src``.
 THUMBNAIL_DEBUG = False
-# Generate the file on demand the first time it's requested, then cache
-# under ``MEDIA_ROOT/thumbs/`` exactly like the upload originals.
 THUMBNAIL_BASEDIR = "thumbs"
 
 
-# ----- Cache (django-redis when REDIS_URL is set) ----------------------------
 REDIS_URL = os.getenv("REDIS_URL", "").strip()
 if REDIS_URL:
     CACHES = {
@@ -385,8 +299,6 @@ if REDIS_URL:
             "LOCATION": REDIS_URL,
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
-                # 5s connect / read timeouts so a flaky Redis can't pin
-                # gunicorn workers indefinitely.
                 "SOCKET_CONNECT_TIMEOUT": 5,
                 "SOCKET_TIMEOUT": 5,
                 "IGNORE_EXCEPTIONS": True,
@@ -394,11 +306,8 @@ if REDIS_URL:
             "KEY_PREFIX": "shava",
         }
     }
-    # If Redis is configured for cache, hand DRF rate-limiting the same
-    # store so throttles work across gunicorn workers.
     DJANGO_REDIS_IGNORE_EXCEPTIONS = True
 else:
-    # In-process cache is fine for dev / tests / single-worker deploys.
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
@@ -407,14 +316,8 @@ else:
     }
 
 
-# ----- Celery (async tasks) --------------------------------------------------
-# Broker / result backend default to the same Redis URL — set
-# CELERY_BROKER_URL explicitly only when you want to split brokers from
-# the cache. When neither is configured we run ``ALWAYS_EAGER`` so calls
-# to ``.delay()`` execute synchronously (dev, tests, CI).
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
-CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
-# Eager when the broker is unset OR explicitly requested OR running tests.
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "").strip() or REDIS_URL
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "").strip() or REDIS_URL
 CELERY_TASK_ALWAYS_EAGER = (
     _env_bool("CELERY_TASK_ALWAYS_EAGER", default=not bool(CELERY_BROKER_URL))
     or _RUNNING_TESTS
@@ -424,8 +327,6 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
-# Reasonable defaults — workers retry on broker connection loss but
-# don't acknowledge until the task body has finished.
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
@@ -467,8 +368,6 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
-# ----- OpenAPI schema (drf-spectacular) --------------------------------------
-# Exposed at /api/schema/, /api/docs/ (Swagger UI), /api/redoc/.
 SPECTACULAR_SETTINGS = {
     "TITLE": "Shava API",
     "DESCRIPTION": (
@@ -479,9 +378,6 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": r"/api/v1/",
-    # Drop the legacy unversioned ``/api/...`` mount from the emitted
-    # schema — runtime keeps it as an alias with a deprecation header,
-    # but generated clients should target ``/api/v1/`` only.
     "PREPROCESSING_HOOKS": ["config.spectacular_hooks.only_versioned_paths"],
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
@@ -529,7 +425,7 @@ LOGGING = {
             ),
             "formatter": "verbose",
             "level": LOG_LEVEL,
-            "maxBytes": 1024 * 1024 * 10,  # 10 MB
+            "maxBytes": 1024 * 1024 * 10,
             "backupCount": 5,
         },
         "error_file": {
@@ -541,7 +437,7 @@ LOGGING = {
             ),
             "formatter": "verbose",
             "level": "ERROR",
-            "maxBytes": 1024 * 1024 * 10,  # 10 MB
+            "maxBytes": 1024 * 1024 * 10,
             "backupCount": 5,
         },
     },
@@ -682,16 +578,10 @@ SIMPLE_JWT = {
 
 
 INTERNAL_IPS = [
-    # ...
     "127.0.0.1",
-    # ...
 ]
 
 
-# ----- Sentry ----------------------------------------------------------------
-# Initialised at the *very end* of settings so any prior import-time errors
-# fail loudly during local development. When ``SENTRY_DSN`` is unset (the
-# default for dev / test / CI) this call is a complete no-op.
-from config.sentry import init_sentry  # noqa: E402
+from config.sentry import init_sentry
 
 SENTRY_ENABLED = init_sentry()
