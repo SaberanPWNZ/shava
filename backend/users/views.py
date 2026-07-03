@@ -1,11 +1,3 @@
-"""Views for the users app.
-
-JWT-only authentication on every endpoint. Privileged actions are gated by
-custom permissions in :mod:`users.permissions`. Business logic lives in
-:mod:`users.services` (SRP) and token operations go through the
-``TokenIssuer`` abstraction in :mod:`users.token_issuer` (DIP).
-"""
-
 import logging
 
 from django.contrib.auth.password_validation import validate_password
@@ -18,7 +10,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from users.authentication import BanAwareJWTAuthentication as JWTAuthentication
-from users.email_service import EmailService
+from backend.users.serivces.email_service import EmailService
 from users.models import User
 from users.permissions import IsAdmin, IsSelfOrAdmin
 from users.serializers import (
@@ -31,7 +23,7 @@ from users.serializers import (
     UserPublicSerializer,
     VerifyEmailConfirmSerializer,
 )
-from users.services import UserRegistrationService
+from backend.users.serivces.services import UserRegistrationService
 from users.token_issuer import SimpleJWTTokenIssuer, TokenError
 from users.tokens import (
     TokenInvalid,

@@ -1,25 +1,9 @@
-"""Serializers for the users app.
-
-The serializers are intentionally split by responsibility (SRP/ISP):
-
-* :class:`RegisterSerializer` — public registration input. Accepts only fields
-  the client may legitimately set; privileged flags can never be assigned via
-  this serializer.
-* :class:`UserPublicSerializer` — read-only representation safe to expose to
-  any authenticated user (their own profile or a public listing).
-* :class:`MeUpdateSerializer` — the limited subset a user can change about
-  themselves.
-* :class:`ChangePasswordSerializer` — old/new password with strong validation.
-* :class:`UserAdminSerializer` — full set of fields, used **only** by
-  admin-only endpoints.
-"""
-
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
 from config.thumbnails import thumbnail_set
 from users.models import User
-from users.services import RegistrationData, UserRegistrationService
+from backend.users.serivces.services import RegistrationData, UserRegistrationService
 
 
 def _avatar_thumbnails(serializer, obj):
@@ -188,9 +172,5 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     new_password = serializers.CharField(required=True, write_only=True)
 
     def validate_new_password(self, value: str) -> str:
-        # The user is resolved from the token in the view, so we can only
-        # apply password validators that don't need a user instance here.
-        # The view runs ``validate_password(value, user=user)`` again with
-        # the resolved user for similarity checks.
         validate_password(value)
         return value

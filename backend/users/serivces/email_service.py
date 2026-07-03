@@ -28,7 +28,6 @@ def _frontend_link(path: str) -> str:
 
 
 def _render_subject(template_name: str, context: dict) -> str:
-    # Subject must be a single line with no trailing newline.
     return render_to_string(template_name, context).strip().splitlines()[0]
 
 
@@ -57,10 +56,7 @@ class EmailService:
                 recipient_list=[user.email],
                 fail_silently=False,
             )
-        except Exception:  # pragma: no cover - transport errors are logged.
-            # Never let email failures break the surrounding HTTP request:
-            # registration / verify-email-request views wrap this call but
-            # we also defend in depth in case a future caller forgets to.
+        except Exception:
             logger.exception("Failed to send verification email to %s", user.email)
             raise
 

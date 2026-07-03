@@ -7,8 +7,6 @@ from rest_framework.test import APITestCase
 
 from users.models import User
 
-# Disable throttling for most tests so they don't interfere; throttling has
-# its own dedicated test below.
 NO_THROTTLE = {
     "DEFAULT_THROTTLE_RATES": {
         "auth": "1000/min",
@@ -180,7 +178,6 @@ class AuthFlowTests(APITestCase):
         )
         self.assertEqual(ok.status_code, status.HTTP_204_NO_CONTENT)
 
-        # New password works for login
         self.client.credentials()
         login = self._login(password="AnotherStrong!234")
         self.assertEqual(login.status_code, status.HTTP_200_OK)
@@ -194,7 +191,6 @@ class AuthFlowTests(APITestCase):
         logout = self.client.post(self.logout_url, {"refresh": refresh}, format="json")
         self.assertEqual(logout.status_code, status.HTTP_205_RESET_CONTENT)
 
-        # The blacklisted refresh token can no longer be used.
         self.client.credentials()
         refresh_resp = self.client.post(
             self.refresh_url, {"refresh": refresh}, format="json"
@@ -223,9 +219,6 @@ class ThrottlingTests(APITestCase):
         from rest_framework.throttling import SimpleRateThrottle
 
         cache.clear()
-        # ``SimpleRateThrottle.THROTTLE_RATES`` is captured at class definition
-        # time, so ``override_settings`` alone does not propagate. Patch the
-        # class attribute for the duration of the test.
         self._original_rates = SimpleRateThrottle.THROTTLE_RATES
         SimpleRateThrottle.THROTTLE_RATES = api_settings.DEFAULT_THROTTLE_RATES
 

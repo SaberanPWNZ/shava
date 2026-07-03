@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
-from users.email_service import EmailService
+from backend.users.serivces.email_service import EmailService
 from users.models import User
 
 logger = logging.getLogger(__name__)
