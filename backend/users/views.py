@@ -250,7 +250,9 @@ class VerifyEmailRequestView(APIView):
         summary="Resend verification email to the current user",
         request=None,
         responses={
-            204: OpenApiResponse(description="Verification email sent (or already verified)."),
+            204: OpenApiResponse(
+                description="Verification email sent (or already verified)."
+            ),
             503: OpenApiResponse(description="Email transport failure."),
         },
     )

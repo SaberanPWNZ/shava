@@ -53,7 +53,9 @@ class MeGamificationView(views.APIView):
         return Response(MeGamificationSerializer(balance).data)
 
 
-@extend_schema(tags=["gamification"], summary="Paginated points-history of the current user")
+@extend_schema(
+    tags=["gamification"], summary="Paginated points-history of the current user"
+)
 class MyPointsTransactionsView(generics.ListAPIView):
     """`GET /api/gamification/me/transactions/` — paginated points history."""
 

@@ -64,9 +64,7 @@ class PlaceViewsTest(APITestCase):
         self.client.force_authenticate(user=None)
         data = {"name": "Test Place", "address": "Test"}
         response = self.client.post("/api/places/create-place/", data)
-        self.assertEqual(
-            response.status_code, status.HTTP_403_FORBIDDEN
-        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_place_detail_success(self):
         """Test successful place detail retrieval"""

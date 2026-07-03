@@ -7,38 +7,56 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('places_menu', '0001_initial'),
-        ('shwarma', '0001_initial'),
+        ("places_menu", "0001_initial"),
+        ("shwarma", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='menu',
-            options={'ordering': ['category', 'name']},
+            name="menu",
+            options={"ordering": ["category", "name"]},
         ),
         migrations.AddField(
-            model_name='menu',
-            name='category',
-            field=models.CharField(choices=[('shawarma', 'Shawarma'), ('drinks', 'Drinks'), ('sides', 'Sides'), ('desserts', 'Desserts'), ('other', 'Other')], default='other', max_length=32),
+            model_name="menu",
+            name="category",
+            field=models.CharField(
+                choices=[
+                    ("shawarma", "Shawarma"),
+                    ("drinks", "Drinks"),
+                    ("sides", "Sides"),
+                    ("desserts", "Desserts"),
+                    ("other", "Other"),
+                ],
+                default="other",
+                max_length=32,
+            ),
         ),
         migrations.AddField(
-            model_name='menu',
-            name='image',
-            field=models.ImageField(blank=True, null=True, upload_to='menu_images/'),
+            model_name="menu",
+            name="image",
+            field=models.ImageField(blank=True, null=True, upload_to="menu_images/"),
         ),
         migrations.AddField(
-            model_name='menu',
-            name='is_available',
+            model_name="menu",
+            name="is_available",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='menu',
-            name='price',
-            field=models.DecimalField(blank=True, decimal_places=2, default=0, max_digits=10, null=True),
+            model_name="menu",
+            name="price",
+            field=models.DecimalField(
+                blank=True, decimal_places=2, default=0, max_digits=10, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='menu',
-            name='item',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='menus', to='shwarma.shwarma'),
+            model_name="menu",
+            name="item",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="menus",
+                to="shwarma.shwarma",
+            ),
         ),
     ]

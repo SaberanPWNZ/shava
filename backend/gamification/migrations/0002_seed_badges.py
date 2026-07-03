@@ -6,7 +6,6 @@ an existing database is safe.
 
 from django.db import migrations
 
-
 SEED_BADGES = [
     {
         "code": "first_review",

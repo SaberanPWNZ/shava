@@ -49,7 +49,9 @@ def init_sentry() -> bool:
 
     sentry_sdk.init(
         dsn=dsn,
-        environment=os.getenv("SENTRY_ENVIRONMENT", os.getenv("DJANGO_ENV", "production")),
+        environment=os.getenv(
+            "SENTRY_ENVIRONMENT", os.getenv("DJANGO_ENV", "production")
+        ),
         release=os.getenv("SENTRY_RELEASE") or os.getenv("GIT_SHA") or None,
         integrations=[
             DjangoIntegration(),

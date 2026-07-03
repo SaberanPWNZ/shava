@@ -146,7 +146,10 @@ class ReviewModerationListView(ListAPIView):
         name="ReviewModerationActionRequest",
         fields={"reason": drf_serializers.CharField(required=False, allow_blank=True)},
     ),
-    responses={200: ReviewSerializer, 400: OpenApiResponse(description="Unknown action.")},
+    responses={
+        200: ReviewSerializer,
+        400: OpenApiResponse(description="Unknown action."),
+    },
 )
 class ReviewModerationActionView(UpdateAPIView):
     """Admin endpoint to approve/reject a review (action_name from URL)."""

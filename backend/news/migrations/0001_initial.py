@@ -7,20 +7,38 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='News',
+            name="News",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=200, verbose_name='Title')),
-                ('text', models.TextField(verbose_name='Content')),
-                ('published_date', models.DateTimeField(auto_now_add=True, verbose_name='Published Date')),
-                ('author', models.CharField(max_length=100, verbose_name='Author')),
-                ('image', models.ImageField(blank=True, null=True, upload_to='news_images/')),
-                ('is_published', models.BooleanField(default=False, verbose_name='Is Published')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("title", models.CharField(max_length=200, verbose_name="Title")),
+                ("text", models.TextField(verbose_name="Content")),
+                (
+                    "published_date",
+                    models.DateTimeField(
+                        auto_now_add=True, verbose_name="Published Date"
+                    ),
+                ),
+                ("author", models.CharField(max_length=100, verbose_name="Author")),
+                (
+                    "image",
+                    models.ImageField(blank=True, null=True, upload_to="news_images/"),
+                ),
+                (
+                    "is_published",
+                    models.BooleanField(default=False, verbose_name="Is Published"),
+                ),
             ],
         ),
     ]

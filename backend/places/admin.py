@@ -79,5 +79,12 @@ class ModerationLogAdmin(admin.ModelAdmin):
     list_display = ("id", "created_at", "actor", "target_type", "target_id", "action")
     list_filter = ("target_type", "action")
     search_fields = ("actor__username", "reason")
-    readonly_fields = ("actor", "target_type", "target_id", "action", "reason", "created_at")
+    readonly_fields = (
+        "actor",
+        "target_type",
+        "target_id",
+        "action",
+        "reason",
+        "created_at",
+    )
     ordering = ("-created_at",)

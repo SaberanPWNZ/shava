@@ -11,10 +11,7 @@ from pathlib import Path
 
 from django.db import migrations
 
-
-CITIES_CSV = (
-    Path(__file__).resolve().parent.parent / "data" / "cities.csv"
-)
+CITIES_CSV = Path(__file__).resolve().parent.parent / "data" / "cities.csv"
 
 
 def _read_cities() -> list[dict[str, str]]:

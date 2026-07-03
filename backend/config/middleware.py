@@ -36,9 +36,7 @@ class LegacyApiDeprecationMiddleware:
 
     def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]) -> None:
         self.get_response = get_response
-        self.sunset_date: str | None = getattr(
-            settings, "API_LEGACY_SUNSET_DATE", None
-        )
+        self.sunset_date: str | None = getattr(settings, "API_LEGACY_SUNSET_DATE", None)
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         response = self.get_response(request)
@@ -50,6 +48,6 @@ class LegacyApiDeprecationMiddleware:
             response["Deprecation"] = "true"
             if self.sunset_date:
                 response["Sunset"] = self.sunset_date
-            successor = self.VERSIONED_PREFIX + path[len(self.LEGACY_PREFIX):]
+            successor = self.VERSIONED_PREFIX + path[len(self.LEGACY_PREFIX) :]
             response["Link"] = f'<{successor}>; rel="successor-version"'
         return response

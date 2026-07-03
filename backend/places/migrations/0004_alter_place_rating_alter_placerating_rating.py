@@ -8,18 +8,34 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('places', '0003_place_reviews_count'),
+        ("places", "0003_place_reviews_count"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='place',
-            name='rating',
-            field=models.DecimalField(decimal_places=2, default=Decimal('0'), help_text='Average rating calculated from reviews', max_digits=4, validators=[django.core.validators.MinValueValidator(0.0), django.core.validators.MaxValueValidator(10.0)]),
+            model_name="place",
+            name="rating",
+            field=models.DecimalField(
+                decimal_places=2,
+                default=Decimal("0"),
+                help_text="Average rating calculated from reviews",
+                max_digits=4,
+                validators=[
+                    django.core.validators.MinValueValidator(0.0),
+                    django.core.validators.MaxValueValidator(10.0),
+                ],
+            ),
         ),
         migrations.AlterField(
-            model_name='placerating',
-            name='rating',
-            field=models.DecimalField(decimal_places=2, max_digits=4, validators=[django.core.validators.MinValueValidator(0.0), django.core.validators.MaxValueValidator(10.0)]),
+            model_name="placerating",
+            name="rating",
+            field=models.DecimalField(
+                decimal_places=2,
+                max_digits=4,
+                validators=[
+                    django.core.validators.MinValueValidator(0.0),
+                    django.core.validators.MaxValueValidator(10.0),
+                ],
+            ),
         ),
     ]
