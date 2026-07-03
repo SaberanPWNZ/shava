@@ -168,12 +168,11 @@ class UserViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
 
     def get_permissions(self):
-        if self.action in ("list", "retrieve"):
+        if self.action == "retrieve":
             return [IsAuthenticated(), IsSelfOrAdmin()]
         return [IsAuthenticated(), IsAdmin()]
 
     def get_serializer_class(self):
-        # Non-admins listing/retrieving see only the safe representation.
         if self.action in ("list", "retrieve"):
             user = self.request.user
             is_admin = bool(
@@ -232,18 +231,13 @@ class UserBanView(APIView):
             target.is_banned = True
         elif action == "unban":
             target.is_banned = False
-        else:  # pragma: no cover - URL conf restricts values
+        else:
             return Response(
                 {"detail": "Unknown action."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         target.save(update_fields=["is_banned"])
         return Response(UserAdminSerializer(target).data)
-
-
-# ---------------------------------------------------------------------------
-# Email verification + password reset
-# ---------------------------------------------------------------------------
 
 
 class VerifyEmailRequestView(APIView):
@@ -271,7 +265,6 @@ class VerifyEmailRequestView(APIView):
     def post(self, request):
         user = request.user
         if user.is_verified:
-            # Idempotent — nothing to do, but don't reveal extra info either.
             return Response(status=status.HTTP_204_NO_CONTENT)
         try:
             self.email_service.send_verify_email(user)
@@ -354,8 +347,6 @@ class PasswordResetRequestView(APIView):
             try:
                 self.email_service.send_password_reset_email(user)
             except Exception:
-                # Log and swallow: surfacing transport errors here would
-                # turn the endpoint back into an enumeration oracle.
                 logger.exception("password-reset send failed for %s", email)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -397,11 +388,9 @@ class PasswordResetConfirmView(APIView):
             user = read_password_reset_token(token)
         except TokenInvalid as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        # Re-run validators with the resolved user for similarity / common
-        # checks; surface as a serializer-style field error.
         try:
             validate_password(new_password, user=user)
-        except Exception as exc:  # django ValidationError
+        except Exception as exc:
             messages = getattr(exc, "messages", [str(exc)])
             raise drf_serializers.ValidationError({"new_password": messages}) from exc
         user.set_password(new_password)

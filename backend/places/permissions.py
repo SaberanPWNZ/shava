@@ -20,7 +20,6 @@ class IsAuthorOrAdminOrReadOnly(permissions.BasePermission):
         if request.user.is_staff:
             return True
         author = getattr(obj, "author", None)
-        # Allow legacy/imported places that have no author set yet.
         if author is None:
-            return True
+            return False
         return author == request.user

@@ -40,12 +40,26 @@ logger = logging.getLogger("places")
 PUBLIC_VISIBLE_STATUSES = ("Active", "Approved")
 
 
+def _can_view_nonpublic_place(user, place) -> bool:
+    """Whether ``user`` may view ``place`` while it is not publicly visible.
+
+    Only the place's own author or staff may see non-public statuses
+    (pending moderation, rejected, ...). Everyone else — including other
+    authenticated users and anonymous visitors — must be treated as if the
+    place does not exist.
+    """
+    if not (user and user.is_authenticated):
+        return False
+    if user.is_staff:
+        return True
+    author = getattr(place, "author", None)
+    return author is not None and author == user
+
+
 def _apply_place_filters(queryset, params):
     """Apply user-supplied query-param filters to a Place queryset."""
     city = params.get("city")
     if city:
-        # Accept either a numeric City PK, a slug, or a free-text name and
-        # match against both the FK and the legacy CharField for back-compat.
         cond = (
             Q(city__iexact=city)
             | Q(city_ref__slug__iexact=city)
@@ -81,7 +95,6 @@ def _apply_place_filters(queryset, params):
     min_stars = params.get("min_stars")
     if min_stars not in (None, ""):
         try:
-            # Stars are stored at half-scale; multiply by 2 to compare to rating field.
             queryset = queryset.filter(rating__gte=Decimal(str(min_stars)) * 2)
         except (InvalidOperation, ValueError):
             pass
@@ -154,16 +167,11 @@ class PlaceListView(ListAPIView):
     def get_queryset(self):
         params = self.request.query_params
         user = self.request.user
-        # Staff can request any status via ?status=
         status_filter = params.get("status")
         if status_filter and user.is_authenticated and user.is_staff:
             qs = Place.objects.filter(status=status_filter)
         else:
             qs = Place.objects.filter(status__in=PUBLIC_VISIBLE_STATUSES)
-        # ``?author=me`` (or ?author=<id>) — used by the profile "my places"
-        # tab. ``me`` is resolved to the authenticated user's PK; when used
-        # by an authenticated owner we widen the queryset back to *all*
-        # statuses so pending submissions are visible too.
         author = params.get("author")
         if author:
             if author == "me":
@@ -176,9 +184,6 @@ class PlaceListView(ListAPIView):
                     qs = qs.filter(author_id=int(author))
                 except (TypeError, ValueError):
                     qs = qs.none()
-        # Annotate aggregate columns the serializer would otherwise compute
-        # one-place-at-a-time. Keeps the list endpoint at constant query
-        # count regardless of page size.
         qs = qs.with_list_annotations().select_related("city_ref", "author")
         return _apply_place_filters(qs, params)
 
@@ -194,7 +199,6 @@ class PlaceCreateView(CreateAPIView):
     def perform_create(self, serializer):
         try:
             instance = serializer.save(author=self.request.user)
-            # Force moderation regardless of payload.
             if instance.status not in ("On_moderation",):
                 instance.status = "On_moderation"
                 instance.save(update_fields=["status"])
@@ -202,9 +206,6 @@ class PlaceCreateView(CreateAPIView):
             return instance
         except ValidationError as e:
             logger.error("Validation error creating place: %s", e)
-            # Surface only the user-facing messages produced by model validators
-            # (a list of plain strings). Avoid `str(e)`, which leaks the
-            # internal repr of the exception (CodeQL py/stack-trace-exposure).
             raise DRFValidationError({"detail": e.messages}) from e
 
 
@@ -223,14 +224,12 @@ class PlaceDetailView(RetrieveAPIView):
 
     def get_object(self):
         obj = super().get_object()
-        if obj.status not in PUBLIC_VISIBLE_STATUSES:
-            user = self.request.user
-            # Authenticated users can view any place (e.g. their own pending
-            # submissions); anonymous users only see public statuses.
-            if not user.is_authenticated:
-                from django.http import Http404
+        if obj.status not in PUBLIC_VISIBLE_STATUSES and not _can_view_nonpublic_place(
+            self.request.user, obj
+        ):
+            from django.http import Http404
 
-                raise Http404("Place not found.")
+            raise Http404("Place not found.")
         return obj
 
 
@@ -243,7 +242,20 @@ class PlaceUpdateView(UpdateAPIView, RetrieveAPIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
-        return Place.objects.all()
+        return Place.objects.select_related("author").all()
+
+    def get_object(self):
+        from django.http import Http404
+        from rest_framework.generics import get_object_or_404
+
+        queryset = self.filter_queryset(self.get_queryset())
+        obj = get_object_or_404(queryset, pk=self.kwargs["pk"])
+        if obj.status not in PUBLIC_VISIBLE_STATUSES and not _can_view_nonpublic_place(
+            self.request.user, obj
+        ):
+            raise Http404("Place not found.")
+        self.check_object_permissions(self.request, obj)
+        return obj
 
 
 @extend_schema(tags=["places"], summary="List places pending moderation (admin)")
@@ -356,7 +368,7 @@ class PlaceRateView(CreateAPIView):
                 {"rating": ["Must be between 1 and 5."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        stored = stars * 2  # 1-5 stars -> 2-10 internal scale
+        stored = stars * 2
         rating_obj, _ = PlaceRating.objects.update_or_create(
             user=request.user, place=place, defaults={"rating": stored}
         )

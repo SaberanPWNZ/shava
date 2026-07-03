@@ -26,6 +26,8 @@ class PlaceViewsTest(APITestCase):
             longitude=30.5234,
             description="Test Description",
             main_image="test.jpg",
+            status="Active",
+            author=self.user,
         )
         self.client.force_authenticate(user=self.user)
 
@@ -64,7 +66,7 @@ class PlaceViewsTest(APITestCase):
         response = self.client.post("/api/places/create-place/", data)
         self.assertEqual(
             response.status_code, status.HTTP_403_FORBIDDEN
-        )  # змінити з 401 на 403
+        )
 
     def test_place_detail_success(self):
         """Test successful place detail retrieval"""
@@ -134,6 +136,107 @@ class PlaceViewsTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["rating"], "8.00")
+
+
+class NonPublicPlaceVisibilityTest(APITestCase):
+    """A place pending moderation must be a 404 for everyone except its
+    author or staff — on both the detail route and the update route (any
+    HTTP method). Locks in the fix for the anonymous/non-author read leak.
+    """
+
+    def setUp(self):
+        self.author = User.objects.create_user(
+            email="author@example.com", password="pass12345", username="author"
+        )
+        self.other = User.objects.create_user(
+            email="stranger@example.com", password="pass12345", username="stranger"
+        )
+        self.staff = User.objects.create_user(
+            email="staff@example.com",
+            password="pass12345",
+            username="staff",
+            is_staff=True,
+        )
+        self.pending = Place.objects.create(
+            name="Pending Place",
+            address="x",
+            main_image="x.jpg",
+            status="On_moderation",
+            author=self.author,
+        )
+
+    def _detail_urls(self):
+        return (
+            f"/api/places/place/{self.pending.pk}/",
+            f"/api/places/{self.pending.pk}/",
+        )
+
+    def test_anonymous_cannot_view_pending(self):
+        self.client.force_authenticate(user=None)
+        for url in self._detail_urls():
+            resp = self.client.get(url)
+            self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND, url)
+
+    def test_non_author_cannot_view_pending(self):
+        self.client.force_authenticate(user=self.other)
+        for url in self._detail_urls():
+            resp = self.client.get(url)
+            self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND, url)
+
+    def test_author_can_view_pending(self):
+        self.client.force_authenticate(user=self.author)
+        for url in self._detail_urls():
+            resp = self.client.get(url)
+            self.assertEqual(resp.status_code, status.HTTP_200_OK, url)
+
+    def test_staff_can_view_pending(self):
+        self.client.force_authenticate(user=self.staff)
+        for url in self._detail_urls():
+            resp = self.client.get(url)
+            self.assertEqual(resp.status_code, status.HTTP_200_OK, url)
+
+    def test_non_author_cannot_edit_pending(self):
+        self.client.force_authenticate(user=self.other)
+        resp = self.client.patch(
+            f"/api/places/{self.pending.pk}/", {"name": "Hijacked"}, format="multipart"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.pending.refresh_from_db()
+        self.assertEqual(self.pending.name, "Pending Place")
+
+    def test_non_staff_cannot_edit_authorless_active_place(self):
+        """Ownerless (legacy/imported) places must not be hijackable by an
+        arbitrary authenticated user — only staff may edit them."""
+        orphan = Place.objects.create(
+            name="Legacy Place",
+            address="x",
+            main_image="x.jpg",
+            status="Active",
+            author=None,
+        )
+        self.client.force_authenticate(user=self.other)
+        resp = self.client.patch(
+            f"/api/places/{orphan.pk}/", {"name": "Hijacked"}, format="multipart"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        orphan.refresh_from_db()
+        self.assertEqual(orphan.name, "Legacy Place")
+
+    def test_staff_can_edit_authorless_active_place(self):
+        orphan = Place.objects.create(
+            name="Legacy Place",
+            address="x",
+            main_image="x.jpg",
+            status="Active",
+            author=None,
+        )
+        self.client.force_authenticate(user=self.staff)
+        resp = self.client.patch(
+            f"/api/places/{orphan.pk}/", {"name": "Fixed"}, format="multipart"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        orphan.refresh_from_db()
+        self.assertEqual(orphan.name, "Fixed")
 
 
 class PlaceModelValidationTest(TestCase):

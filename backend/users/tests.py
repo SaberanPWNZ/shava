@@ -341,3 +341,66 @@ class UserBanTests(APITestCase):
         self._auth(token)
         resp = self.client.get("/api/users/me/")
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class UserListPermissionTests(APITestCase):
+    """Guards against user enumeration / email harvesting via ``/users/list/``.
+
+    ``IsSelfOrAdmin`` only implements ``has_object_permission``, which is
+    never invoked for the ``list`` action — so the collection endpoint must
+    be gated by an admin-level ``has_permission`` check instead.
+    """
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.admin = User.objects.create_user(
+            email="admin@example.com",
+            password="AdminPass!234",
+            is_staff=True,
+            is_superuser=True,
+        )
+        self.regular = User.objects.create_user(
+            email="regular@example.com", password="RegularPass!234"
+        )
+        self.other = User.objects.create_user(
+            email="other@example.com", password="OtherPass!234"
+        )
+
+    def _login(self, email, password):
+        resp = self.client.post(
+            "/api/users/login/", {"email": email, "password": password}, format="json"
+        )
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
+
+    def test_regular_user_cannot_list_users(self):
+        self._login("regular@example.com", "RegularPass!234")
+        resp = self.client.get("/api/users/list/")
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_anonymous_cannot_list_users(self):
+        resp = self.client.get("/api/users/list/")
+        self.assertIn(
+            resp.status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
+
+    def test_admin_can_list_users(self):
+        self._login("admin@example.com", "AdminPass!234")
+        resp = self.client.get("/api/users/list/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_regular_user_can_retrieve_self(self):
+        self._login("regular@example.com", "RegularPass!234")
+        resp = self.client.get(f"/api/users/{self.regular.pk}/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_regular_user_cannot_retrieve_other(self):
+        self._login("regular@example.com", "RegularPass!234")
+        resp = self.client.get(f"/api/users/{self.other.pk}/")
+        self.assertIn(
+            resp.status_code,
+            (status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND),
+        )
