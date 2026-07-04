@@ -10,7 +10,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from users.authentication import BanAwareJWTAuthentication as JWTAuthentication
-from backend.users.serivces.email_service import EmailService
+from users.serivces.email_service import EmailService
 from users.models import User
 from users.permissions import IsAdmin, IsSelfOrAdmin
 from users.serializers import (
@@ -23,7 +23,7 @@ from users.serializers import (
     UserPublicSerializer,
     VerifyEmailConfirmSerializer,
 )
-from backend.users.serivces.services import UserRegistrationService
+from users.serivces.services import UserRegistrationService
 from users.token_issuer import SimpleJWTTokenIssuer, TokenError
 from users.tokens import (
     TokenInvalid,

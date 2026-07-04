@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from config.thumbnails import thumbnail_set
 from users.models import User
-from backend.users.serivces.services import RegistrationData, UserRegistrationService
+from users.serivces.services import RegistrationData, UserRegistrationService
 
 
 def _avatar_thumbnails(serializer, obj):

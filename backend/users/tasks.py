@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 def send_verification_email(user_id: int) -> None:
     """Send a verification email to ``user_id`` if the user still exists."""
 
-    from backend.users.serivces.email_service import EmailService
+    from users.serivces.email_service import EmailService
     from users.models import User
 
     try:
@@ -58,7 +58,7 @@ def send_verification_email(user_id: int) -> None:
 def send_password_reset_email(user_id: int) -> None:
     """Send a password-reset email to ``user_id`` if the user still exists."""
 
-    from backend.users.serivces.email_service import EmailService
+    from users.serivces.email_service import EmailService
     from users.models import User
 
     try:
