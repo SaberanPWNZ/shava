@@ -9,7 +9,8 @@ import type {
 	PlaceDetail,
 	PlaceFilters,
 	Review,
-	ReviewListParams
+	ReviewListParams,
+	ReviewReply
 } from '$lib/types';
 
 function buildQuery(params: Record<string, unknown>): string {
@@ -116,6 +117,23 @@ export const reviewsApi = {
 	},
 	myList(page = 1): Promise<Paginated<Review>> {
 		return apiFetch<Paginated<Review>>(`/reviews/my-reviews/${buildQuery({ page })}`);
+	},
+	byUser(userId: number | string, page = 1): Promise<Paginated<Review>> {
+		return apiFetch<Paginated<Review>>(`/reviews/by-user/${userId}/${buildQuery({ page })}`, {
+			auth: false
+		});
+	},
+	replies(reviewId: number): Promise<Paginated<ReviewReply>> {
+		return apiFetch<Paginated<ReviewReply>>(`/reviews/${reviewId}/replies/`, { auth: false });
+	},
+	addReply(reviewId: number, text: string): Promise<ReviewReply> {
+		return apiFetch<ReviewReply>(`/reviews/${reviewId}/replies/`, {
+			method: 'POST',
+			body: { text }
+		});
+	},
+	deleteReply(replyId: number): Promise<void> {
+		return apiFetch(`/reviews/replies/${replyId}/`, { method: 'DELETE' });
 	},
 	create(
 		placeId: number,

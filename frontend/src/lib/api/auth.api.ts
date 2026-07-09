@@ -1,5 +1,6 @@
 import { apiFetch, sessionFlags, API_BASE } from '$lib/api/client';
 import type { User } from '$lib/types/auth';
+import type { UserPublicProfile } from '$lib/types';
 
 interface LoginInput {
 	email: string;
@@ -111,6 +112,10 @@ export const authApi = {
 			body: { token, new_password: newPassword },
 			auth: false
 		});
+	},
+
+	publicProfile(userId: number | string): Promise<UserPublicProfile> {
+		return apiFetch<UserPublicProfile>(`/users/${userId}/public/`, { auth: false });
 	}
 };
 

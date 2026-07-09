@@ -5,6 +5,7 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { authService } from '$lib/services/auth.service';
 	import { themeStore } from '$lib/stores/theme.svelte';
+	import NotificationBell from '$lib/components/layout/NotificationBell.svelte';
 	import PointsBadge from '$lib/components/gamification/PointsBadge.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import { getLocale, setLocale } from '$lib/paraglide/runtime';
@@ -133,6 +134,7 @@
 			{@render themeToggle()}
 			{#if authStore.isAuthenticated}
 				<PointsBadge />
+				<NotificationBell />
 				<a
 					href="/places/new"
 					class="inline-flex min-h-11 items-center rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 shadow-sm transition hover:border-amber-400 hover:text-amber-700 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:hover:border-amber-600 dark:hover:text-amber-400"
@@ -183,6 +185,9 @@
 		<div class="flex items-center gap-1 md:hidden">
 			{@render localeSwitcher()}
 			{@render themeToggle()}
+			{#if authStore.isAuthenticated}
+				<NotificationBell />
+			{/if}
 			<button
 				type="button"
 				class="inline-flex h-11 w-11 items-center justify-center rounded-full text-stone-700 transition hover:bg-stone-100 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none dark:text-stone-200 dark:hover:bg-stone-800"

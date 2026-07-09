@@ -89,8 +89,52 @@ export interface Review {
 	helpful_count?: number;
 	/** True when the *current* user has cast a helpful vote on this review. */
 	viewer_voted?: boolean;
+	replies_count?: number;
 	created_at: string;
 	is_moderated: boolean;
+}
+
+export interface ReviewReply {
+	id: number;
+	review: number;
+	author: number;
+	author_username?: string;
+	text: string;
+	created_at: string;
+}
+
+export type NotificationType =
+	| 'review_approved'
+	| 'review_rejected'
+	| 'place_approved'
+	| 'place_rejected'
+	| 'review_reply';
+
+export interface AppNotification {
+	id: number;
+	type: NotificationType;
+	data: {
+		review_id?: number;
+		place_id?: number;
+		place_name?: string;
+		reply_author?: string;
+		text_preview?: string;
+		reason?: string;
+	};
+	is_read: boolean;
+	created_at: string;
+}
+
+export interface UserPublicProfile {
+	id: number;
+	username?: string;
+	first_name?: string;
+	last_name?: string;
+	bio?: string;
+	city?: City | null;
+	avatar?: string | null;
+	avatar_thumbnails?: ImageThumbnails | null;
+	member_since: string;
 }
 
 export interface Article {

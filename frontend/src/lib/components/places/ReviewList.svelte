@@ -1,5 +1,6 @@
 <script lang="ts">
 	import StarRating from '$lib/components/places/StarRating.svelte';
+	import ReviewReplies from '$lib/components/places/ReviewReplies.svelte';
 	import { reviewsHelpfulApi } from '$lib/api/gamification.api';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { ApiError } from '$lib/types/auth';
@@ -7,6 +8,8 @@
 	import { m } from '$lib/paraglide/messages';
 
 	let { reviews = [] } = $props<{ reviews?: Review[] }>();
+
+	let openReplies = $state<Record<number, boolean>>({});
 
 	const voted = $derived<Record<number, boolean>>(
 		Object.fromEntries(reviews.map((r: Review) => [r.id, r.viewer_voted ?? false]))
@@ -52,7 +55,12 @@
 				<div class="flex items-center justify-between gap-2">
 					<div>
 						<p class="flex items-center gap-2 font-medium text-stone-900 dark:text-stone-100">
-							{review.author_username ?? m.reviews_anonymous()}
+							<a
+								class="hover:text-amber-700 hover:underline dark:hover:text-amber-400"
+								href={`/users/${review.author}`}
+							>
+								{review.author_username ?? m.reviews_anonymous()}
+							</a>
 							{#if review.is_verified}
 								<span
 									class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
@@ -98,7 +106,21 @@
 						<span>{m.reviews_helpful()}</span>
 						<span class="text-stone-500 dark:text-stone-400">({getCount(review)})</span>
 					</button>
+					{#if review.is_moderated}
+						<button
+							type="button"
+							class="inline-flex items-center gap-1 rounded-full border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-700 transition hover:border-amber-300 hover:text-amber-700 dark:border-stone-700 dark:text-stone-200 dark:hover:border-amber-500 dark:hover:text-amber-400"
+							aria-expanded={openReplies[review.id] ?? false}
+							onclick={() => (openReplies[review.id] = !(openReplies[review.id] ?? false))}
+						>
+							<span aria-hidden="true">💬</span>
+							<span>{m.replies_toggle({ count: review.replies_count ?? 0 })}</span>
+						</button>
+					{/if}
 				</div>
+				{#if openReplies[review.id]}
+					<ReviewReplies reviewId={review.id} />
+				{/if}
 			</li>
 		{/each}
 	</ul>

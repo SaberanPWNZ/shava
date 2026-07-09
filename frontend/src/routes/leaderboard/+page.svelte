@@ -114,9 +114,12 @@
 							{idx + 1}
 						</span>
 						<div class="flex min-w-0 flex-1 flex-col">
-							<span class="truncate text-sm font-semibold text-stone-900 dark:text-stone-100">
+							<a
+								class="truncate text-sm font-semibold text-stone-900 hover:text-amber-700 hover:underline dark:text-stone-100 dark:hover:text-amber-400"
+								href={`/users/${entry.user_id}`}
+							>
 								{entry.username || m.leaderboard_user_fallback({ id: entry.user_id })}
-							</span>
+							</a>
 							<span class="text-xs text-stone-500 dark:text-stone-400">
 								{m.level_label({ level: entry.level })} · {entry.level_title}
 							</span>
