@@ -42,7 +42,8 @@ class UserRating(models.Model):
     # User statistics
     total_reviews = models.PositiveIntegerField(default=0)
     average_score_given = models.DecimalField(
-        max_digits=3,
+        # 4 digits: the maximum average (10.00) doesn't fit in 3.
+        max_digits=4,
         decimal_places=2,
         default=0.0,
         validators=[MinValueValidator(0.0), MaxValueValidator(10.0)],

@@ -10,7 +10,9 @@ class Review(models.Model):
     )
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     score = models.DecimalField(
-        max_digits=3,
+        # 4 digits, not 3: the top choice "10.0" stored at 2 decimal places
+        # is 10.00 — with max_digits=3 SQLite fails to even *read* the row.
+        max_digits=4,
         decimal_places=2,
         choices=REVIEW_SCORE_CHOICES,
     )
