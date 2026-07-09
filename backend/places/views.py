@@ -24,6 +24,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
+from notifications.services import notify
 from places.models import City, ModerationLog, Place, PlaceFavorite, PlaceRating
 from places.permissions import IsAuthorOrAdminOrReadOnly
 from places.serializers import (
@@ -407,6 +408,13 @@ class PlaceModerationActionView(UpdateAPIView):
             target_type=ModerationLog.TARGET_PLACE,
             target_id=place.id,
             action=action_name,
+            reason=reason or "",
+        )
+        notify(
+            place.author,
+            "place_approved" if action_name == "approve" else "place_rejected",
+            place_id=place.id,
+            place_name=place.name,
             reason=reason or "",
         )
         logger.info("Place %s %sd by %s", place.id, action_name, request.user)

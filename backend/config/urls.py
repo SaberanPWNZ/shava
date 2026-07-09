@@ -24,6 +24,7 @@ api_v1_urlpatterns: list = [
     path("reviews/", include("reviews.urls")),
     path("articles/", include("articles.urls")),
     path("gamification/", include("gamification.urls")),
+    path("notifications/", include("notifications.urls")),
     # OpenAPI schema + UIs (drf-spectacular)
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
