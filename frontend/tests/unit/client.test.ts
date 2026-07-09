@@ -1,24 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
-import { tokenStorage, apiFetch } from '$lib/api/client';
+import { sessionFlags, apiFetch } from '$lib/api/client';
 import { ApiError } from '$lib/types/auth';
 
-describe('tokenStorage', () => {
-	it('starts empty', () => {
-		expect(tokenStorage.getAccess()).toBeNull();
-		expect(tokenStorage.getRefresh()).toBeNull();
+describe('sessionFlags', () => {
+	it('starts without a session', () => {
+		expect(sessionFlags.hasSession()).toBe(false);
 	});
 
-	it('persists access + refresh tokens', () => {
-		tokenStorage.set('a-token', 'r-token');
-		expect(tokenStorage.getAccess()).toBe('a-token');
-		expect(tokenStorage.getRefresh()).toBe('r-token');
+	it('remembers that a session was established', () => {
+		sessionFlags.markSession();
+		expect(sessionFlags.hasSession()).toBe(true);
 	});
 
-	it('clear() removes both tokens', () => {
-		tokenStorage.set('a', 'r');
-		tokenStorage.clear();
-		expect(tokenStorage.getAccess()).toBeNull();
-		expect(tokenStorage.getRefresh()).toBeNull();
+	it('clear() forgets the session', () => {
+		sessionFlags.markSession();
+		sessionFlags.clear();
+		expect(sessionFlags.hasSession()).toBe(false);
 	});
 });
 
@@ -30,8 +27,7 @@ function jsonResponse(status: number, body: unknown): Response {
 }
 
 describe('apiFetch', () => {
-	it('sends Authorization header when an access token is stored', async () => {
-		tokenStorage.set('the-access', 'the-refresh');
+	it('sends cookies (credentials: include) and JSON content type', async () => {
 		const fetchMock = vi.fn<typeof fetch>(async () => jsonResponse(200, { ok: true }));
 		vi.stubGlobal('fetch', fetchMock);
 
@@ -39,21 +35,11 @@ describe('apiFetch', () => {
 
 		expect(fetchMock).toHaveBeenCalledOnce();
 		const init = fetchMock.mock.calls[0][1] as RequestInit;
+		expect(init.credentials).toBe('include');
 		const headers = init.headers as Headers;
-		expect(headers.get('Authorization')).toBe('Bearer the-access');
-		expect(headers.get('Content-Type')).toBe('application/json');
-	});
-
-	it('omits Authorization when auth: false', async () => {
-		tokenStorage.set('the-access', 'the-refresh');
-		const fetchMock = vi.fn<typeof fetch>(async () => jsonResponse(200, {}));
-		vi.stubGlobal('fetch', fetchMock);
-
-		await apiFetch('/public/', { auth: false });
-
-		const init = fetchMock.mock.calls[0][1] as RequestInit;
-		const headers = init.headers as Headers;
+		// Tokens live in HttpOnly cookies — never in an Authorization header.
 		expect(headers.has('Authorization')).toBe(false);
+		expect(headers.get('Content-Type')).toBe('application/json');
 	});
 
 	it('parses field errors into ApiError', async () => {
@@ -70,14 +56,13 @@ describe('apiFetch', () => {
 		});
 	});
 
-	it('refreshes the access token on 401 and retries the request', async () => {
-		tokenStorage.set('expired', 'good-refresh');
+	it('refreshes the session on 401 and retries the request', async () => {
 		const fetchMock = vi
 			.fn()
 			// First call: protected endpoint returns 401.
 			.mockResolvedValueOnce(jsonResponse(401, { detail: 'expired' }))
-			// Second call: token/refresh returns a fresh access token.
-			.mockResolvedValueOnce(jsonResponse(200, { access: 'new-access', refresh: 'new-refresh' }))
+			// Second call: token/refresh succeeds (cookies rotated server-side).
+			.mockResolvedValueOnce(jsonResponse(200, { access: 'new-access' }))
 			// Third call: retried original request succeeds.
 			.mockResolvedValueOnce(jsonResponse(200, { id: 1 }));
 		vi.stubGlobal('fetch', fetchMock);
@@ -86,12 +71,11 @@ describe('apiFetch', () => {
 
 		expect(data).toEqual({ id: 1 });
 		expect(fetchMock).toHaveBeenCalledTimes(3);
-		expect(tokenStorage.getAccess()).toBe('new-access');
-		expect(tokenStorage.getRefresh()).toBe('new-refresh');
+		const refreshInit = fetchMock.mock.calls[1][1] as RequestInit;
+		expect(refreshInit.credentials).toBe('include');
 	});
 
 	it('does not retry when the refresh call itself fails', async () => {
-		tokenStorage.set('expired', 'bad-refresh');
 		const fetchMock = vi
 			.fn()
 			.mockResolvedValueOnce(jsonResponse(401, { detail: 'expired' }))

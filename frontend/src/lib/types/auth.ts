@@ -26,8 +26,3 @@ export interface User {
 	is_staff?: boolean;
 	marketing_opt_in?: boolean;
 }
-
-export interface AuthTokens {
-	access: string;
-	refresh: string;
-}

@@ -7,8 +7,12 @@ import { ApiError, type FieldErrors } from '$lib/types/auth';
 // emitted by the bundler and kept in sync via ``npm run generate:api*``).
 export type { paths, components, operations, Schemas } from './schema';
 
-const ACCESS_KEY = 'shava.access';
-const REFRESH_KEY = 'shava.refresh';
+// Tokens live in HttpOnly cookies set by the backend — JavaScript never
+// sees or stores them. ``sessionFlags`` only remembers *whether* a session
+// likely exists, so anonymous page loads can skip the /me round-trip.
+const HAS_SESSION_KEY = 'shava.hasSession';
+// Legacy localStorage token keys from the pre-cookie era — always purge.
+const LEGACY_KEYS = ['shava.access', 'shava.refresh'];
 
 function resolveApiBase(): string {
 	const env = (import.meta as unknown as { env?: Record<string, string> }).env;
@@ -26,26 +30,24 @@ function resolveApiBase(): string {
 
 export const API_BASE: string = resolveApiBase();
 
-export const tokenStorage = {
-	getAccess(): string | null {
-		if (!browser) return null;
-		return localStorage.getItem(ACCESS_KEY);
+export const sessionFlags = {
+	hasSession(): boolean {
+		if (!browser) return false;
+		return localStorage.getItem(HAS_SESSION_KEY) === '1';
 	},
-	getRefresh(): string | null {
-		if (!browser) return null;
-		return localStorage.getItem(REFRESH_KEY);
-	},
-	set(access: string, refresh: string) {
+	markSession() {
 		if (!browser) return;
-		localStorage.setItem(ACCESS_KEY, access);
-		localStorage.setItem(REFRESH_KEY, refresh);
+		localStorage.setItem(HAS_SESSION_KEY, '1');
 	},
 	clear() {
 		if (!browser) return;
-		localStorage.removeItem(ACCESS_KEY);
-		localStorage.removeItem(REFRESH_KEY);
+		localStorage.removeItem(HAS_SESSION_KEY);
 	}
 };
+
+if (browser) {
+	for (const key of LEGACY_KEYS) localStorage.removeItem(key);
+}
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
 	body?: unknown;
@@ -53,33 +55,26 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
 	rawBody?: boolean;
 }
 
-async function refreshAccessToken(): Promise<string | null> {
-	const refresh = tokenStorage.getRefresh();
-	if (!refresh) return null;
+async function refreshSession(): Promise<boolean> {
 	try {
+		// The refresh token travels in an HttpOnly cookie; the backend rotates
+		// the pair and re-sets both cookies on success.
 		const resp = await fetch(`${API_BASE}/token/refresh/`, {
 			method: 'POST',
+			credentials: 'include',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ refresh })
+			body: '{}'
 		});
-		if (!resp.ok) return null;
-		const data = (await resp.json()) as { access: string; refresh?: string };
-		const newRefresh = data.refresh ?? refresh;
-		tokenStorage.set(data.access, newRefresh);
-		return data.access;
+		return resp.ok;
 	} catch {
-		return null;
+		return false;
 	}
 }
 
-async function buildHeaders(options: RequestOptions): Promise<Headers> {
+function buildHeaders(options: RequestOptions): Headers {
 	const headers = new Headers(options.headers ?? {});
 	if (!options.rawBody && !headers.has('Content-Type')) {
 		headers.set('Content-Type', 'application/json');
-	}
-	if (options.auth !== false) {
-		const access = tokenStorage.getAccess();
-		if (access) headers.set('Authorization', `Bearer ${access}`);
 	}
 	return headers;
 }
@@ -117,7 +112,8 @@ export async function apiFetch<T = unknown>(
 	const send = async (): Promise<Response> => {
 		return fetch(url, {
 			...options,
-			headers: await buildHeaders(options),
+			credentials: 'include',
+			headers: buildHeaders(options),
 			body: serializeBody(options)
 		});
 	};
@@ -125,8 +121,7 @@ export async function apiFetch<T = unknown>(
 	let response = await send();
 
 	if (response.status === 401 && options.auth !== false) {
-		const newAccess = await refreshAccessToken();
-		if (newAccess) {
+		if (await refreshSession()) {
 			response = await send();
 		}
 	}

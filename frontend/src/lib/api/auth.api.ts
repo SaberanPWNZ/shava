@@ -1,5 +1,5 @@
-import { apiFetch, tokenStorage, API_BASE } from '$lib/api/client';
-import type { AuthTokens, User } from '$lib/types/auth';
+import { apiFetch, sessionFlags, API_BASE } from '$lib/api/client';
+import type { User } from '$lib/types/auth';
 
 interface LoginInput {
 	email: string;
@@ -27,14 +27,15 @@ interface MeUpdateInput {
 }
 
 export const authApi = {
-	async login(input: LoginInput): Promise<AuthTokens> {
-		const tokens = await apiFetch<AuthTokens>('/token/', {
+	async login(input: LoginInput): Promise<void> {
+		// Tokens arrive as HttpOnly cookies; the body copy is ignored so the
+		// browser never handles raw tokens in JavaScript.
+		await apiFetch('/token/', {
 			method: 'POST',
 			body: input,
 			auth: false
 		});
-		tokenStorage.set(tokens.access, tokens.refresh);
-		return tokens;
+		sessionFlags.markSession();
 	},
 
 	async register(input: RegisterInput): Promise<User> {
@@ -58,11 +59,13 @@ export const authApi = {
 
 	async logout(): Promise<void> {
 		try {
+			// The refresh token is read from the HttpOnly cookie server-side;
+			// the response blacklists it and clears both cookies.
 			await apiFetch('/users/logout/', { method: 'POST' });
 		} catch {
 			// best-effort logout
 		} finally {
-			tokenStorage.clear();
+			sessionFlags.clear();
 		}
 	},
 
@@ -74,11 +77,12 @@ export const authApi = {
 	},
 
 	async deleteAccount(password: string): Promise<void> {
+		// The backend clears the auth cookies on the 204 response.
 		await apiFetch('/users/me/delete/', {
 			method: 'POST',
 			body: { password }
 		});
-		tokenStorage.clear();
+		sessionFlags.clear();
 	},
 
 	async requestVerifyEmail(): Promise<void> {

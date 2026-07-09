@@ -41,7 +41,7 @@ vi.mock('$lib/services/gamification.service', () => ({
 
 import { authService } from '$lib/services/auth.service';
 import { authStore } from '$lib/stores/auth.svelte';
-import { tokenStorage } from '$lib/api/client';
+import { sessionFlags } from '$lib/api/client';
 import { requireAuth, requireAdmin } from '$lib/guards/requireAuth';
 import type { User } from '$lib/types/auth';
 
@@ -58,7 +58,7 @@ beforeEach(() => {
 	for (const fn of Object.values(authApiMock)) fn.mockReset();
 	authStore.reset();
 	authStore.setHydrated(false);
-	tokenStorage.clear();
+	sessionFlags.clear();
 });
 
 afterEach(() => {
@@ -66,7 +66,7 @@ afterEach(() => {
 });
 
 describe('authService.hydrate', () => {
-	it('returns null and marks hydrated when no access token is stored', async () => {
+	it('returns null and marks hydrated when no session flag is set', async () => {
 		const user = await authService.hydrate();
 		expect(user).toBeNull();
 		expect(authStore.hydrated).toBe(true);
@@ -81,8 +81,8 @@ describe('authService.hydrate', () => {
 		expect(authApiMock.me).not.toHaveBeenCalled();
 	});
 
-	it('loads /me and stores the user when an access token exists', async () => {
-		tokenStorage.set('access', 'refresh');
+	it('loads /me and stores the user when a session flag exists', async () => {
+		sessionFlags.markSession();
 		authApiMock.me.mockResolvedValueOnce(aUser);
 
 		const user = await authService.hydrate();
@@ -92,14 +92,14 @@ describe('authService.hydrate', () => {
 		expect(authStore.hydrated).toBe(true);
 	});
 
-	it('clears tokens and store when /me fails', async () => {
-		tokenStorage.set('access', 'refresh');
+	it('clears the session flag and store when /me fails', async () => {
+		sessionFlags.markSession();
 		authApiMock.me.mockRejectedValueOnce(new Error('401'));
 
 		const user = await authService.hydrate();
 
 		expect(user).toBeNull();
-		expect(tokenStorage.getAccess()).toBeNull();
+		expect(sessionFlags.hasSession()).toBe(false);
 		expect(authStore.hydrated).toBe(true);
 	});
 });
