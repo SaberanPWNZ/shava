@@ -6,8 +6,9 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from PIL import Image
+from rest_framework.test import APIClient
 
-from places.models import Place
+from places.models import Place, PlaceRating
 from places_menu.models import Menu
 from shwarma.models import Shwarma
 
@@ -40,7 +41,8 @@ class PlaceModelTest(TestCase):
         self.user = get_user_model().objects.create_user(
             email="testuser@example.com", password="testpass123", username="testuser"
         )
-        self.client.force_login(self.user)
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
 
     def test_create_place(self):
         image = Image.new("RGB", (1, 1), color="red")
@@ -54,9 +56,10 @@ class PlaceModelTest(TestCase):
 
         data = {
             "name": "Test Place API",
-            "district": "Unknown",
+            "city": "Kyiv",
             "address": "Test Address",
             "delivery": True,
+            "latitude": "50.4501",
             "longitude": "30.5234",
             "description": "Test Description",
             "main_image": uploaded_image,
@@ -64,7 +67,6 @@ class PlaceModelTest(TestCase):
         response = self.client.post(
             "/api/places/create-place/", data, format="multipart"
         )
-        print(response.data)
         self.assertEqual(response.status_code, 201)
         self.assertTrue(Place.objects.filter(name="Test Place API").exists())
 
@@ -139,17 +141,33 @@ class PlaceModelTest(TestCase):
         self.assertIsNone(place_no_coords.google_maps_url())
 
     def test_calculate_average_rating(self):
-        from reviews.models import Review
-
-        Review.objects.create(
-            place=self.place, author=self.user, score=8.0, comment="Good"
+        other_user = get_user_model().objects.create_user(
+            email="rater2@example.com", password="testpass123", username="rater2"
         )
-        Review.objects.create(
-            place=self.place, author=self.user, score=6.0, comment="OK"
-        )
+        PlaceRating.objects.create(place=self.place, user=self.user, rating=8.0)
+        PlaceRating.objects.create(place=self.place, user=other_user, rating=6.0)
 
         avg_rating = self.place.calculate_average_rating()
         self.assertEqual(avg_rating, Decimal("7.0"))
+
+    def test_recalculate_rating_from_reviews(self):
+        from reviews.models import Review
+
+        Review.objects.create(
+            place=self.place,
+            author=self.user,
+            score=8.0,
+            comment="Good",
+            is_moderated=True,
+        )
+        # Unmoderated reviews must not affect the rating.
+        Review.objects.create(
+            place=self.place, author=self.user, score=2.0, comment="Spam"
+        )
+
+        self.place.recalculate_rating_from_reviews()
+        self.place.refresh_from_db()
+        self.assertEqual(self.place.rating, Decimal("8.0"))
 
     def test_required_fields(self):
         with self.assertRaises(ValidationError):
