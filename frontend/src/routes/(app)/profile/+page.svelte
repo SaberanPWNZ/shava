@@ -24,7 +24,7 @@
 
 	const PAGE_SIZE = 10;
 
-	type Tab = 'overview' | 'reviews' | 'places' | 'points';
+	type Tab = 'overview' | 'reviews' | 'places' | 'saved' | 'points';
 	let activeTab = $state<Tab>('overview');
 
 	let firstName = $state(authStore.user?.first_name ?? '');
@@ -54,6 +54,11 @@
 	let placesData = $state<Paginated<Place> | null>(null);
 	let placesLoading = $state(false);
 	let placesError = $state<string | null>(null);
+
+	let savedPage = $state(1);
+	let savedData = $state<Paginated<Place> | null>(null);
+	let savedLoading = $state(false);
+	let savedError = $state<string | null>(null);
 
 	let pointsPage = $state(1);
 	let pointsData = $state<Paginated<PointsTransactionRecord> | null>(null);
@@ -100,6 +105,19 @@
 		}
 	}
 
+	async function loadSaved(p = savedPage) {
+		savedLoading = true;
+		savedError = null;
+		try {
+			savedData = await placesApi.favorites(p);
+			savedPage = p;
+		} catch (e) {
+			savedError = e instanceof Error ? e.message : m.profile_saved_load_failed();
+		} finally {
+			savedLoading = false;
+		}
+	}
+
 	async function loadPoints(p = pointsPage) {
 		pointsLoading = true;
 		pointsError = null;
@@ -119,6 +137,9 @@
 		}
 		if (activeTab === 'places' && placesData === null && !placesLoading) {
 			void loadPlaces(1);
+		}
+		if (activeTab === 'saved' && savedData === null && !savedLoading) {
+			void loadSaved(1);
 		}
 		if (activeTab === 'points' && pointsData === null && !pointsLoading) {
 			void loadPoints(1);
@@ -207,6 +228,7 @@
 		{ id: 'overview', label: m.profile_tab_overview() },
 		{ id: 'reviews', label: m.profile_tab_reviews() },
 		{ id: 'places', label: m.profile_tab_places() },
+		{ id: 'saved', label: m.profile_tab_saved() },
 		{ id: 'points', label: m.profile_tab_points() }
 	]);
 </script>
@@ -466,6 +488,52 @@
 							count={placesData.count}
 							pageSize={PAGE_SIZE}
 							onchange={(p) => loadPlaces(p)}
+						/>
+					{/if}
+				</Card>
+			{:else if id === 'saved'}
+				<Card title={m.profile_tab_saved()}>
+					{#if savedError}
+						<Alert variant="error">{savedError}</Alert>
+					{/if}
+					{#if savedLoading && !savedData}
+						<div class="flex flex-col gap-3">
+							{#each Array.from({ length: 4 }, (_, i) => i) as i (i)}
+								<Skeleton class="h-16 w-full" rounded="lg" />
+							{/each}
+						</div>
+					{:else if savedData && savedData.results.length === 0}
+						<p class="text-sm text-stone-500 dark:text-stone-400">
+							{m.profile_saved_empty()}
+							<a class="text-amber-700 hover:underline" href="/places">{m.profile_saved_browse()}</a
+							>.
+						</p>
+					{:else if savedData}
+						<ul class="flex flex-col gap-3">
+							{#each savedData.results as place (place.id)}
+								<li
+									class="flex flex-col gap-1 rounded-lg border border-stone-200 bg-white p-3 dark:border-stone-800 dark:bg-stone-900"
+								>
+									<div class="flex items-center justify-between gap-2">
+										<a
+											class="font-medium text-amber-700 hover:underline dark:text-amber-400"
+											href={`/places/${place.id}`}
+										>
+											{place.name}
+										</a>
+										<span class="text-xs text-stone-500">
+											{(place.stars ?? 0).toFixed(1)} ★
+										</span>
+									</div>
+									<p class="text-xs text-stone-500">{place.address}</p>
+								</li>
+							{/each}
+						</ul>
+						<Pagination
+							page={savedPage}
+							count={savedData.count}
+							pageSize={PAGE_SIZE}
+							onchange={(p) => loadSaved(p)}
 						/>
 					{/if}
 				</Card>

@@ -1,17 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import FavoriteButton from '$lib/components/places/FavoriteButton.svelte';
 	import MenuList from '$lib/components/places/MenuList.svelte';
 	import ReviewForm from '$lib/components/places/ReviewForm.svelte';
 	import ReviewList from '$lib/components/places/ReviewList.svelte';
 	import StarRating from '$lib/components/places/StarRating.svelte';
+	import Select from '$lib/components/ui/Select.svelte';
 	import Seo from '$lib/components/Seo.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Skeleton from '$lib/components/ui/Skeleton.svelte';
 	import { placesApi, reviewsApi } from '$lib/api/places.api';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { toasts } from '$lib/stores/toasts.svelte';
-	import type { PlaceDetail, Review } from '$lib/types';
+	import type { PlaceDetail, Review, ReviewOrdering } from '$lib/types';
 	import { m } from '$lib/paraglide/messages';
 
 	let place = $state<PlaceDetail | null>(null);
@@ -19,20 +21,42 @@
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let rateError = $state<string | null>(null);
+	let reviewOrdering = $state<ReviewOrdering>('newest');
+	let reviewsLoading = $state(false);
 
 	let id = $derived(Number(page.params.id));
+
+	const sortOptions = $derived([
+		{ value: 'newest', label: m.reviews_sort_newest() },
+		{ value: 'helpful', label: m.reviews_sort_helpful() },
+		{ value: 'top', label: m.reviews_sort_top() },
+		{ value: 'low', label: m.reviews_sort_low() },
+		{ value: 'oldest', label: m.reviews_sort_oldest() }
+	]);
 
 	async function load() {
 		loading = true;
 		error = null;
 		try {
 			place = await placesApi.detail(id);
-			const reviewResp = await reviewsApi.listForPlace(id);
+			const reviewResp = await reviewsApi.listForPlace(id, { ordering: reviewOrdering });
 			reviews = reviewResp.results;
 		} catch (e) {
 			error = (e as Error).message;
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function reloadReviews() {
+		reviewsLoading = true;
+		try {
+			const reviewResp = await reviewsApi.listForPlace(id, { ordering: reviewOrdering });
+			reviews = reviewResp.results;
+		} catch (e) {
+			toasts.error((e as Error).message);
+		} finally {
+			reviewsLoading = false;
 		}
 	}
 
@@ -100,6 +124,7 @@
 				<span class="text-sm text-stone-500"
 					>{m.place_ratings_count({ count: place.ratings_count })}</span
 				>
+				<FavoriteButton placeId={id} favorited={place.is_favorited} count={place.favorites_count} />
 			</div>
 		</header>
 
@@ -122,7 +147,17 @@
 			{#if rateError}
 				<Alert variant="error">{rateError}</Alert>
 			{/if}
-			<StarRating value={place.stars ?? 0} interactive size="lg" onchange={rate} />
+			{#if place.viewer_rating != null}
+				<p class="mb-2 text-sm text-stone-600 dark:text-stone-400">
+					{m.place_your_rating({ stars: place.viewer_rating })}
+				</p>
+			{/if}
+			<StarRating
+				value={place.viewer_rating ?? place.stars ?? 0}
+				interactive
+				size="lg"
+				onchange={rate}
+			/>
 		</section>
 
 		<section>
@@ -131,9 +166,34 @@
 		</section>
 
 		<section class="flex flex-col gap-4">
-			<h2 class="text-xl font-semibold">{m.place_reviews_title()}</h2>
+			<div class="flex flex-wrap items-center justify-between gap-3">
+				<h2 class="text-xl font-semibold">{m.place_reviews_title()}</h2>
+				{#if reviews.length > 1}
+					<div class="w-44">
+						<Select
+							id="review-sort"
+							label={m.reviews_sort_label()}
+							bind:value={reviewOrdering}
+							onchange={reloadReviews}
+						>
+							{#each sortOptions as option (option.value)}
+								<option value={option.value}>{option.label}</option>
+							{/each}
+						</Select>
+					</div>
+				{/if}
+			</div>
 			{#if authStore.isAuthenticated}
-				<ReviewForm placeId={id} oncreated={onReviewCreated} />
+				{#if place.viewer_review_id != null}
+					<p class="text-sm text-stone-500 dark:text-stone-400">
+						{m.place_already_reviewed()}
+						<a class="text-amber-700 hover:underline dark:text-amber-400" href="/profile">
+							{m.place_already_reviewed_link()}
+						</a>
+					</p>
+				{:else}
+					<ReviewForm placeId={id} oncreated={onReviewCreated} />
+				{/if}
 			{:else}
 				<p class="text-sm text-stone-500">
 					<a class="text-amber-700 hover:underline" href={`/login?next=/places/${id}`}>
@@ -142,7 +202,9 @@
 					{m.place_sign_in_to_review()}
 				</p>
 			{/if}
-			<ReviewList {reviews} />
+			<div class:opacity-60={reviewsLoading}>
+				<ReviewList {reviews} />
+			</div>
 		</section>
 	</article>
 {/if}

@@ -39,11 +39,18 @@ export interface Place {
 	google_maps_url?: string | null;
 	average_rating?: string;
 	reviews_count: number;
+	favorites_count: number;
+	/** True when the *current* user has saved this place. */
+	is_favorited: boolean;
 }
 
 export interface PlaceDetail extends Place {
 	ratings: PlaceRating[];
 	menu: MenuItem[];
+	/** The current user's own 1–5 star rating, if they rated this place. */
+	viewer_rating: number | null;
+	/** Id of the current user's review of this place, if they wrote one. */
+	viewer_review_id: number | null;
 }
 
 export interface PlaceRating {
@@ -112,6 +119,14 @@ export interface PlaceFilters {
 	has_menu?: boolean;
 	search?: string;
 	ordering?: string;
+}
+
+export type ReviewOrdering = 'newest' | 'oldest' | 'helpful' | 'top' | 'low';
+
+export interface ReviewListParams {
+	ordering?: ReviewOrdering;
+	with_photos?: boolean;
+	page?: number;
 }
 
 export interface Paginated<T> {

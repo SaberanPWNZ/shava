@@ -1,7 +1,22 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import Seo from '$lib/components/Seo.svelte';
+	import StarRating from '$lib/components/places/StarRating.svelte';
+	import { reviewsApi } from '$lib/api/places.api';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { m } from '$lib/paraglide/messages';
+	import type { Review } from '$lib/types';
+
+	let recentReviews = $state<Review[]>([]);
+
+	onMount(async () => {
+		try {
+			const feed = await reviewsApi.feed();
+			recentReviews = feed.results.slice(0, 6);
+		} catch {
+			// The feed is decorative on the landing page — fail silently.
+		}
+	});
 
 	const features = $derived([
 		{
@@ -98,3 +113,38 @@
 		</a>
 	</div>
 </section>
+
+{#if recentReviews.length > 0}
+	<section class="mx-auto max-w-6xl pb-14 sm:pb-20" aria-label={m.home_recent_reviews_title()}>
+		<h2 class="text-center text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
+			{m.home_recent_reviews_title()}
+		</h2>
+		<p class="mt-2 text-center text-sm text-stone-600 dark:text-stone-400">
+			{m.home_recent_reviews_subtitle()}
+		</p>
+		<div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			{#each recentReviews as review (review.id)}
+				<a
+					href={`/places/${review.place}`}
+					class="flex flex-col gap-2 rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none dark:border-stone-800 dark:bg-stone-900 dark:hover:border-amber-800"
+				>
+					<div class="flex items-center justify-between gap-2">
+						<span class="truncate font-semibold text-stone-900 dark:text-stone-100">
+							{review.place_name}
+						</span>
+						<StarRating value={Number(review.score) / 2} size="sm" />
+					</div>
+					{#if review.comment}
+						<p class="line-clamp-3 text-sm text-stone-600 dark:text-stone-400">
+							{review.comment}
+						</p>
+					{/if}
+					<div class="mt-auto flex items-center justify-between pt-1 text-xs text-stone-500">
+						<span>{review.author_username ?? m.reviews_anonymous()}</span>
+						<span>{new Date(review.created_at).toLocaleDateString()}</span>
+					</div>
+				</a>
+			{/each}
+		</div>
+	</section>
+{/if}

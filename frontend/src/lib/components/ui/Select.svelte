@@ -6,6 +6,7 @@
 		required = false,
 		placeholder = '',
 		error = null,
+		onchange = undefined,
 		children
 	} = $props<{
 		id: string;
@@ -14,6 +15,7 @@
 		required?: boolean;
 		placeholder?: string;
 		error?: string | string[] | null;
+		onchange?: (event: Event) => void;
 		children: import('svelte').Snippet;
 	}>();
 
@@ -29,6 +31,7 @@
 	<select
 		{id}
 		{required}
+		{onchange}
 		bind:value
 		aria-invalid={errorText ? 'true' : undefined}
 		aria-describedby={errorText ? `${id}-error` : undefined}

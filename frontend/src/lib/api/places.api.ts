@@ -8,7 +8,8 @@ import type {
 	Place,
 	PlaceDetail,
 	PlaceFilters,
-	Review
+	Review,
+	ReviewListParams
 } from '$lib/types';
 
 function buildQuery(params: Record<string, unknown>): string {
@@ -58,6 +59,15 @@ export const placesApi = {
 	},
 	rate(id: number, stars: number): Promise<unknown> {
 		return apiFetch(`/places/${id}/rate/`, { method: 'POST', body: { rating: stars } });
+	},
+	favorite(id: number): Promise<{ favorites_count: number; favorited: boolean }> {
+		return apiFetch(`/places/${id}/favorite/`, { method: 'POST' });
+	},
+	unfavorite(id: number): Promise<{ favorites_count: number; favorited: boolean }> {
+		return apiFetch(`/places/${id}/favorite/`, { method: 'DELETE' });
+	},
+	favorites(page = 1): Promise<Paginated<Place>> {
+		return apiFetch<Paginated<Place>>(`/places/favorites/${buildQuery({ page })}`);
 	}
 };
 
@@ -89,8 +99,20 @@ export const menuApi = {
 };
 
 export const reviewsApi = {
-	listForPlace(placeId: number | string): Promise<Paginated<Review>> {
-		return apiFetch<Paginated<Review>>(`/places/${placeId}/reviews/`, { auth: false });
+	listForPlace(
+		placeId: number | string,
+		params: ReviewListParams = {}
+	): Promise<Paginated<Review>> {
+		return apiFetch<Paginated<Review>>(
+			`/places/${placeId}/reviews/${buildQuery(params as Record<string, unknown>)}`,
+			{ auth: false }
+		);
+	},
+	feed(params: { city?: string; page?: number } = {}): Promise<Paginated<Review>> {
+		return apiFetch<Paginated<Review>>(
+			`/reviews/feed/${buildQuery(params as Record<string, unknown>)}`,
+			{ auth: false }
+		);
 	},
 	myList(page = 1): Promise<Paginated<Review>> {
 		return apiFetch<Paginated<Review>>(`/reviews/my-reviews/${buildQuery({ page })}`);
