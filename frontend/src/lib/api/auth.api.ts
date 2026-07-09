@@ -11,11 +11,19 @@ interface RegisterInput {
 	password: string;
 	first_name?: string;
 	last_name?: string;
+	phone?: string;
+	city?: number;
+	terms_accepted: boolean;
+	marketing_opt_in?: boolean;
 }
 
 interface MeUpdateInput {
 	first_name?: string;
 	last_name?: string;
+	phone?: string;
+	bio?: string;
+	city?: number | null;
+	marketing_opt_in?: boolean;
 }
 
 export const authApi = {

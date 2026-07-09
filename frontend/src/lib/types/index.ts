@@ -4,6 +4,12 @@ export interface ImageThumbnails {
 	sizes: { xs?: string; sm?: string; md?: string; lg?: string };
 }
 
+export interface City {
+	id: number;
+	name: string;
+	slug: string;
+}
+
 export interface Place {
 	id: number;
 	name: string;

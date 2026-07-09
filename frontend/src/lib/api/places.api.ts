@@ -1,6 +1,7 @@
 import { apiFetch } from '$lib/api/client';
 import type {
 	Article,
+	City,
 	MenuItem,
 	ModerationLogEntry,
 	Paginated,
@@ -57,6 +58,12 @@ export const placesApi = {
 	},
 	rate(id: number, stars: number): Promise<unknown> {
 		return apiFetch(`/places/${id}/rate/`, { method: 'POST', body: { rating: stars } });
+	}
+};
+
+export const citiesApi = {
+	list(): Promise<City[]> {
+		return apiFetch<City[]>('/places/cities/', { auth: false });
 	}
 };
 

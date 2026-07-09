@@ -18,9 +18,13 @@ export interface User {
 	username?: string;
 	first_name?: string;
 	last_name?: string;
+	phone?: string;
+	bio?: string;
+	city?: { id: number; name: string; slug: string } | null;
 	avatar?: string | null;
 	is_verified?: boolean;
 	is_staff?: boolean;
+	marketing_opt_in?: boolean;
 }
 
 export interface AuthTokens {
