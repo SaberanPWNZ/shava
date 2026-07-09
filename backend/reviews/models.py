@@ -39,6 +39,33 @@ class Review(models.Model):
         ordering = ["-created_at"]
 
 
+class ReviewReply(models.Model):
+    """A short public reply under a review — the "forum" part of the site.
+
+    Replies are post-moderated (visible immediately, soft-deletable by the
+    author or staff): requiring pre-moderation would kill conversations.
+    """
+
+    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name="replies")
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="review_replies",
+    )
+    text = models.TextField(max_length=1000)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_deleted = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Review reply"
+        verbose_name_plural = "Review replies"
+        ordering = ["created_at"]
+        indexes = [models.Index(fields=["review", "created_at"])]
+
+    def __str__(self) -> str:  # pragma: no cover - cosmetic
+        return f"Reply by {self.author_id} on review {self.review_id}"
+
+
 class ReviewHelpfulVote(models.Model):
     """A "this review was helpful" vote from one user on a review."""
 

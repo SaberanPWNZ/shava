@@ -9,7 +9,10 @@ from .views import (
     ReviewFeedView,
     ReviewModerationActionView,
     ReviewModerationListView,
+    ReviewRepliesListCreateView,
+    ReviewReplyDeleteView,
     ReviewViewSet,
+    UserReviewsListView,
 )
 
 router = SimpleRouter()
@@ -19,6 +22,23 @@ urlpatterns = [
     path("", include(router.urls)),
     # Public site-wide feed of latest approved reviews
     path("feed/", ReviewFeedView.as_view(), name="reviews-feed"),
+    # Public list of one user's approved reviews (profile pages)
+    path(
+        "by-user/<int:user_pk>/",
+        UserReviewsListView.as_view(),
+        name="reviews-by-user",
+    ),
+    # Replies (threaded discussion under a review)
+    path(
+        "<int:pk>/replies/",
+        ReviewRepliesListCreateView.as_view(),
+        name="review-replies",
+    ),
+    path(
+        "replies/<int:pk>/",
+        ReviewReplyDeleteView.as_view(),
+        name="review-reply-delete",
+    ),
     # Admin moderation
     path(
         "moderation/",

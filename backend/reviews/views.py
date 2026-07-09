@@ -1,6 +1,6 @@
 import logging
 
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Count, Prefetch, Q, QuerySet
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -8,16 +8,21 @@ from drf_spectacular.utils import (
     extend_schema,
     inline_serializer,
 )
-from rest_framework import permissions, status, viewsets
+from rest_framework import permissions, status, views, viewsets
 from rest_framework import serializers as drf_serializers
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import ListAPIView, ListCreateAPIView, UpdateAPIView
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
+from notifications.services import notify
 from places.models import ModerationLog, Place
-from reviews.models import Review, ReviewHelpfulVote
-from reviews.serializers import ReviewCreateSerializer, ReviewSerializer
+from reviews.models import Review, ReviewHelpfulVote, ReviewReply
+from reviews.serializers import (
+    ReviewCreateSerializer,
+    ReviewReplySerializer,
+    ReviewSerializer,
+)
 
 logger = logging.getLogger("reviews")
 
@@ -40,6 +45,15 @@ def with_viewer_votes_prefetch(qs: QuerySet, request) -> QuerySet:
             "helpful_votes",
             queryset=ReviewHelpfulVote.objects.filter(user_id=user.id),
             to_attr="viewer_votes",
+        )
+    )
+
+
+def with_replies_count(qs: QuerySet) -> QuerySet:
+    """Annotate the visible-replies count so lists stay N+1-free."""
+    return qs.annotate(
+        _replies_count=Count(
+            "replies", filter=Q(replies__is_deleted=False), distinct=True
         )
     )
 
@@ -79,7 +93,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
         qs = Review.objects.filter(
             author=self.request.user, is_deleted=False
         ).select_related("place", "author")
-        return with_viewer_votes_prefetch(qs, self.request)
+        return with_replies_count(with_viewer_votes_prefetch(qs, self.request))
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -151,14 +165,12 @@ class PlaceReviewsListCreateView(ListCreateAPIView):
         qs = Review.objects.filter(place_id=place_id, is_deleted=False).select_related(
             "author", "place"
         )
-        qs = with_viewer_votes_prefetch(qs, self.request)
+        qs = with_replies_count(with_viewer_votes_prefetch(qs, self.request))
         user = self.request.user
         if user.is_authenticated and user.is_staff:
             return apply_review_list_params(qs, self.request.query_params)
         # Authors see their own pending reviews + everyone's approved reviews.
         if user.is_authenticated:
-            from django.db.models import Q
-
             qs = qs.filter(Q(is_moderated=True) | Q(author=user))
         else:
             qs = qs.filter(is_moderated=True)
@@ -203,8 +215,6 @@ class ReviewFeedView(ListAPIView):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        from django.db.models import Q
-
         qs = Review.objects.filter(is_moderated=True, is_deleted=False).select_related(
             "author", "place"
         )
@@ -214,8 +224,108 @@ class ReviewFeedView(ListAPIView):
             if str(city).isdigit():
                 cond |= Q(place__city_ref_id=int(city))
             qs = qs.filter(cond)
-        qs = with_viewer_votes_prefetch(qs, self.request)
+        qs = with_replies_count(with_viewer_votes_prefetch(qs, self.request))
         return qs.order_by("-created_at", "-id")
+
+
+@extend_schema(tags=["reviews"], summary="Public list of a user's approved reviews")
+class UserReviewsListView(ListAPIView):
+    """Approved reviews written by one user — powers the public profile page.
+
+    Banned/deactivated authors 404 just like their profile does, so content
+    disappears together with the account.
+    """
+
+    serializer_class = ReviewSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        from django.contrib.auth import get_user_model
+
+        author = get_object_or_404(
+            get_user_model(),
+            pk=self.kwargs["user_pk"],
+            is_active=True,
+            is_banned=False,
+        )
+        qs = Review.objects.filter(
+            author=author, is_moderated=True, is_deleted=False
+        ).select_related("author", "place")
+        qs = with_replies_count(with_viewer_votes_prefetch(qs, self.request))
+        return qs.order_by("-created_at", "-id")
+
+
+@extend_schema(tags=["reviews"])
+class ReviewRepliesListCreateView(ListCreateAPIView):
+    """List replies under a review; post a new reply (authenticated).
+
+    Replies inherit the review's visibility: anyone can read replies to an
+    approved review; a pending review's replies are only reachable by its
+    author or staff (matching the review itself).
+    """
+
+    serializer_class = ReviewReplySerializer
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    def get_throttles(self):
+        if self.request.method == "POST":
+            self.throttle_scope = "reply"
+        return super().get_throttles()
+
+    def _get_review(self):
+        review = get_object_or_404(Review, pk=self.kwargs["pk"], is_deleted=False)
+        user = self.request.user
+        if not review.is_moderated:
+            is_privileged = user.is_authenticated and (
+                user.is_staff or review.author_id == user.id
+            )
+            if not is_privileged:
+                from django.http import Http404
+
+                raise Http404("Review not found.")
+        return review
+
+    def get_queryset(self):
+        review = self._get_review()
+        return ReviewReply.objects.filter(
+            review=review, is_deleted=False
+        ).select_related("author")
+
+    def perform_create(self, serializer):
+        review = self._get_review()
+        reply = serializer.save(author=self.request.user, review=review)
+        # Tell the review author someone answered them — but not when they
+        # reply under their own review.
+        if review.author_id != self.request.user.id:
+            notify(
+                review.author,
+                "review_reply",
+                review_id=review.id,
+                place_id=review.place_id,
+                place_name=review.place.name,
+                reply_author=self.request.user.username or "",
+                text_preview=reply.text[:120],
+            )
+
+
+@extend_schema(tags=["reviews"], summary="Delete own reply (author or admin)")
+class ReviewReplyDeleteView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk: int):
+        reply = get_object_or_404(ReviewReply, pk=pk, is_deleted=False)
+        if reply.author_id != request.user.id and not request.user.is_staff:
+            return Response(
+                {"detail": "You can only delete your own replies."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        reply.is_deleted = True
+        reply.save(update_fields=["is_deleted"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @extend_schema(tags=["reviews"], summary="List reviews pending moderation (admin)")
@@ -277,6 +387,14 @@ class ReviewModerationActionView(UpdateAPIView):
             target_type=ModerationLog.TARGET_REVIEW,
             target_id=review.id,
             action=action_name,
+            reason=reason or "",
+        )
+        notify(
+            review.author,
+            "review_approved" if action_name == "approve" else "review_rejected",
+            review_id=review.id,
+            place_id=review.place_id,
+            place_name=review.place.name if review.place_id else "",
             reason=reason or "",
         )
         logger.info("Review %s %sd by %s", review.id, action_name, request.user)

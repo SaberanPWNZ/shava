@@ -2,13 +2,23 @@ from rest_framework import serializers
 
 from config.thumbnails import thumbnail_set
 from reviews.choices import REVIEW_SCORE_CHOICES
-from reviews.models import Review
+from reviews.models import Review, ReviewReply
+
+
+class ReviewReplySerializer(serializers.ModelSerializer):
+    author_username = serializers.CharField(source="author.username", read_only=True)
+
+    class Meta:
+        model = ReviewReply
+        fields = ["id", "review", "author", "author_username", "text", "created_at"]
+        read_only_fields = ["id", "review", "author", "author_username", "created_at"]
 
 
 class ReviewSerializer(serializers.ModelSerializer):
     author_username = serializers.CharField(source="author.username", read_only=True)
     place_name = serializers.CharField(source="place.name", read_only=True)
     viewer_voted = serializers.SerializerMethodField()
+    replies_count = serializers.SerializerMethodField()
     dish_image_thumbnails = serializers.SerializerMethodField()
     receipt_image_thumbnails = serializers.SerializerMethodField()
 
@@ -29,6 +39,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             "is_verified",
             "helpful_count",
             "viewer_voted",
+            "replies_count",
             "created_at",
             "is_moderated",
         ]
@@ -40,6 +51,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             "is_verified",
             "helpful_count",
             "viewer_voted",
+            "replies_count",
         ]
 
     def get_dish_image_thumbnails(self, obj: Review):
@@ -51,6 +63,12 @@ class ReviewSerializer(serializers.ModelSerializer):
         return thumbnail_set(
             obj.receipt_image, alias_group="photo", request=self.context.get("request")
         )
+
+    def get_replies_count(self, obj: Review) -> int:
+        annotated = getattr(obj, "_replies_count", None)
+        if annotated is not None:
+            return annotated
+        return obj.replies.filter(is_deleted=False).count()
 
     def get_viewer_voted(self, obj: Review) -> bool:
         """Whether the *current* request user has cast a helpful vote.
