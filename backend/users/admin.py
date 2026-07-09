@@ -9,13 +9,16 @@ class UserAdmin(admin.ModelAdmin):
         "email",
         "first_name",
         "last_name",
+        "phone",
+        "city",
         "is_staff",
         "is_banned",
         "date_joined",
     )
-    search_fields = ("username", "email", "first_name", "last_name")
-    list_filter = ("is_staff", "is_active", "is_banned", "date_joined")
-    readonly_fields = ("date_joined",)
+    search_fields = ("username", "email", "first_name", "last_name", "phone")
+    list_filter = ("is_staff", "is_active", "is_banned", "city", "date_joined")
+    readonly_fields = ("date_joined", "terms_accepted_at")
+    autocomplete_fields = ("city",)
     date_hierarchy = "date_joined"
     ordering = ("-date_joined",)
     list_per_page = 20

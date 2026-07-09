@@ -1,5 +1,11 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.core.validators import RegexValidator
 from django.db import models
+
+phone_validator = RegexValidator(
+    regex=r"^\+?[1-9]\d{6,14}$",
+    message="Enter a valid phone number (7–15 digits, optional leading +).",
+)
 
 
 class UserManager(BaseUserManager):
@@ -44,6 +50,24 @@ class User(AbstractUser):
         null=True,
         default="user_avatars/default_avatar.png",
     )  # TODO create  default avatar
+    phone = models.CharField(
+        max_length=20, blank=True, default="", validators=[phone_validator]
+    )
+    bio = models.CharField(max_length=280, blank=True, default="")
+    city = models.ForeignKey(
+        "places.City",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="residents",
+        help_text="User's preferred/home city — used to personalize defaults.",
+    )
+    marketing_opt_in = models.BooleanField(default=False)
+    terms_accepted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the user accepted the Terms of Service, set once at registration.",
+    )
     is_verified = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
     is_moderator = models.BooleanField(default=False)

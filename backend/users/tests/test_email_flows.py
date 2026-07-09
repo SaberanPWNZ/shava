@@ -65,7 +65,12 @@ class VerifyEmailFlowTests(APITestCase):
     def _register(self, email="alice@example.com"):
         response = self.client.post(
             self.register_url,
-            {"email": email, "password": "StrongPass!234", "first_name": "Alice"},
+            {
+                "email": email,
+                "password": "StrongPass!234",
+                "first_name": "Alice",
+                "terms_accepted": True,
+            },
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -75,8 +80,6 @@ class VerifyEmailFlowTests(APITestCase):
         return self.client.post(
             self.login_url, {"email": email, "password": password}, format="json"
         )
-
-    # --- Registration sends a verification email ---------------------------
 
     def test_registration_sends_verification_email(self):
         self._register()
@@ -187,7 +190,12 @@ class PasswordResetFlowTests(APITestCase):
     def _register(self, email="bob@example.com"):
         self.client.post(
             self.register_url,
-            {"email": email, "password": "StrongPass!234", "first_name": "Bob"},
+            {
+                "email": email,
+                "password": "StrongPass!234",
+                "first_name": "Bob",
+                "terms_accepted": True,
+            },
             format="json",
         )
         return User.objects.get(email=email)

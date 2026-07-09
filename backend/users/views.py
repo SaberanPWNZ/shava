@@ -10,20 +10,22 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from users.authentication import BanAwareJWTAuthentication as JWTAuthentication
-from users.serivces.email_service import EmailService
 from users.models import User
 from users.permissions import IsAdmin, IsSelfOrAdmin
 from users.serializers import (
+    AccountDeleteSerializer,
     ChangePasswordSerializer,
     MeUpdateSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     RegisterSerializer,
     UserAdminSerializer,
+    UserPublicProfileSerializer,
     UserPublicSerializer,
     VerifyEmailConfirmSerializer,
 )
-from users.serivces.services import UserRegistrationService
+from users.serivces.email_service import EmailService
+from users.serivces.services import AccountDeletionService, UserRegistrationService
 from users.token_issuer import SimpleJWTTokenIssuer, TokenError
 from users.tokens import (
     TokenInvalid,
@@ -87,6 +89,37 @@ class MeView(APIView):
 
 
 @extend_schema(tags=["users"])
+class UserPublicProfileView(APIView):
+    """Public — safe profile view of *another* user.
+
+    Excludes email/phone (see :class:`UserPublicProfileSerializer`).
+    Deactivated or banned users are treated as not found so their profile
+    cannot be browsed after leaving or being moderated off the platform.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes: list = []
+
+    @extend_schema(
+        summary="Get a user's public profile",
+        responses={
+            200: UserPublicProfileSerializer,
+            404: OpenApiResponse(description="User not found."),
+        },
+    )
+    def get(self, request, pk: int):
+        try:
+            user = User.objects.get(pk=pk, is_active=True, is_banned=False)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        return Response(
+            UserPublicProfileSerializer(user, context={"request": request}).data
+        )
+
+
+@extend_schema(tags=["users"])
 class ChangePasswordView(APIView):
     """Change the password of the authenticated user."""
 
@@ -108,6 +141,38 @@ class ChangePasswordView(APIView):
         serializer.is_valid(raise_exception=True)
         request.user.set_password(serializer.validated_data["new_password"])
         request.user.save(update_fields=["password"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(tags=["users"])
+class AccountDeleteView(APIView):
+    """Self-service account deletion.
+
+    Requires the current password so a hijacked-but-logged-in session
+    cannot delete the account without re-proving identity. Soft-deletes via
+    :class:`AccountDeletionService` — see that class for why this never
+    hard-deletes the row.
+    """
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    deletion_service = AccountDeletionService()
+
+    @extend_schema(
+        summary="Delete (deactivate + anonymize) the current user's account",
+        request=AccountDeleteSerializer,
+        responses={
+            204: OpenApiResponse(description="Account deleted."),
+            400: OpenApiResponse(description="Incorrect password."),
+        },
+    )
+    def post(self, request):
+        serializer = AccountDeleteSerializer(
+            data=request.data, context={"user": request.user}
+        )
+        serializer.is_valid(raise_exception=True)
+        self.deletion_service.delete(request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

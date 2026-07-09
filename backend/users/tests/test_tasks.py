@@ -83,11 +83,10 @@ class RegistrationDispatchesViaCeleryTests(TestCase):
                 "password": "StrongPass!234",
                 "first_name": "N",
                 "last_name": "U",
+                "terms_accepted": True,
             },
             format="json",
         )
         self.assertEqual(resp.status_code, 201, resp.content)
-        # Eager mode runs the task inline, so the outbox is populated
-        # by the time the response returns.
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("newuser@example.com", mail.outbox[0].to)

@@ -3,6 +3,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from .jwt_views import EmailTokenObtainPairView
 from .views import (
+    AccountDeleteView,
     ChangePasswordView,
     LogoutView,
     MeView,
@@ -10,6 +11,7 @@ from .views import (
     PasswordResetRequestView,
     RegisterView,
     UserBanView,
+    UserPublicProfileView,
     UserViewSet,
     VerifyEmailConfirmView,
     VerifyEmailRequestView,
@@ -27,6 +29,11 @@ urlpatterns = [
         "me/change-password/",
         ChangePasswordView.as_view(),
         name="user-change-password",
+    ),
+    path(
+        "me/delete/",
+        AccountDeleteView.as_view(),
+        name="user-delete-account",
     ),
     # Email verification
     path(
@@ -63,6 +70,11 @@ urlpatterns = [
         UserBanView.as_view(),
         {"action": "unban"},
         name="user-unban",
+    ),
+    path(
+        "<int:pk>/public/",
+        UserPublicProfileView.as_view(),
+        name="user-public-profile",
     ),
     path(
         "<int:pk>/",

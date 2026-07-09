@@ -5,6 +5,7 @@ from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from places.models import City
 from users.models import User
 
 NO_THROTTLE = {
@@ -47,7 +48,12 @@ class AuthFlowTests(APITestCase):
     def _register(self, email="alice@example.com", password="StrongPass!234"):
         return self.client.post(
             self.register_url,
-            {"email": email, "password": password, "first_name": "Alice"},
+            {
+                "email": email,
+                "password": password,
+                "first_name": "Alice",
+                "terms_accepted": True,
+            },
             format="json",
         )
 
@@ -74,6 +80,7 @@ class AuthFlowTests(APITestCase):
             {
                 "email": "eve@example.com",
                 "password": "StrongPass!234",
+                "terms_accepted": True,
                 "is_staff": True,
                 "is_superuser": True,
                 "is_admin": True,
@@ -397,3 +404,322 @@ class UserListPermissionTests(APITestCase):
             resp.status_code,
             (status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND),
         )
+
+
+@override_settings(
+    REST_FRAMEWORK={
+        **NO_THROTTLE,
+        **{
+            "DEFAULT_AUTHENTICATION_CLASSES": [
+                "rest_framework_simplejwt.authentication.JWTAuthentication",
+            ],
+            "DEFAULT_PERMISSION_CLASSES": [
+                "rest_framework.permissions.IsAuthenticated",
+            ],
+            "DEFAULT_THROTTLE_CLASSES": [
+                "rest_framework.throttling.ScopedRateThrottle",
+            ],
+        },
+    }
+)
+class RegistrationExtraFieldsTests(APITestCase):
+    """Registration with the new phone/city/terms/marketing fields."""
+
+    register_url = "/api/users/register/"
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        # Distinct slug from the ones seeded by the 0007 data migration
+        # (real city names), so this test is independent of seed data.
+        self.city = City.objects.create(name="Test City", slug="test-city-kyiv")
+
+    def _payload(self, **overrides):
+        payload = {
+            "email": "newbie@example.com",
+            "password": "StrongPass!234",
+            "first_name": "New",
+            "terms_accepted": True,
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_register_without_terms_accepted_is_rejected(self):
+        payload = self._payload()
+        del payload["terms_accepted"]
+        response = self.client.post(self.register_url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("terms_accepted", response.data)
+        self.assertFalse(User.objects.filter(email="newbie@example.com").exists())
+
+    def test_register_with_terms_declined_is_rejected(self):
+        response = self.client.post(
+            self.register_url, self._payload(terms_accepted=False), format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("terms_accepted", response.data)
+
+    def test_register_stamps_terms_accepted_at(self):
+        response = self.client.post(self.register_url, self._payload(), format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get(email="newbie@example.com")
+        self.assertIsNotNone(user.terms_accepted_at)
+
+    def test_register_with_valid_phone_and_city(self):
+        response = self.client.post(
+            self.register_url,
+            self._payload(
+                phone="+380501234567", city=self.city.pk, marketing_opt_in=True
+            ),
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        user = User.objects.get(email="newbie@example.com")
+        self.assertEqual(user.phone, "+380501234567")
+        self.assertEqual(user.city_id, self.city.pk)
+        self.assertTrue(user.marketing_opt_in)
+
+    def test_register_rejects_invalid_phone(self):
+        response = self.client.post(
+            self.register_url, self._payload(phone="not-a-phone"), format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("phone", response.data)
+
+    def test_register_rejects_inactive_city(self):
+        inactive = City.objects.create(
+            name="Ghost Town", slug="ghost-town", is_active=False
+        )
+        response = self.client.post(
+            self.register_url, self._payload(city=inactive.pk), format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("city", response.data)
+
+    def test_register_ignores_terms_accepted_at_override_attempt(self):
+        """``terms_accepted_at`` must always be server-stamped, never client-supplied."""
+        response = self.client.post(
+            self.register_url,
+            self._payload(terms_accepted_at="2000-01-01T00:00:00Z"),
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get(email="newbie@example.com")
+        self.assertGreater(user.terms_accepted_at.year, 2000)
+
+
+@override_settings(
+    REST_FRAMEWORK={
+        **NO_THROTTLE,
+        **{
+            "DEFAULT_AUTHENTICATION_CLASSES": [
+                "rest_framework_simplejwt.authentication.JWTAuthentication",
+            ],
+            "DEFAULT_PERMISSION_CLASSES": [
+                "rest_framework.permissions.IsAuthenticated",
+            ],
+            "DEFAULT_THROTTLE_CLASSES": [
+                "rest_framework.throttling.ScopedRateThrottle",
+            ],
+        },
+    }
+)
+class MeUpdateExtraFieldsTests(APITestCase):
+    """Self-service profile updates for the new fields."""
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.city = City.objects.create(name="Test City", slug="test-city-lviv")
+        self.user = User.objects.create_user(
+            email="profile@example.com", password="ProfilePass!234"
+        )
+
+    def _auth(self):
+        resp = self.client.post(
+            "/api/users/login/",
+            {"email": "profile@example.com", "password": "ProfilePass!234"},
+            format="json",
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
+
+    def test_patch_updates_phone_bio_city_marketing(self):
+        self._auth()
+        resp = self.client.patch(
+            "/api/users/me/",
+            {
+                "phone": "+380671112233",
+                "bio": "Shawarma enthusiast.",
+                "city": self.city.pk,
+                "marketing_opt_in": True,
+            },
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.phone, "+380671112233")
+        self.assertEqual(self.user.bio, "Shawarma enthusiast.")
+        self.assertEqual(self.user.city_id, self.city.pk)
+        self.assertTrue(self.user.marketing_opt_in)
+
+    def test_patch_rejects_invalid_phone(self):
+        self._auth()
+        resp = self.client.patch("/api/users/me/", {"phone": "abc"}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("phone", resp.data)
+
+    def test_me_response_never_includes_password(self):
+        self._auth()
+        resp = self.client.get("/api/users/me/")
+        self.assertNotIn("password", resp.data)
+
+
+@override_settings(
+    REST_FRAMEWORK={
+        **NO_THROTTLE,
+        **{
+            "DEFAULT_AUTHENTICATION_CLASSES": [
+                "rest_framework_simplejwt.authentication.JWTAuthentication",
+            ],
+            "DEFAULT_PERMISSION_CLASSES": [
+                "rest_framework.permissions.IsAuthenticated",
+            ],
+            "DEFAULT_THROTTLE_CLASSES": [
+                "rest_framework.throttling.ScopedRateThrottle",
+            ],
+        },
+    }
+)
+class UserPublicProfileViewTests(APITestCase):
+    """``GET /users/<id>/public/`` — safe profile view of another user."""
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.city = City.objects.create(name="Test City", slug="test-city-odesa")
+        self.user = User.objects.create_user(
+            email="visible@example.com",
+            password="VisiblePass!234",
+            first_name="Vika",
+            bio="I love shawarma.",
+            phone="+380631112233",
+            city=self.city,
+        )
+        self.banned = User.objects.create_user(
+            email="banned@example.com", password="BannedPass!234", is_banned=True
+        )
+        self.inactive = User.objects.create_user(
+            email="inactive@example.com", password="InactivePass!234", is_active=False
+        )
+
+    def test_anonymous_can_view_public_profile(self):
+        resp = self.client.get(f"/api/users/{self.user.pk}/public/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["first_name"], "Vika")
+        self.assertEqual(resp.data["city"]["slug"], "test-city-odesa")
+
+    def test_public_profile_excludes_email_and_phone(self):
+        resp = self.client.get(f"/api/users/{self.user.pk}/public/")
+        self.assertNotIn("email", resp.data)
+        self.assertNotIn("phone", resp.data)
+
+    def test_banned_user_profile_is_not_found(self):
+        resp = self.client.get(f"/api/users/{self.banned.pk}/public/")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_inactive_user_profile_is_not_found(self):
+        resp = self.client.get(f"/api/users/{self.inactive.pk}/public/")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_unknown_user_profile_is_not_found(self):
+        resp = self.client.get("/api/users/999999/public/")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+
+@override_settings(
+    REST_FRAMEWORK={
+        **NO_THROTTLE,
+        **{
+            "DEFAULT_AUTHENTICATION_CLASSES": [
+                "rest_framework_simplejwt.authentication.JWTAuthentication",
+            ],
+            "DEFAULT_PERMISSION_CLASSES": [
+                "rest_framework.permissions.IsAuthenticated",
+            ],
+            "DEFAULT_THROTTLE_CLASSES": [
+                "rest_framework.throttling.ScopedRateThrottle",
+            ],
+        },
+    }
+)
+class AccountDeleteTests(APITestCase):
+    """``POST /users/me/delete/`` — self-service account deletion."""
+
+    delete_url = "/api/users/me/delete/"
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.user = User.objects.create_user(
+            email="leaving@example.com",
+            password="LeavingPass!234",
+            first_name="Leaving",
+        )
+
+    def _login(self):
+        resp = self.client.post(
+            "/api/users/login/",
+            {"email": "leaving@example.com", "password": "LeavingPass!234"},
+            format="json",
+        )
+        return resp.data["access"], resp.data["refresh"]
+
+    def test_requires_authentication(self):
+        resp = self.client.post(self.delete_url, {"password": "LeavingPass!234"})
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_rejects_wrong_password(self):
+        access, _ = self._login()
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        resp = self.client.post(self.delete_url, {"password": "WrongPass!234"})
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.is_active)
+
+    def test_deletes_and_anonymizes_account(self):
+        access, refresh = self._login()
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        resp = self.client.post(self.delete_url, {"password": "LeavingPass!234"})
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_active)
+        self.assertNotEqual(self.user.email, "leaving@example.com")
+        self.assertEqual(self.user.first_name, "")
+        self.assertFalse(self.user.has_usable_password())
+
+    def test_refresh_token_is_blacklisted_after_deletion(self):
+        access, refresh = self._login()
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        self.client.post(self.delete_url, {"password": "LeavingPass!234"})
+
+        resp = self.client.post(
+            "/api/users/token/refresh/", {"refresh": refresh}, format="json"
+        )
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_deactivated_user_cannot_login(self):
+        access, _ = self._login()
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        self.client.post(self.delete_url, {"password": "LeavingPass!234"})
+
+        resp = self.client.post(
+            "/api/users/login/",
+            {"email": "leaving@example.com", "password": "LeavingPass!234"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
