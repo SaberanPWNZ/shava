@@ -6,6 +6,7 @@ from gamification.views import ReviewHelpfulView
 from .views import (
     PlaceReviewsListCreateView,
     ReviewCreateView,
+    ReviewFeedView,
     ReviewModerationActionView,
     ReviewModerationListView,
     ReviewViewSet,
@@ -16,6 +17,8 @@ router.register(r"my-reviews", ReviewViewSet, basename="my-reviews")
 
 urlpatterns = [
     path("", include(router.urls)),
+    # Public site-wide feed of latest approved reviews
+    path("feed/", ReviewFeedView.as_view(), name="reviews-feed"),
     # Admin moderation
     path(
         "moderation/",

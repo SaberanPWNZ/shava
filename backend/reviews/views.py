@@ -3,11 +3,13 @@ import logging
 from django.db.models import Prefetch, QuerySet
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import (
+    OpenApiParameter,
     OpenApiResponse,
     extend_schema,
     inline_serializer,
 )
-from rest_framework import permissions, serializers as drf_serializers, status, viewsets
+from rest_framework import permissions, status, viewsets
+from rest_framework import serializers as drf_serializers
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import ListAPIView, ListCreateAPIView, UpdateAPIView
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
@@ -42,6 +44,28 @@ def with_viewer_votes_prefetch(qs: QuerySet, request) -> QuerySet:
     )
 
 
+REVIEW_ORDERING = {
+    # "newest" is the model default; "helpful" surfaces community-endorsed
+    # reviews; "top"/"low" let visitors jump straight to raves or warnings.
+    "newest": "-created_at",
+    "oldest": "created_at",
+    "helpful": "-helpful_count",
+    "top": "-score",
+    "low": "score",
+}
+
+
+def apply_review_list_params(qs: QuerySet, params) -> QuerySet:
+    """Apply the shared ``ordering`` / ``with_photos`` query params."""
+    if str(params.get("with_photos", "")).lower() in ("1", "true", "yes"):
+        qs = qs.filter(dish_image__gt="")
+    order = REVIEW_ORDERING.get(params.get("ordering") or "newest")
+    if order:
+        # Stable tie-break so pagination never shows duplicates.
+        qs = qs.order_by(order, "-id")
+    return qs
+
+
 @extend_schema(tags=["reviews"])
 class ReviewViewSet(viewsets.ModelViewSet):
     """A user's own reviews."""
@@ -71,6 +95,14 @@ class ReviewViewSet(viewsets.ModelViewSet):
             self.request.user,
         )
 
+    def perform_update(self, serializer):
+        # An edited review goes back to the moderation queue: otherwise an
+        # author could get an innocuous text approved and then swap it for
+        # spam/abuse that keeps the "approved" flag.
+        instance = serializer.save(is_moderated=False)
+        if instance.place_id:
+            instance.place.recalculate_rating_from_reviews()
+
     def perform_destroy(self, instance):
         instance.is_deleted = True
         instance.save(update_fields=["is_deleted"])
@@ -79,7 +111,26 @@ class ReviewViewSet(viewsets.ModelViewSet):
             instance.place.recalculate_rating_from_reviews()
 
 
-@extend_schema(tags=["reviews"])
+@extend_schema(
+    tags=["reviews"],
+    parameters=[
+        OpenApiParameter(
+            "ordering",
+            str,
+            OpenApiParameter.QUERY,
+            required=False,
+            enum=sorted(REVIEW_ORDERING),
+            description="Sort order; defaults to newest.",
+        ),
+        OpenApiParameter(
+            "with_photos",
+            bool,
+            OpenApiParameter.QUERY,
+            required=False,
+            description="Only reviews that include a dish photo.",
+        ),
+    ],
+)
 class PlaceReviewsListCreateView(ListCreateAPIView):
     """List approved reviews for a place; create a new (pending) review."""
 
@@ -103,13 +154,15 @@ class PlaceReviewsListCreateView(ListCreateAPIView):
         qs = with_viewer_votes_prefetch(qs, self.request)
         user = self.request.user
         if user.is_authenticated and user.is_staff:
-            return qs
+            return apply_review_list_params(qs, self.request.query_params)
         # Authors see their own pending reviews + everyone's approved reviews.
         if user.is_authenticated:
             from django.db.models import Q
 
-            return qs.filter(Q(is_moderated=True) | Q(author=user))
-        return qs.filter(is_moderated=True)
+            qs = qs.filter(Q(is_moderated=True) | Q(author=user))
+        else:
+            qs = qs.filter(is_moderated=True)
+        return apply_review_list_params(qs, self.request.query_params)
 
     def perform_create(self, serializer):
         place_id = self.kwargs.get("place_pk") or self.kwargs.get("place_id")
@@ -124,6 +177,45 @@ class PlaceReviewsListCreateView(ListCreateAPIView):
 # Backwards-compatible alias used elsewhere.
 class PlaceReviewsListView(PlaceReviewsListCreateView):
     pass
+
+
+@extend_schema(
+    tags=["reviews"],
+    summary="Public feed of the latest approved reviews",
+    parameters=[
+        OpenApiParameter(
+            "city",
+            str,
+            OpenApiParameter.QUERY,
+            required=False,
+            description="Filter by place city (name, slug or city id).",
+        ),
+    ],
+)
+class ReviewFeedView(ListAPIView):
+    """Site-wide "what's happening" feed: newest approved reviews.
+
+    Public and cheap on purpose — it powers the landing page, so it must
+    render for anonymous visitors and stay at a constant query count.
+    """
+
+    serializer_class = ReviewSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        from django.db.models import Q
+
+        qs = Review.objects.filter(is_moderated=True, is_deleted=False).select_related(
+            "author", "place"
+        )
+        city = self.request.query_params.get("city")
+        if city:
+            cond = Q(place__city__iexact=city) | Q(place__city_ref__slug__iexact=city)
+            if str(city).isdigit():
+                cond |= Q(place__city_ref_id=int(city))
+            qs = qs.filter(cond)
+        qs = with_viewer_votes_prefetch(qs, self.request)
+        return qs.order_by("-created_at", "-id")
 
 
 @extend_schema(tags=["reviews"], summary="List reviews pending moderation (admin)")
