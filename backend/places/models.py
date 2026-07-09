@@ -77,6 +77,20 @@ class PlaceQuerySet(models.QuerySet):
                 filter=Q(review_set__is_moderated=True, review_set__is_deleted=False),
                 distinct=True,
             ),
+            _favorites_count=Count("favorites", distinct=True),
+        )
+
+    def with_viewer_favorites(self, user):
+        """Prefetch only the *viewer's* favorite rows so the serializer can
+        answer ``is_favorited`` in O(1) per place without an N+1."""
+        if user is None or not getattr(user, "is_authenticated", False):
+            return self
+        return self.prefetch_related(
+            models.Prefetch(
+                "favorites",
+                queryset=PlaceFavorite.objects.filter(user_id=user.id),
+                to_attr="viewer_favorites",
+            )
         )
 
 
@@ -212,6 +226,31 @@ class Place(models.Model):
     @property
     def ratings_count(self):
         return self.ratings.count()
+
+
+class PlaceFavorite(models.Model):
+    """A user's bookmark ("want to try / my shava spots") on a place."""
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="favorite_places"
+    )
+    place = models.ForeignKey(
+        "Place", on_delete=models.CASCADE, related_name="favorites"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Place favorite"
+        verbose_name_plural = "Place favorites"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "place"], name="uniq_place_favorite"
+            )
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover - cosmetic
+        return f"{self.user_id} ★ {self.place_id}"
 
 
 class ModerationLog(models.Model):

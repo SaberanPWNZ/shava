@@ -10,7 +10,7 @@ from drf_spectacular.utils import (
     extend_schema,
     inline_serializer,
 )
-from rest_framework import permissions, status, viewsets
+from rest_framework import permissions, status, views, viewsets
 from rest_framework import serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -24,7 +24,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
-from places.models import City, ModerationLog, Place, PlaceRating
+from places.models import City, ModerationLog, Place, PlaceFavorite, PlaceRating
 from places.permissions import IsAuthorOrAdminOrReadOnly
 from places.serializers import (
     CityMinimalSerializer,
@@ -201,8 +201,89 @@ class PlaceListView(ListAPIView):
                     qs = qs.filter(author_id=int(author))
                 except (TypeError, ValueError):
                     qs = qs.none()
-        qs = qs.with_list_annotations().select_related("city_ref", "author")
+        qs = (
+            qs.with_list_annotations()
+            .with_viewer_favorites(user)
+            .select_related("city_ref", "author")
+        )
         return _apply_place_filters(qs, params)
+
+
+class PlaceFavoriteView(views.APIView):
+    """POST/DELETE ``/places/<pk>/favorite/`` — toggle a bookmark.
+
+    Idempotent in both directions so double-clicks and retried requests
+    never error; the response always carries the fresh aggregate count
+    plus the viewer's resulting state.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    _RESPONSE_SERIALIZER = inline_serializer(
+        name="PlaceFavoriteResponse",
+        fields={
+            "favorites_count": drf_serializers.IntegerField(),
+            "favorited": drf_serializers.BooleanField(),
+        },
+    )
+
+    def _get_place(self, pk):
+        return get_object_or_404(Place, pk=pk, status__in=PUBLIC_VISIBLE_STATUSES)
+
+    @extend_schema(
+        tags=["places"],
+        summary="Save a place to the viewer's favorites",
+        request=None,
+        responses={200: _RESPONSE_SERIALIZER, 201: _RESPONSE_SERIALIZER},
+    )
+    def post(self, request, pk: int):
+        place = self._get_place(pk)
+        _, created = PlaceFavorite.objects.get_or_create(user=request.user, place=place)
+        return Response(
+            {"favorites_count": place.favorites.count(), "favorited": True},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        tags=["places"],
+        summary="Remove a place from the viewer's favorites",
+        request=None,
+        responses={200: _RESPONSE_SERIALIZER},
+    )
+    def delete(self, request, pk: int):
+        place = self._get_place(pk)
+        PlaceFavorite.objects.filter(user=request.user, place=place).delete()
+        return Response(
+            {"favorites_count": place.favorites.count(), "favorited": False}
+        )
+
+
+@extend_schema(tags=["places"], summary="List the viewer's favorite places")
+class FavoritePlacesListView(ListAPIView):
+    """Paginated list of places the current user has bookmarked,
+    most recently saved first."""
+
+    serializer_class = PlaceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        from django.db.models import OuterRef, Subquery
+
+        my_favorites = PlaceFavorite.objects.filter(user=self.request.user)
+        # Ordering via a subquery (not a JOIN on `favorites`) so the
+        # `_favorites_count` annotation keeps counting *all* users' rows.
+        saved_at = my_favorites.filter(place=OuterRef("pk")).values("created_at")[:1]
+        return (
+            Place.objects.filter(
+                id__in=my_favorites.values_list("place_id", flat=True),
+                status__in=PUBLIC_VISIBLE_STATUSES,
+            )
+            .with_list_annotations()
+            .with_viewer_favorites(self.request.user)
+            .select_related("city_ref", "author")
+            .annotate(_saved_at=Subquery(saved_at))
+            .order_by("-_saved_at")
+        )
 
 
 @extend_schema(tags=["places"], summary="Submit a new place (goes to moderation)")

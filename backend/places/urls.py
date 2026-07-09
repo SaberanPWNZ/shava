@@ -3,9 +3,11 @@ from rest_framework.routers import SimpleRouter
 
 from .views import (
     CityListView,
+    FavoritePlacesListView,
     ModerationLogListView,
     PlaceCreateView,
     PlaceDetailView,
+    PlaceFavoriteView,
     PlaceListView,
     PlaceModerationActionView,
     PlaceModerationListView,
@@ -23,6 +25,7 @@ urlpatterns = [
     # Public list and submission
     path("", PlaceListView.as_view(), name="places-list"),
     path("cities/", CityListView.as_view(), name="places-cities"),
+    path("favorites/", FavoritePlacesListView.as_view(), name="places-favorites"),
     path("create-place/", PlaceCreateView.as_view(), name="create-place"),
     path("submit-place/", PlaceCreateView.as_view(), name="submit-place"),
     path("moderation/", PlaceModerationListView.as_view(), name="places-moderation"),
@@ -37,6 +40,7 @@ urlpatterns = [
     path("<int:place_pk>/menu/", include("places_menu.urls")),
     path("<int:place_pk>/reviews/", include("reviews.place_urls")),
     path("<int:pk>/rate/", PlaceRateView.as_view(), name="place-rate"),
+    path("<int:pk>/favorite/", PlaceFavoriteView.as_view(), name="place-favorite"),
     re_path(
         r"^(?P<pk>\d+)/(?P<action_name>approve|reject)/$",
         PlaceModerationActionView.as_view(),

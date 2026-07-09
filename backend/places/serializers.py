@@ -22,6 +22,8 @@ class PlaceSerializer(ModelSerializer):
     stars = serializers.SerializerMethodField()
     ratings_count = serializers.SerializerMethodField()
     main_image_thumbnails = serializers.SerializerMethodField()
+    favorites_count = serializers.SerializerMethodField()
+    is_favorited = serializers.SerializerMethodField()
 
     class Meta:
         model = Place
@@ -55,6 +57,8 @@ class PlaceSerializer(ModelSerializer):
             "google_maps_url",
             "average_rating",
             "reviews_count",
+            "favorites_count",
+            "is_favorited",
         ]
 
     def get_main_image_thumbnails(self, obj):
@@ -82,6 +86,29 @@ class PlaceSerializer(ModelSerializer):
 
     def get_stars(self, obj):
         return obj.stars
+
+    def get_favorites_count(self, obj):
+        annotated = getattr(obj, "_favorites_count", None)
+        if annotated is not None:
+            return annotated
+        return obj.favorites.count()
+
+    def get_is_favorited(self, obj) -> bool:
+        """Whether the current viewer has bookmarked this place.
+
+        Reads the per-request ``viewer_favorites`` prefetch (see
+        :meth:`places.models.PlaceQuerySet.with_viewer_favorites`) when the
+        view prepared it; falls back to a single EXISTS query on detail
+        endpoints. Anonymous viewers always get ``False`` with no query.
+        """
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request is not None else None
+        if user is None or not getattr(user, "is_authenticated", False):
+            return False
+        prefetched = getattr(obj, "viewer_favorites", None)
+        if prefetched is not None:
+            return len(prefetched) > 0
+        return obj.favorites.filter(user_id=user.id).exists()
 
     def get_ratings_count(self, obj):
         annotated = getattr(obj, "_ratings_count", None)
@@ -213,9 +240,16 @@ class PlaceRatingSerializer(serializers.ModelSerializer):
 class PlaceDetailSerializer(PlaceSerializer):
     ratings = PlaceRatingSerializer(many=True, read_only=True)
     menu = serializers.SerializerMethodField()
+    viewer_rating = serializers.SerializerMethodField()
+    viewer_review_id = serializers.SerializerMethodField()
 
     class Meta(PlaceSerializer.Meta):
-        fields = PlaceSerializer.Meta.fields + ["ratings", "menu"]
+        fields = PlaceSerializer.Meta.fields + [
+            "ratings",
+            "menu",
+            "viewer_rating",
+            "viewer_review_id",
+        ]
         extra_kwargs = {
             "ratings": {"required": False},
         }
@@ -227,6 +261,42 @@ class PlaceDetailSerializer(PlaceSerializer):
 
         items = obj.menus.filter(is_available=True).order_by("category", "name")
         return MenuItemSerializer(items, many=True, context=self.context).data
+
+    def _viewer(self):
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request is not None else None
+        if user is None or not getattr(user, "is_authenticated", False):
+            return None
+        return user
+
+    def get_viewer_rating(self, obj) -> float | None:
+        """The viewer's own 1-5 star rating of this place, if any.
+
+        Lets the UI render "your rating" instead of pretending the user
+        never rated (ratings are stored on a 0-10 scale, hence the /2).
+        """
+        user = self._viewer()
+        if user is None:
+            return None
+        # `ratings` is prefetched by the detail view — iterate in memory.
+        for rating in obj.ratings.all():
+            if rating.user_id == user.id:
+                return float(rating.rating) / 2.0
+        return None
+
+    def get_viewer_review_id(self, obj) -> int | None:
+        """Id of the viewer's (non-deleted) review of this place, if any.
+
+        The UI uses it to swap the "write a review" form for a "you already
+        reviewed this place" state instead of surfacing a 400 on submit.
+        """
+        user = self._viewer()
+        if user is None:
+            return None
+        for review in obj.review_set.all():
+            if review.author_id == user.id and not review.is_deleted:
+                return review.id
+        return None
 
 
 class ModerationLogSerializer(ModelSerializer):
