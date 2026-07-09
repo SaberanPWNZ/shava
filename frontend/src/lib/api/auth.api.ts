@@ -66,6 +66,21 @@ export const authApi = {
 		}
 	},
 
+	async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+		await apiFetch('/users/me/change-password/', {
+			method: 'POST',
+			body: { old_password: oldPassword, new_password: newPassword }
+		});
+	},
+
+	async deleteAccount(password: string): Promise<void> {
+		await apiFetch('/users/me/delete/', {
+			method: 'POST',
+			body: { password }
+		});
+		tokenStorage.clear();
+	},
+
 	async requestVerifyEmail(): Promise<void> {
 		await apiFetch('/users/verify-email/request/', { method: 'POST' });
 	},

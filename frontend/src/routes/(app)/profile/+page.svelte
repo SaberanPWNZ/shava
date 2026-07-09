@@ -15,6 +15,7 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { gamificationStore } from '$lib/stores/gamification.svelte';
 	import { gamificationService } from '$lib/services/gamification.service';
+	import { authService } from '$lib/services/auth.service';
 	import { toasts } from '$lib/stores/toasts.svelte';
 	import { ApiError, type FieldErrors } from '$lib/types/auth';
 	import type { Place, Review, Paginated } from '$lib/types';
@@ -32,6 +33,17 @@
 	let savedMessage = $state<string | null>(null);
 	let fieldErrors = $state<FieldErrors>({});
 	let formError = $state<string | null>(null);
+
+	let oldPassword = $state('');
+	let newPassword = $state('');
+	let confirmNewPassword = $state('');
+	let changingPassword = $state(false);
+	let passwordFieldErrors = $state<FieldErrors>({});
+	let passwordFormError = $state<string | null>(null);
+
+	let deletePassword = $state('');
+	let deleting = $state(false);
+	let deleteError = $state<string | null>(null);
 
 	let reviewsPage = $state(1);
 	let reviewsData = $state<Paginated<Review> | null>(null);
@@ -141,6 +153,56 @@
 		return fieldErrors[key] ?? null;
 	}
 
+	async function changePassword(event: SubmitEvent) {
+		event.preventDefault();
+		changingPassword = true;
+		passwordFieldErrors = {};
+		passwordFormError = null;
+		if (newPassword !== confirmNewPassword) {
+			passwordFieldErrors = { confirm_password: m.register_passwords_mismatch() };
+			changingPassword = false;
+			return;
+		}
+		try {
+			await authApi.changePassword(oldPassword, newPassword);
+			oldPassword = '';
+			newPassword = '';
+			confirmNewPassword = '';
+			toasts.success(m.profile_password_changed());
+		} catch (error) {
+			if (error instanceof ApiError) {
+				passwordFieldErrors = error.fieldErrors;
+				passwordFormError = Object.keys(error.fieldErrors).length ? null : error.message;
+			} else {
+				passwordFormError = m.profile_password_change_failed();
+			}
+		} finally {
+			changingPassword = false;
+		}
+	}
+
+	async function deleteAccount(event: SubmitEvent) {
+		event.preventDefault();
+		deleting = true;
+		deleteError = null;
+		try {
+			await authApi.deleteAccount(deletePassword);
+			await authService.logout('/');
+		} catch (error) {
+			deleteError = error instanceof ApiError ? error.message : m.profile_delete_failed();
+			const passwordErrors = error instanceof ApiError ? error.fieldErrors['password'] : null;
+			if (passwordErrors) {
+				deleteError = Array.isArray(passwordErrors) ? passwordErrors.join(' ') : passwordErrors;
+			}
+		} finally {
+			deleting = false;
+		}
+	}
+
+	function passwordFieldError(key: string): string | string[] | null {
+		return passwordFieldErrors[key] ?? null;
+	}
+
 	const tabs = $derived([
 		{ id: 'overview', label: m.profile_tab_overview() },
 		{ id: 'reviews', label: m.profile_tab_reviews() },
@@ -229,6 +291,80 @@
 								{m.profile_gamification_empty()}
 							</p>
 						{/if}
+					</Card>
+
+					<Card title={m.profile_security_title()}>
+						{#if passwordFormError}
+							<Alert variant="error">{passwordFormError}</Alert>
+						{/if}
+						<form class="mt-2 flex flex-col gap-4" onsubmit={changePassword} novalidate>
+							<Input
+								id="profile-old-password"
+								label={m.profile_field_current_password()}
+								type="password"
+								autocomplete="current-password"
+								required
+								bind:value={oldPassword}
+								error={passwordFieldError('old_password')}
+							/>
+							<div class="grid gap-4 sm:grid-cols-2">
+								<Input
+									id="profile-new-password"
+									label={m.profile_field_new_password()}
+									type="password"
+									autocomplete="new-password"
+									required
+									hint={m.register_password_hint()}
+									bind:value={newPassword}
+									error={passwordFieldError('new_password')}
+								/>
+								<Input
+									id="profile-confirm-new-password"
+									label={m.field_confirm_password()}
+									type="password"
+									autocomplete="new-password"
+									required
+									bind:value={confirmNewPassword}
+									error={passwordFieldError('confirm_password')}
+								/>
+							</div>
+							<Button type="submit" loading={changingPassword}>
+								{m.profile_change_password_submit()}
+							</Button>
+						</form>
+
+						<div class="mt-8 border-t border-red-200 pt-6 dark:border-red-900">
+							<h3 class="text-sm font-semibold text-red-700 dark:text-red-400">
+								{m.profile_delete_title()}
+							</h3>
+							<p class="mt-1 text-sm text-stone-600 dark:text-stone-400">
+								{m.profile_delete_warning()}
+							</p>
+							{#if deleteError}
+								<div class="mt-3">
+									<Alert variant="error">{deleteError}</Alert>
+								</div>
+							{/if}
+							<form class="mt-4 flex flex-col gap-4" onsubmit={deleteAccount} novalidate>
+								<Input
+									id="profile-delete-password"
+									label={m.profile_field_current_password()}
+									type="password"
+									autocomplete="current-password"
+									required
+									hint={m.profile_delete_confirm_hint()}
+									bind:value={deletePassword}
+								/>
+								<Button
+									type="submit"
+									variant="danger"
+									loading={deleting}
+									disabled={!deletePassword}
+								>
+									{m.profile_delete_submit()}
+								</Button>
+							</form>
+						</div>
 					</Card>
 				</div>
 			{:else if id === 'reviews'}
