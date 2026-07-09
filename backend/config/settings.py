@@ -576,6 +576,12 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
 }
 
+# HttpOnly JWT cookies (see users/cookies.py). ``Secure`` outside DEBUG so
+# tokens never travel over plain HTTP in production; ``Lax`` keeps them off
+# cross-site POSTs (CSRF mitigation) while still working for the SPA.
+JWT_COOKIE_SECURE = _env_bool("JWT_COOKIE_SECURE", default=not DEBUG)
+JWT_COOKIE_SAMESITE = os.getenv("JWT_COOKIE_SAMESITE", "Lax")
+
 
 INTERNAL_IPS = [
     "127.0.0.1",

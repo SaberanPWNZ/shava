@@ -6,9 +6,8 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
-from rest_framework_simplejwt.views import TokenRefreshView
 
-from users.jwt_views import EmailTokenObtainPairView
+from users.jwt_views import CookieTokenRefreshView, EmailTokenObtainPairView
 
 # All public REST endpoints live under a versioned prefix so we can roll
 # out breaking changes without orphaning existing clients. The unversioned
@@ -18,7 +17,7 @@ from users.jwt_views import EmailTokenObtainPairView
 # get a machine-readable nudge to switch to ``/api/v1/``.
 api_v1_urlpatterns: list = [
     path("token/", EmailTokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("token/refresh/", CookieTokenRefreshView.as_view(), name="token_refresh"),
     path("users/", include("users.urls")),
     path("news/", include("news.urls")),
     path("places/", include("places.urls")),

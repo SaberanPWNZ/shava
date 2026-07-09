@@ -10,6 +10,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from users.authentication import BanAwareJWTAuthentication as JWTAuthentication
+from users.cookies import REFRESH_COOKIE, clear_jwt_cookies
 from users.models import User
 from users.permissions import IsAdmin, IsSelfOrAdmin
 from users.serializers import (
@@ -173,7 +174,9 @@ class AccountDeleteView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         self.deletion_service.delete(request.user)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        clear_jwt_cookies(response)
+        return response
 
 
 @extend_schema(tags=["users"])
@@ -197,7 +200,7 @@ class LogoutView(APIView):
         },
     )
     def post(self, request):
-        refresh = request.data.get("refresh")
+        refresh = request.data.get("refresh") or request.COOKIES.get(REFRESH_COOKIE)
         if not refresh:
             return Response(
                 {"refresh": "This field is required."},
@@ -206,11 +209,15 @@ class LogoutView(APIView):
         try:
             self.token_issuer.revoke_refresh_token(refresh)
         except TokenError:
-            return Response(
+            response = Response(
                 {"refresh": "Invalid or expired refresh token."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        return Response(status=status.HTTP_205_RESET_CONTENT)
+            clear_jwt_cookies(response)
+            return response
+        response = Response(status=status.HTTP_205_RESET_CONTENT)
+        clear_jwt_cookies(response)
+        return response
 
 
 class UserViewSet(viewsets.ModelViewSet):
