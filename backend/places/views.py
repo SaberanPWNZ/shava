@@ -10,7 +10,8 @@ from drf_spectacular.utils import (
     extend_schema,
     inline_serializer,
 )
-from rest_framework import permissions, serializers as drf_serializers, status, viewsets
+from rest_framework import permissions, status, viewsets
+from rest_framework import serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.generics import (
@@ -23,9 +24,10 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
-from places.models import ModerationLog, Place, PlaceRating
+from places.models import City, ModerationLog, Place, PlaceRating
 from places.permissions import IsAuthorOrAdminOrReadOnly
 from places.serializers import (
+    CityMinimalSerializer,
     ModerationLogSerializer,
     PlaceCreateSerializer,
     PlaceDetailSerializer,
@@ -54,6 +56,21 @@ def _can_view_nonpublic_place(user, place) -> bool:
         return True
     author = getattr(place, "author", None)
     return author is not None and author == user
+
+
+@extend_schema(tags=["places"], summary="List active cities (for filters/registration)")
+class CityListView(ListAPIView):
+    """Public, unpaginated list of active cities.
+
+    Small reference table (~20 rows) — the frontend uses this to populate
+    the city dropdown on the places filter bar and the registration form,
+    so pagination would just add friction for no benefit.
+    """
+
+    serializer_class = CityMinimalSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+    queryset = City.objects.filter(is_active=True).order_by("name")
 
 
 def _apply_place_filters(queryset, params):

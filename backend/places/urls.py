@@ -2,6 +2,7 @@ from django.urls import include, path, re_path
 from rest_framework.routers import SimpleRouter
 
 from .views import (
+    CityListView,
     ModerationLogListView,
     PlaceCreateView,
     PlaceDetailView,
@@ -21,6 +22,7 @@ urlpatterns = [
     path("", include(router.urls)),
     # Public list and submission
     path("", PlaceListView.as_view(), name="places-list"),
+    path("cities/", CityListView.as_view(), name="places-cities"),
     path("create-place/", PlaceCreateView.as_view(), name="create-place"),
     path("submit-place/", PlaceCreateView.as_view(), name="submit-place"),
     path("moderation/", PlaceModerationListView.as_view(), name="places-moderation"),

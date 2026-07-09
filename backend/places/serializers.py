@@ -2,7 +2,17 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from config.thumbnails import thumbnail_set
-from places.models import ModerationLog, Place, PlaceRating
+from places.models import City, ModerationLog, Place, PlaceRating
+
+
+class CityMinimalSerializer(serializers.ModelSerializer):
+    """Minimal, read-only city representation — used for the public
+    ``/places/cities/`` list and embedded in user profile payloads."""
+
+    class Meta:
+        model = City
+        fields = ["id", "name", "slug"]
+        read_only_fields = fields
 
 
 class PlaceSerializer(ModelSerializer):

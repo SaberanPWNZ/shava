@@ -95,3 +95,38 @@ class PlaceCityFilterTests(TestCase):
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["results"], [])
+
+
+class CityListViewTests(TestCase):
+    """``GET /places/cities/`` — public, unpaginated, active-only list."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.kyiv, _ = City.objects.get_or_create(slug="kyiv", defaults={"name": "Київ"})
+        cls.lviv, _ = City.objects.get_or_create(
+            slug="lviv", defaults={"name": "Львів"}
+        )
+        City.objects.create(name="Retired Town", slug="retired-town", is_active=False)
+
+    def test_anonymous_can_list_cities(self):
+        url = reverse("places-cities")
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_response_is_unpaginated_list(self):
+        url = reverse("places-cities")
+        resp = self.client.get(url)
+        self.assertIsInstance(resp.json(), list)
+
+    def test_excludes_inactive_cities(self):
+        url = reverse("places-cities")
+        resp = self.client.get(url)
+        slugs = {c["slug"] for c in resp.json()}
+        self.assertIn("kyiv", slugs)
+        self.assertNotIn("retired-town", slugs)
+
+    def test_entries_expose_minimal_shape(self):
+        url = reverse("places-cities")
+        resp = self.client.get(url)
+        entry = next(c for c in resp.json() if c["slug"] == "kyiv")
+        self.assertEqual(set(entry.keys()), {"id", "name", "slug"})
