@@ -1,8 +1,8 @@
 from django.contrib import admin, messages
 
-from notifications.services import notify
 from places.models import ModerationLog
 from reviews.models import Review, ReviewHelpfulVote
+from reviews.services import notify_favoriters_of_new_review, notify_review_moderated
 
 
 @admin.action(description="Mark selected reviews as verified")
@@ -58,7 +58,9 @@ class ReviewAdmin(admin.ModelAdmin):
             )
         super().save_model(request, obj, form, change)
 
-        was_pending = previous and not previous["is_moderated"] and not previous["is_deleted"]
+        was_pending = (
+            previous and not previous["is_moderated"] and not previous["is_deleted"]
+        )
         if not was_pending:
             return
 
@@ -78,13 +80,9 @@ class ReviewAdmin(admin.ModelAdmin):
             target_id=obj.id,
             action=action,
         )
-        notify(
-            obj.author,
-            "review_approved" if action == "approve" else "review_rejected",
-            review_id=obj.id,
-            place_id=obj.place_id,
-            place_name=obj.place.name if obj.place_id else "",
-        )
+        notify_review_moderated(obj, action)
+        if action == "approve":
+            notify_favoriters_of_new_review(obj)
 
 
 admin.site.register(Review, ReviewAdmin)

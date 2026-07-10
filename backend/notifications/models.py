@@ -15,12 +15,14 @@ class Notification(models.Model):
     TYPE_PLACE_APPROVED = "place_approved"
     TYPE_PLACE_REJECTED = "place_rejected"
     TYPE_REVIEW_REPLY = "review_reply"
+    TYPE_FAVORITE_PLACE_REVIEW = "favorite_place_review"
     TYPE_CHOICES = [
         (TYPE_REVIEW_APPROVED, "Review approved"),
         (TYPE_REVIEW_REJECTED, "Review rejected"),
         (TYPE_PLACE_APPROVED, "Place approved"),
         (TYPE_PLACE_REJECTED, "Place rejected"),
         (TYPE_REVIEW_REPLY, "Reply to review"),
+        (TYPE_FAVORITE_PLACE_REVIEW, "New review on a favorite place"),
     ]
 
     user = models.ForeignKey(

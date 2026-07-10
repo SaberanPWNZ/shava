@@ -23,6 +23,7 @@ from reviews.serializers import (
     ReviewReplySerializer,
     ReviewSerializer,
 )
+from reviews.services import notify_favoriters_of_new_review, notify_review_moderated
 
 logger = logging.getLogger("reviews")
 
@@ -365,6 +366,7 @@ class ReviewModerationActionView(UpdateAPIView):
         review = self.get_object()
         action_name = self.kwargs.get("action_name")
         reason = request.data.get("reason", "") if hasattr(request, "data") else ""
+        was_public = review.is_moderated and not review.is_deleted
         if action_name == "approve":
             review.is_moderated = True
             review.is_deleted = False
@@ -389,14 +391,9 @@ class ReviewModerationActionView(UpdateAPIView):
             action=action_name,
             reason=reason or "",
         )
-        notify(
-            review.author,
-            "review_approved" if action_name == "approve" else "review_rejected",
-            review_id=review.id,
-            place_id=review.place_id,
-            place_name=review.place.name if review.place_id else "",
-            reason=reason or "",
-        )
+        notify_review_moderated(review, action_name, reason)
+        if action_name == "approve" and not was_public:
+            notify_favoriters_of_new_review(review)
         logger.info("Review %s %sd by %s", review.id, action_name, request.user)
         return Response(self.get_serializer(review).data)
 

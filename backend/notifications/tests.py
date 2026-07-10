@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from notifications.models import Notification
-from places.models import Place
+from places.models import Place, PlaceFavorite
 from reviews.models import Review
 
 User = get_user_model()
@@ -130,3 +130,57 @@ class NotificationTriggerTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         note = Notification.objects.get(user=self.author, type="review_reply")
         self.assertEqual(note.data["text_preview"], "agreed")
+
+
+class FavoritePlaceReviewFanOutTests(APITestCase):
+    """Approving a review notifies everyone who favorited the place."""
+
+    def setUp(self):
+        self.reviewer = User.objects.create_user(
+            email="rev-f@example.com", password="testpass123", username="revf"
+        )
+        self.fan = User.objects.create_user(
+            email="fan@example.com", password="testpass123", username="fan"
+        )
+        self.banned_fan = User.objects.create_user(
+            email="banned-f@example.com", password="testpass123", username="bannedf"
+        )
+        self.banned_fan.is_banned = True
+        self.banned_fan.save(update_fields=["is_banned"])
+        self.admin = User.objects.create_superuser(
+            email="admin-f@example.com", password="testpass123", username="adminf"
+        )
+        self.place = make_place(self.reviewer, name="Fan Spot")
+        for user in (self.fan, self.banned_fan, self.reviewer):
+            PlaceFavorite.objects.create(user=user, place=self.place)
+        self.review = Review.objects.create(
+            place=self.place,
+            author=self.reviewer,
+            score=Decimal("9.0"),
+            comment="great",
+        )
+
+    def _approve(self):
+        self.client.force_authenticate(user=self.admin)
+        return self.client.patch(
+            f"/api/reviews/{self.review.pk}/approve/", {}, format="json"
+        )
+
+    def test_approval_notifies_fans_but_not_reviewer_or_banned(self):
+        response = self._approve()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        notes = Notification.objects.filter(type="favorite_place_review")
+        self.assertEqual([n.user_id for n in notes], [self.fan.id])
+        note = notes.get()
+        self.assertEqual(note.data["place_name"], "Fan Spot")
+        self.assertEqual(note.data["review_author"], "revf")
+
+    def test_re_approval_does_not_duplicate(self):
+        self._approve()
+        self._approve()
+        self.assertEqual(
+            Notification.objects.filter(
+                user=self.fan, type="favorite_place_review"
+            ).count(),
+            1,
+        )
