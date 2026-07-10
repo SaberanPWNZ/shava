@@ -1,6 +1,11 @@
 from django.contrib import admin
+from django.utils import timezone
 
+from notifications.services import notify
 from places.models import City, ModerationLog, Place, PlaceRating
+
+PENDING_STATUS = "On_moderation"
+APPROVED_STATUSES = {"Active", "Approved"}
 
 
 @admin.register(City)
@@ -61,6 +66,43 @@ class PlaceAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         return queryset.select_related("author", "moderated_by")
+
+    def save_model(self, request, obj, form, change):
+        previous_status = None
+        if change and "status" in form.changed_data:
+            previous_status = (
+                Place.objects.filter(pk=obj.pk).values_list("status", flat=True).first()
+            )
+        super().save_model(request, obj, form, change)
+
+        if previous_status != PENDING_STATUS or obj.status == PENDING_STATUS:
+            return
+
+        action = "approve" if obj.status in APPROVED_STATUSES else "reject"
+        update_fields = []
+        if not obj.moderated_by_id:
+            obj.moderated_by = request.user
+            update_fields.append("moderated_by")
+        if not obj.moderated_at:
+            obj.moderated_at = timezone.now()
+            update_fields.append("moderated_at")
+        if update_fields:
+            obj.save(update_fields=update_fields)
+
+        ModerationLog.objects.create(
+            actor=request.user,
+            target_type=ModerationLog.TARGET_PLACE,
+            target_id=obj.id,
+            action=action,
+            reason=obj.moderation_reason or "",
+        )
+        notify(
+            obj.author,
+            "place_approved" if action == "approve" else "place_rejected",
+            place_id=obj.id,
+            place_name=obj.name,
+            reason=obj.moderation_reason or "",
+        )
 
 
 class PlaceRatingAdmin(admin.ModelAdmin):

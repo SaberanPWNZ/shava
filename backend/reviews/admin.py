@@ -1,5 +1,7 @@
 from django.contrib import admin, messages
 
+from notifications.services import notify
+from places.models import ModerationLog
 from reviews.models import Review, ReviewHelpfulVote
 
 
@@ -45,6 +47,44 @@ class ReviewAdmin(admin.ModelAdmin):
     ordering = ("-created_at",)
     list_per_page = 20
     actions = [mark_verified]
+
+    def save_model(self, request, obj, form, change):
+        previous = None
+        if change:
+            previous = (
+                Review.objects.filter(pk=obj.pk)
+                .values("is_moderated", "is_deleted")
+                .first()
+            )
+        super().save_model(request, obj, form, change)
+
+        was_pending = previous and not previous["is_moderated"] and not previous["is_deleted"]
+        if not was_pending:
+            return
+
+        if obj.is_moderated and not obj.is_deleted:
+            action = "approve"
+        elif obj.is_deleted and not obj.is_moderated:
+            action = "reject"
+        else:
+            return
+
+        if obj.place_id:
+            obj.place.recalculate_rating_from_reviews()
+
+        ModerationLog.objects.create(
+            actor=request.user,
+            target_type=ModerationLog.TARGET_REVIEW,
+            target_id=obj.id,
+            action=action,
+        )
+        notify(
+            obj.author,
+            "review_approved" if action == "approve" else "review_rejected",
+            review_id=obj.id,
+            place_id=obj.place_id,
+            place_name=obj.place.name if obj.place_id else "",
+        )
 
 
 admin.site.register(Review, ReviewAdmin)
