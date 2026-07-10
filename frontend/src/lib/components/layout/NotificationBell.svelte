@@ -4,20 +4,37 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { m } from '$lib/paraglide/messages';
 
+	const POLL_MS = 60_000;
+
 	let unread = $state(0);
+
+	function refresh() {
+		notificationsApi
+			.unreadCount()
+			.then((r) => (unread = r.unread))
+			.catch(() => {});
+	}
 
 	// Refresh the badge on login and on every navigation — cheap COUNT query,
 	// and it keeps the number honest after the user reads notifications.
+	// While signed in, also poll and refresh when the tab regains focus so
+	// the badge updates without navigating.
 	$effect(() => {
 		void page.url.pathname;
 		if (!authStore.isAuthenticated) {
 			unread = 0;
 			return;
 		}
-		notificationsApi
-			.unreadCount()
-			.then((r) => (unread = r.unread))
-			.catch(() => {});
+		refresh();
+		const timer = setInterval(() => {
+			if (document.visibilityState === 'visible') refresh();
+		}, POLL_MS);
+		const onFocus = () => refresh();
+		window.addEventListener('focus', onFocus);
+		return () => {
+			clearInterval(timer);
+			window.removeEventListener('focus', onFocus);
+		};
 	});
 </script>
 

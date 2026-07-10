@@ -159,6 +159,7 @@
 	"notifications_bell_label": "Сповіщення",
 	"notifications_bell_label_unread": "Сповіщення ({count} непрочитаних)",
 	"notifications_empty": "Поки порожньо — тут з'являтимуться відповіді, модерація та інші події.",
+	"notifications_favorite_place_review": "{author} залишив(ла) новий відгук про {place} — заклад із ваших збережених.",
 	"notifications_open_link": "Відкрити →",
 	"notifications_place_approved": "Ваш заклад «{place}» схвалено — тепер він публічний.",
 	"notifications_place_rejected": "Ваш заклад «{place}» відхилено.",

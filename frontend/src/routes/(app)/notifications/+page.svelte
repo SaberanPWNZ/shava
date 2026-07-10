@@ -20,7 +20,8 @@
 		review_rejected: '❌',
 		place_approved: '🏪',
 		place_rejected: '🚫',
-		review_reply: '💬'
+		review_reply: '💬',
+		favorite_place_review: '⭐'
 	};
 
 	function messageFor(note: AppNotification): string {
@@ -37,6 +38,11 @@
 			case 'review_reply':
 				return m.notifications_review_reply({
 					author: note.data.reply_author ?? '',
+					place
+				});
+			case 'favorite_place_review':
+				return m.notifications_favorite_place_review({
+					author: note.data.review_author ?? '',
 					place
 				});
 		}

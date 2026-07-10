@@ -108,7 +108,8 @@ export type NotificationType =
 	| 'review_rejected'
 	| 'place_approved'
 	| 'place_rejected'
-	| 'review_reply';
+	| 'review_reply'
+	| 'favorite_place_review';
 
 export interface AppNotification {
 	id: number;
@@ -118,6 +119,7 @@ export interface AppNotification {
 		place_id?: number;
 		place_name?: string;
 		reply_author?: string;
+		review_author?: string;
 		text_preview?: string;
 		reason?: string;
 	};

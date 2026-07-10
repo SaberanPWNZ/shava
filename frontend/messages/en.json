@@ -159,6 +159,7 @@
 	"notifications_bell_label": "Notifications",
 	"notifications_bell_label_unread": "Notifications ({count} unread)",
 	"notifications_empty": "Nothing here yet — reviews, replies and moderation updates will show up here.",
+	"notifications_favorite_place_review": "{author} left a new review on {place} — a place you saved.",
 	"notifications_open_link": "Open →",
 	"notifications_place_approved": "Your place “{place}” was approved and is now public.",
 	"notifications_place_rejected": "Your place “{place}” was rejected.",
