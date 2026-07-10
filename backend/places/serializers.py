@@ -2,7 +2,16 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from config.thumbnails import thumbnail_set
-from places.models import City, ModerationLog, Place, PlaceRating
+from places.models import City, ModerationLog, Place, PlaceImage, PlaceRating
+
+
+class PlaceImageSerializer(serializers.ModelSerializer):
+    """Read-only gallery photo of a place."""
+
+    class Meta:
+        model = PlaceImage
+        fields = ["id", "image", "caption", "sort_order"]
+        read_only_fields = fields
 
 
 class CityMinimalSerializer(serializers.ModelSerializer):
@@ -44,11 +53,13 @@ class PlaceSerializer(ModelSerializer):
             "ratings_count",
             "main_image",
             "main_image_thumbnails",
-            "additional_images",
             "created_at",
             "updated_at",
             "website",
+            "phone",
+            "instagram",
             "opening_hours",
+            "price_level",
             "is_featured",
             "author",
             "moderated_by",
@@ -149,9 +160,11 @@ class PlaceCreateSerializer(ModelSerializer):
             "longitude",
             "description",
             "main_image",
-            "additional_images",
             "website",
+            "phone",
+            "instagram",
             "opening_hours",
+            "price_level",
         ]
         read_only_fields = [
             "created_at",
@@ -191,9 +204,11 @@ class PlaceUpdateSerializer(ModelSerializer):
             "longitude",
             "description",
             "main_image",
-            "additional_images",
             "website",
+            "phone",
+            "instagram",
             "opening_hours",
+            "price_level",
             "status",
         ]
         read_only_fields = ["created_at", "updated_at", "rating", "is_featured"]
@@ -242,9 +257,12 @@ class PlaceDetailSerializer(PlaceSerializer):
     menu = serializers.SerializerMethodField()
     viewer_rating = serializers.SerializerMethodField()
     viewer_review_id = serializers.SerializerMethodField()
+    # Gallery photos only on the detail payload — lists stay lean.
+    images = PlaceImageSerializer(many=True, read_only=True)
 
     class Meta(PlaceSerializer.Meta):
         fields = PlaceSerializer.Meta.fields + [
+            "images",
             "ratings",
             "menu",
             "viewer_rating",

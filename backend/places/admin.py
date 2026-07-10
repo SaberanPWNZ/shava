@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils import timezone
 
 from notifications.services import notify
-from places.models import City, ModerationLog, Place, PlaceRating
+from places.models import City, ModerationLog, Place, PlaceImage, PlaceRating
 
 PENDING_STATUS = "On_moderation"
 APPROVED_STATUSES = {"Active", "Approved"}
@@ -17,7 +17,14 @@ class CityAdmin(admin.ModelAdmin):
     prepopulated_fields = {"slug": ("name",)}
 
 
+class PlaceImageInline(admin.TabularInline):
+    model = PlaceImage
+    extra = 0
+    fields = ("image", "caption", "sort_order")
+
+
 class PlaceAdmin(admin.ModelAdmin):
+    inlines = [PlaceImageInline]
     list_display = (
         "id",
         "name",
@@ -50,13 +57,24 @@ class PlaceAdmin(admin.ModelAdmin):
             {"fields": ("name", "city", "city_ref", "district", "address", "author")},
         ),
         ("Location", {"fields": ("latitude", "longitude", "delivery")}),
-        ("Content", {"fields": ("description", "main_image", "additional_images")}),
+        ("Content", {"fields": ("description", "main_image")}),
         ("Status & Rating", {"fields": ("status", "rating", "is_featured")}),
         (
             "Moderation",
             {"fields": ("moderated_by", "moderation_reason", "moderated_at")},
         ),
-        ("Additional Info", {"fields": ("website", "opening_hours")}),
+        (
+            "Additional Info",
+            {
+                "fields": (
+                    "website",
+                    "phone",
+                    "instagram",
+                    "opening_hours",
+                    "price_level",
+                )
+            },
+        ),
         (
             "Timestamps",
             {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},

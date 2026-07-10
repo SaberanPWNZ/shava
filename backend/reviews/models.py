@@ -16,7 +16,7 @@ class Review(models.Model):
         decimal_places=2,
         choices=REVIEW_SCORE_CHOICES,
     )
-    comment = models.TextField(blank=True, null=True)
+    comment = models.TextField(blank=True, default="")
     dish_image = models.ImageField(upload_to="review_dishes/", blank=True, null=True)
     receipt_image = models.ImageField(
         upload_to="review_receipts/", blank=True, null=True
@@ -27,6 +27,7 @@ class Review(models.Model):
     )
     helpful_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     is_moderated = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
 
@@ -37,6 +38,12 @@ class Review(models.Model):
         verbose_name = "Review"
         verbose_name_plural = "Reviews"
         ordering = ["-created_at"]
+        indexes = [
+            # The public place page: approved reviews for one place.
+            models.Index(fields=["place", "is_moderated", "is_deleted"]),
+            # Profile pages and the review feed.
+            models.Index(fields=["author", "-created_at"]),
+        ]
 
 
 class ReviewReply(models.Model):

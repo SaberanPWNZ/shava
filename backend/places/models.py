@@ -119,7 +119,6 @@ class Place(models.Model):
     longitude = models.DecimalField(
         max_digits=9, decimal_places=6, blank=True, null=True
     )
-    reviews_count = models.PositiveIntegerField(default=0)
     description = models.TextField(blank=True, null=True)
     status = models.CharField(
         max_length=50, choices=PLACE_STATUS_CHOICES, default="On_moderation"
@@ -132,13 +131,20 @@ class Place(models.Model):
         help_text="Average rating calculated from reviews",
     )
     main_image = models.ImageField(upload_to="place_images/")
-    additional_images = models.ImageField(
-        upload_to="place_additional_images/", blank=True, null=True
-    )
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     website = models.URLField(blank=True, null=True)
+    phone = models.CharField(max_length=32, blank=True, default="")
+    instagram = models.URLField(blank=True, default="")
     opening_hours = models.CharField(max_length=100, blank=True, null=True)
+    PRICE_LEVEL_CHOICES = [
+        (1, "₴ — budget"),
+        (2, "₴₴ — mid-range"),
+        (3, "₴₴₴ — premium"),
+    ]
+    price_level = models.PositiveSmallIntegerField(
+        choices=PRICE_LEVEL_CHOICES, null=True, blank=True
+    )
     is_featured = models.BooleanField(default=False)
     author = models.ForeignKey(
         User,
@@ -226,6 +232,28 @@ class Place(models.Model):
     @property
     def ratings_count(self):
         return self.ratings.count()
+
+
+class PlaceImage(models.Model):
+    """One gallery photo of a place.
+
+    Replaces the old single ``additional_images`` ImageField, which could
+    hold exactly one file despite its plural name.
+    """
+
+    place = models.ForeignKey("Place", on_delete=models.CASCADE, related_name="images")
+    image = models.ImageField(upload_to="place_gallery/")
+    caption = models.CharField(max_length=200, blank=True, default="")
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Place image"
+        verbose_name_plural = "Place images"
+        ordering = ["sort_order", "id"]
+
+    def __str__(self) -> str:  # pragma: no cover - cosmetic
+        return f"Image {self.pk} of place {self.place_id}"
 
 
 class PlaceFavorite(models.Model):
