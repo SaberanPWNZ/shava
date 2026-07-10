@@ -26,11 +26,14 @@ export interface Place {
 	ratings_count: number;
 	main_image?: string | null;
 	main_image_thumbnails?: ImageThumbnails | null;
-	additional_images?: string | null;
 	created_at: string;
 	updated_at: string;
 	website?: string | null;
+	phone?: string;
+	instagram?: string;
 	opening_hours?: string | null;
+	/** 1 = ₴ budget, 2 = ₴₴ mid-range, 3 = ₴₴₴ premium. */
+	price_level?: 1 | 2 | 3 | null;
 	is_featured: boolean;
 	author?: number | null;
 	moderated_by?: number | null;
@@ -44,7 +47,15 @@ export interface Place {
 	is_favorited: boolean;
 }
 
+export interface PlaceImage {
+	id: number;
+	image: string;
+	caption: string;
+	sort_order: number;
+}
+
 export interface PlaceDetail extends Place {
+	images: PlaceImage[];
 	ratings: PlaceRating[];
 	menu: MenuItem[];
 	/** The current user's own 1–5 star rating, if they rated this place. */
@@ -109,7 +120,8 @@ export type NotificationType =
 	| 'place_approved'
 	| 'place_rejected'
 	| 'review_reply'
-	| 'favorite_place_review';
+	| 'favorite_place_review'
+	| 'badge_awarded';
 
 export interface AppNotification {
 	id: number;
@@ -122,6 +134,9 @@ export interface AppNotification {
 		review_author?: string;
 		text_preview?: string;
 		reason?: string;
+		badge_code?: string;
+		badge_title?: string;
+		badge_icon?: string;
 	};
 	is_read: boolean;
 	created_at: string;

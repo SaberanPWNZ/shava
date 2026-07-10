@@ -21,7 +21,8 @@
 		place_approved: '🏪',
 		place_rejected: '🚫',
 		review_reply: '💬',
-		favorite_place_review: '⭐'
+		favorite_place_review: '⭐',
+		badge_awarded: '🏅'
 	};
 
 	function messageFor(note: AppNotification): string {
@@ -45,10 +46,16 @@
 					author: note.data.review_author ?? '',
 					place
 				});
+			case 'badge_awarded':
+				return m.notifications_badge_awarded({
+					icon: note.data.badge_icon ?? '🏅',
+					title: note.data.badge_title ?? ''
+				});
 		}
 	}
 
 	function linkFor(note: AppNotification): string | null {
+		if (note.type === 'badge_awarded') return '/profile';
 		if (note.data.place_id) return `/places/${note.data.place_id}`;
 		return null;
 	}

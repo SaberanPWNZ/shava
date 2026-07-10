@@ -140,6 +140,70 @@
 			<p class="text-stone-700 dark:text-stone-300">{place.description}</p>
 		{/if}
 
+		{#if place.phone || place.instagram || place.website || place.opening_hours || place.price_level || place.google_maps_url}
+			<section
+				class="flex flex-wrap gap-x-6 gap-y-2 rounded-xl border border-stone-200 bg-white p-4 text-sm dark:border-stone-800 dark:bg-stone-900"
+				aria-label={m.place_info_label()}
+			>
+				{#if place.price_level}
+					<span class="font-semibold text-amber-700 dark:text-amber-400">
+						{'₴'.repeat(place.price_level)}
+					</span>
+				{/if}
+				{#if place.opening_hours}
+					<span class="text-stone-700 dark:text-stone-300">🕒 {place.opening_hours}</span>
+				{/if}
+				{#if place.phone}
+					<a class="text-amber-700 hover:underline dark:text-amber-400" href={`tel:${place.phone}`}>
+						📞 {place.phone}
+					</a>
+				{/if}
+				{#if place.website}
+					<a
+						class="text-amber-700 hover:underline dark:text-amber-400"
+						href={place.website}
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						🌐 {m.place_info_website()}
+					</a>
+				{/if}
+				{#if place.instagram}
+					<a
+						class="text-amber-700 hover:underline dark:text-amber-400"
+						href={place.instagram}
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						📷 {m.place_info_instagram()}
+					</a>
+				{/if}
+				{#if place.google_maps_url}
+					<a
+						class="text-amber-700 hover:underline dark:text-amber-400"
+						href={place.google_maps_url}
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						📍 {m.place_info_map()}
+					</a>
+				{/if}
+			</section>
+		{/if}
+
+		{#if place.images?.length}
+			<section class="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label={m.place_gallery_label()}>
+				{#each place.images as photo (photo.id)}
+					<img
+						src={photo.image}
+						alt={photo.caption || place.name}
+						loading="lazy"
+						class="h-40 w-full rounded-lg object-cover"
+					/>
+				{/each}
+			</section>
+		{/if}
+
 		<section
 			class="rounded-xl border border-stone-200 bg-white p-4 dark:border-stone-800 dark:bg-stone-900"
 		>
