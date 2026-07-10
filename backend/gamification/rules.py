@@ -16,6 +16,9 @@ REVIEW_FIRST_FOR_PLACE = "REVIEW_FIRST_FOR_PLACE"
 REVIEW_PHOTO = "REVIEW_PHOTO"
 REVIEW_VERIFIED = "REVIEW_VERIFIED"
 REVIEW_HELPFUL_VOTE = "REVIEW_HELPFUL_VOTE"
+REPLY_CREATED = "REPLY_CREATED"
+RATING_CREATED = "RATING_CREATED"
+PLACE_APPROVED = "PLACE_APPROVED"
 BADGE_AWARDED = "BADGE_AWARDED"
 MANUAL_ADJUSTMENT = "MANUAL_ADJUSTMENT"
 
@@ -26,6 +29,9 @@ REASON_CHOICES: list[tuple[str, str]] = [
     (REVIEW_PHOTO, "Review with dish photo"),
     (REVIEW_VERIFIED, "Review verified by moderator"),
     (REVIEW_HELPFUL_VOTE, "Review marked as helpful"),
+    (REPLY_CREATED, "Reply posted under someone's review"),
+    (RATING_CREATED, "Rated a place"),
+    (PLACE_APPROVED, "Added place approved by moderators"),
     (BADGE_AWARDED, "Badge awarded"),
     (MANUAL_ADJUSTMENT, "Manual adjustment"),
 ]
@@ -52,6 +58,11 @@ RULES: dict[str, Rule] = {
     REVIEW_HELPFUL_VOTE: Rule(
         REVIEW_HELPFUL_VOTE, 1, "Another user marked your review as helpful"
     ),
+    REPLY_CREATED: Rule(
+        REPLY_CREATED, 2, "Posting a reply under someone else's review"
+    ),
+    RATING_CREATED: Rule(RATING_CREATED, 2, "Rating a place"),
+    PLACE_APPROVED: Rule(PLACE_APPROVED, 25, "A place you submitted passed moderation"),
 }
 
 

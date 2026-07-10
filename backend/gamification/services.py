@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Iterable
 
 from django.db import IntegrityError, transaction
+
+from notifications.services import notify
 
 from .levels import level_for
 from .models import Badge, PointsTransaction, UserBadge, UserPointsBalance
@@ -127,91 +128,20 @@ class PointsService:
 # ---------------------------------------------------------------------------
 
 
-class BadgeStrategy:
-    """Predicate that decides whether a badge should be awarded.
-
-    Concrete strategies override :meth:`is_satisfied`. Adding a new
-    badge means adding a strategy class and registering its code in
-    :data:`BADGE_STRATEGIES` — no other code needs to change (OCP).
-    """
-
-    code: str = ""
-
-    def is_satisfied(self, user) -> bool:  # pragma: no cover - abstract
-        raise NotImplementedError
-
-
-class FirstReviewBadge(BadgeStrategy):
-    code = "first_review"
-
-    def is_satisfied(self, user) -> bool:
-        from reviews.models import Review
-
-        return Review.objects.filter(author=user, is_deleted=False).exists()
-
-
-class TenReviewsBadge(BadgeStrategy):
-    code = "ten_reviews"
-
-    def is_satisfied(self, user) -> bool:
-        from reviews.models import Review
-
-        return Review.objects.filter(author=user, is_deleted=False).count() >= 10
-
-
-class FoodieLevelBadge(BadgeStrategy):
-    """Awarded when the user reaches the second level (``Foodie``)."""
-
-    code = "foodie"
-
-    def is_satisfied(self, user) -> bool:
-        balance = UserPointsBalance.objects.filter(user=user).only("level").first()
-        return bool(balance and balance.level >= 1)
-
-
-class VerifiedFiveBadge(BadgeStrategy):
-    code = "verified_five"
-
-    def is_satisfied(self, user) -> bool:
-        from reviews.models import Review
-
-        return (
-            Review.objects.filter(
-                author=user, is_verified=True, is_deleted=False
-            ).count()
-            >= 5
-        )
-
-
-class HelpfulFiftyBadge(BadgeStrategy):
-    code = "helpful_fifty"
-
-    def is_satisfied(self, user) -> bool:
-        from django.db.models import Sum
-
-        from reviews.models import Review
-
-        agg = Review.objects.filter(author=user, is_deleted=False).aggregate(
-            total=Sum("helpful_count")
-        )
-        return int(agg["total"] or 0) >= 50
-
-
-BADGE_STRATEGIES: list[BadgeStrategy] = [
-    FirstReviewBadge(),
-    TenReviewsBadge(),
-    FoodieLevelBadge(),
-    VerifiedFiveBadge(),
-    HelpfulFiftyBadge(),
-]
-
-
 class BadgeService:
-    """Evaluates badge predicates and awards new badges atomically."""
+    """Evaluates the declarative catalogue in :mod:`gamification.badges`.
+
+    Badges are grouped by metric: each metric function runs at most once
+    per evaluation pass, and only when at least one of its badges is
+    still unearned — so a 60-badge catalogue stays a handful of queries
+    for an active user.
+    """
 
     @staticmethod
     def evaluate(user, *, trigger: str | None = None) -> list[Badge]:
         """Return the list of newly-awarded badges (may be empty)."""
+
+        from .badges import BADGES, METRICS
 
         # Pre-fetch existing memberships and the catalogue once.
         already = set(
@@ -219,35 +149,43 @@ class BadgeService:
         )
         catalogue = {b.code: b for b in Badge.objects.filter(is_active=True)}
 
+        metric_cache: dict[str, int] = {}
         new_badges: list[Badge] = []
-        for strategy in BadgeService._strategies_for(trigger):
-            if strategy.code in already:
+        for definition in BADGES:
+            if definition.code in already:
                 continue
-            badge = catalogue.get(strategy.code)
+            badge = catalogue.get(definition.code)
             if badge is None:
                 # Catalogue not seeded for this code — skip silently so
                 # tests and partial deployments do not crash.
                 continue
-            if strategy.is_satisfied(user):
-                try:
-                    UserBadge.objects.create(user=user, badge=badge)
-                except IntegrityError:
-                    # Race: another request awarded the same badge.
+            if definition.metric not in metric_cache:
+                metric_fn = METRICS.get(definition.metric)
+                if metric_fn is None:
                     continue
-                new_badges.append(badge)
-                if badge.points_reward:
-                    PointsService.award(
-                        user,
-                        reason="BADGE_AWARDED",
-                        amount=badge.points_reward,
-                        ref_type="badge",
-                        ref_id=badge.id,
-                        check_badges=False,
-                    )
+                metric_cache[definition.metric] = int(metric_fn(user) or 0)
+            if metric_cache[definition.metric] < definition.threshold:
+                continue
+            try:
+                UserBadge.objects.create(user=user, badge=badge)
+            except IntegrityError:
+                # Race: another request awarded the same badge.
+                continue
+            new_badges.append(badge)
+            notify(
+                user,
+                "badge_awarded",
+                badge_code=badge.code,
+                badge_title=badge.title,
+                badge_icon=badge.icon,
+            )
+            if badge.points_reward:
+                PointsService.award(
+                    user,
+                    reason="BADGE_AWARDED",
+                    amount=badge.points_reward,
+                    ref_type="badge",
+                    ref_id=badge.id,
+                    check_badges=False,
+                )
         return new_badges
-
-    @staticmethod
-    def _strategies_for(trigger: str | None) -> Iterable[BadgeStrategy]:
-        # In MVP we always evaluate all strategies — they are cheap.
-        # Hook left in place so future triggers can narrow the scope.
-        return BADGE_STRATEGIES

@@ -140,16 +140,18 @@ class ReviewSignalTests(TestCase):
             score=Decimal("8.0"),
             comment="great",
         )
+        from django.db.models import Sum
+
         balance = UserPointsBalance.objects.get(user=self.user)
-        # REVIEW_CREATED (10) + REVIEW_FIRST_FOR_PLACE (20) = 30
-        self.assertEqual(balance.total, 30)
-        reasons = set(
-            PointsTransaction.objects.filter(user=self.user).values_list(
-                "reason", flat=True
-            )
-        )
-        self.assertIn(REVIEW_CREATED, reasons)
-        self.assertIn(REVIEW_FIRST_FOR_PLACE, reasons)
+        # REVIEW_CREATED (10) + REVIEW_FIRST_FOR_PLACE (20), plus whatever
+        # badge rewards the catalogue grants for a first review — the exact
+        # figure would break each time the catalogue is re-balanced, so we
+        # assert the ledger is consistent instead.
+        ledger = PointsTransaction.objects.filter(user=self.user)
+        self.assertEqual(balance.total, ledger.aggregate(s=Sum("amount"))["s"])
+        amounts = {t.reason: t.amount for t in ledger if t.reason != "BADGE_AWARDED"}
+        self.assertEqual(amounts.get(REVIEW_CREATED), 10)
+        self.assertEqual(amounts.get(REVIEW_FIRST_FOR_PLACE), 20)
 
     def test_first_for_place_only_for_first_author(self):
         other = User.objects.create_user(
@@ -175,7 +177,9 @@ class ReviewSignalTests(TestCase):
         review.save(update_fields=["is_verified"])
 
         balance = UserPointsBalance.objects.get(user=self.user)
-        self.assertEqual(balance.total, before + 30)
+        # +30 for the verification itself; badge rewards (e.g. the first
+        # verified-review badge) may add more on top.
+        self.assertGreaterEqual(balance.total, before + 30)
         self.assertEqual(
             PointsTransaction.objects.filter(
                 user=self.user, reason=REVIEW_VERIFIED
@@ -411,3 +415,138 @@ class HelpfulVoteApiTests(APITestCase):
         row = self._row(resp.data)
         self.assertEqual(row["helpful_count"], 1)
         self.assertFalse(row["viewer_voted"])
+
+
+class BadgeCatalogueTests(TestCase):
+    """The declarative catalogue, its seed migration and the evaluator."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="catalog@example.com", password="StrongPass!234"
+        )
+
+    def test_every_catalogue_entry_is_seeded_and_valid(self):
+        from gamification.badges import BADGES, METRICS
+
+        self.assertGreaterEqual(len(BADGES), 50)
+        seeded = set(Badge.objects.values_list("code", flat=True))
+        for definition in BADGES:
+            self.assertIn(definition.code, seeded)
+            self.assertIn(definition.metric, METRICS)
+            self.assertGreater(definition.threshold, 0)
+        # Codes are unique.
+        codes = [d.code for d in BADGES]
+        self.assertEqual(len(codes), len(set(codes)))
+
+    def test_threshold_family_awards_on_fifth_review(self):
+        for i in range(5):
+            Review.objects.create(
+                place=_make_place(name=f"P{i}"),
+                author=self.user,
+                score=Decimal("8.0"),
+            )
+        earned = set(
+            UserBadge.objects.filter(user=self.user).values_list(
+                "badge__code", flat=True
+            )
+        )
+        self.assertIn("first_review", earned)
+        self.assertIn("five_reviews", earned)
+        self.assertNotIn("ten_reviews", earned)
+
+    def test_badge_award_creates_notification(self):
+        from notifications.models import Notification
+
+        Review.objects.create(
+            place=_make_place(name="Notif"), author=self.user, score=Decimal("8.0")
+        )
+        notes = Notification.objects.filter(user=self.user, type="badge_awarded")
+        self.assertTrue(notes.exists())
+        self.assertIn("badge_title", notes.first().data)
+
+    def test_perfect_ten_and_tough_critic(self):
+        Review.objects.create(
+            place=_make_place(name="Ten"), author=self.user, score=Decimal("10.0")
+        )
+        Review.objects.create(
+            place=_make_place(name="Two"), author=self.user, score=Decimal("1.0")
+        )
+        earned = set(
+            UserBadge.objects.filter(user=self.user).values_list(
+                "badge__code", flat=True
+            )
+        )
+        self.assertIn("perfect_ten", earned)
+        self.assertIn("tough_critic", earned)
+
+
+class NewTriggerTests(TestCase):
+    """Points for replies, ratings and place approval."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="trigger@example.com", password="StrongPass!234"
+        )
+        self.other = User.objects.create_user(
+            email="trigger2@example.com", password="StrongPass!234"
+        )
+        self.place = _make_place(name="Triggers")
+
+    def _reasons(self, user):
+        return set(
+            PointsTransaction.objects.filter(user=user).values_list("reason", flat=True)
+        )
+
+    def test_reply_awards_points_but_not_for_self_reply(self):
+        from reviews.models import ReviewReply
+
+        review = Review.objects.create(
+            place=self.place, author=self.user, score=Decimal("8.0")
+        )
+        ReviewReply.objects.create(review=review, author=self.other, text="hi")
+        self.assertIn("REPLY_CREATED", self._reasons(self.other))
+        ReviewReply.objects.create(review=review, author=self.user, text="thanks")
+        self.assertNotIn("REPLY_CREATED", self._reasons(self.user))
+
+    def test_rating_awards_points(self):
+        from places.models import PlaceRating
+
+        PlaceRating.objects.create(
+            user=self.user, place=self.place, rating=Decimal("8.0")
+        )
+        self.assertIn("RATING_CREATED", self._reasons(self.user))
+
+    def test_place_approval_awards_author_once(self):
+        pending = Place.objects.create(
+            name="Pending",
+            district="Unknown",
+            address="Somewhere 2",
+            main_image="place_images/test.png",
+            status="On_moderation",
+            author=self.user,
+        )
+        pending.status = "Active"
+        pending.save()
+        self.assertIn("PLACE_APPROVED", self._reasons(self.user))
+        tx_count = PointsTransaction.objects.filter(
+            user=self.user, reason="PLACE_APPROVED"
+        ).count()
+        # Saving again while already Active must not double-award.
+        pending.save()
+        self.assertEqual(
+            PointsTransaction.objects.filter(
+                user=self.user, reason="PLACE_APPROVED"
+            ).count(),
+            tx_count,
+        )
+
+    def test_favorite_triggers_collector_badge(self):
+        from places.models import PlaceFavorite
+
+        for i in range(5):
+            PlaceFavorite.objects.create(
+                user=self.user, place=_make_place(name=f"Fav{i}")
+            )
+        self.assertTrue(
+            UserBadge.objects.filter(user=self.user, badge__code="collector_5").exists()
+        )

@@ -91,10 +91,12 @@ class Badge(models.Model):
     TIER_BRONZE = "bronze"
     TIER_SILVER = "silver"
     TIER_GOLD = "gold"
+    TIER_PLATINUM = "platinum"
     TIER_CHOICES = [
         (TIER_BRONZE, "Bronze"),
         (TIER_SILVER, "Silver"),
         (TIER_GOLD, "Gold"),
+        (TIER_PLATINUM, "Platinum"),
     ]
 
     code = models.SlugField(max_length=64, unique=True)

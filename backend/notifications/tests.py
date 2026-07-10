@@ -99,8 +99,7 @@ class NotificationTriggerTests(APITestCase):
             f"/api/reviews/{self.review.pk}/approve/", {}, format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        note = Notification.objects.get(user=self.author)
-        self.assertEqual(note.type, "review_approved")
+        note = Notification.objects.get(user=self.author, type="review_approved")
         self.assertEqual(note.data["place_name"], self.place.name)
 
     def test_place_moderation_notifies_author(self):
