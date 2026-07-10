@@ -11,11 +11,13 @@
  */
 
 export type ToastVariant = 'success' | 'error' | 'info';
+export type ToastSize = 'sm' | 'lg';
 
 export interface Toast {
 	id: number;
 	message: string;
 	variant: ToastVariant;
+	size: ToastSize;
 	/** Auto-dismiss timeout in ms; null disables auto-dismiss. */
 	timeout: number | null;
 }
@@ -30,9 +32,14 @@ class ToastStore {
 		return this.#items;
 	}
 
-	push(message: string, variant: ToastVariant = 'info', timeout: number | null = DEFAULT_TIMEOUT) {
+	push(
+		message: string,
+		variant: ToastVariant = 'info',
+		timeout: number | null = DEFAULT_TIMEOUT,
+		size: ToastSize = 'sm'
+	) {
 		const id = this.#nextId++;
-		const toast: Toast = { id, message, variant, timeout };
+		const toast: Toast = { id, message, variant, size, timeout };
 		this.#items = [...this.#items, toast];
 		if (timeout !== null && typeof window !== 'undefined') {
 			window.setTimeout(() => this.dismiss(id), timeout);
@@ -40,8 +47,8 @@ class ToastStore {
 		return id;
 	}
 
-	success(message: string, timeout: number | null = DEFAULT_TIMEOUT) {
-		return this.push(message, 'success', timeout);
+	success(message: string, timeout: number | null = DEFAULT_TIMEOUT, size: ToastSize = 'sm') {
+		return this.push(message, 'success', timeout, size);
 	}
 
 	error(message: string, timeout: number | null = 6000) {

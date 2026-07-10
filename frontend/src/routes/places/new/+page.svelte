@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import MapPicker from '$lib/components/places/MapPicker.svelte';
 	import { placesApi } from '$lib/api/places.api';
+	import { toasts } from '$lib/stores/toasts.svelte';
 	import { ApiError, type FieldErrors } from '$lib/types/auth';
 	import { m } from '$lib/paraglide/messages';
 
@@ -17,7 +19,6 @@
 	let coords = $state<{ lat: number; lng: number } | null>(null);
 
 	let submitting = $state(false);
-	let success = $state(false);
 	let formError = $state<string | null>(null);
 	let fieldErrors = $state<FieldErrors>({});
 
@@ -35,7 +36,6 @@
 		submitting = true;
 		formError = null;
 		fieldErrors = {};
-		success = false;
 
 		if (!coords) {
 			formError = m.new_place_location_required();
@@ -54,14 +54,8 @@
 			data.set('longitude', coords.lng.toFixed(6));
 			if (mainImage) data.set('main_image', mainImage);
 			await placesApi.create(data);
-			success = true;
-			name = '';
-			city = 'Київ';
-			address = '';
-			description = '';
-			delivery = false;
-			mainImage = null;
-			coords = null;
+			toasts.success(m.new_place_success(), 6000, 'lg');
+			await goto('/places');
 		} catch (error) {
 			if (error instanceof ApiError) {
 				fieldErrors = error.fieldErrors;
@@ -77,11 +71,6 @@
 
 <div class="mx-auto max-w-2xl py-8">
 	<Card title={m.new_place_title()}>
-		{#if success}
-			<Alert variant="success">
-				{m.new_place_success()}
-			</Alert>
-		{/if}
 		{#if formError}
 			<Alert variant="error">{formError}</Alert>
 		{/if}

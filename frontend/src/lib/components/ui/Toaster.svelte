@@ -18,12 +18,12 @@
 >
 	{#each toasts.items as toast (toast.id)}
 		<div
-			class="pointer-events-auto flex items-start gap-3 rounded-lg border px-4 py-3 text-sm shadow-md {variantClass[
+			class="pointer-events-auto flex items-start gap-3 rounded-lg border shadow-md {variantClass[
 				toast.variant
-			]}"
+			]} {toast.size === 'lg' ? 'max-w-md px-5 py-4 text-base' : 'px-4 py-3 text-sm'}"
 			role={toast.variant === 'error' ? 'alert' : 'status'}
 		>
-			<span class="flex-1">{toast.message}</span>
+			<span class="flex-1 {toast.size === 'lg' ? 'font-medium' : ''}">{toast.message}</span>
 			<button
 				type="button"
 				class="-mr-1 -mt-1 inline-flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none opacity-70 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
