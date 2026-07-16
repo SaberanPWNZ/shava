@@ -70,7 +70,6 @@ known-first-party = [
     "news",
     "places",
     "places_menu",
-    "rating",
     "reviews",
     "shwarma",
     "users",

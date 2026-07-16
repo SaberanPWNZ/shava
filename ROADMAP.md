@@ -26,14 +26,14 @@ spot-check and close.
 |---|-------|----------------|
 | #5 | API: list of places | `backend/places/views.py` (`PlaceListView`), `backend/places/urls.py:22` |
 | #6 | API: single place | `backend/places/views.py` (`PlaceDetailView`), `backend/places/urls.py:27` |
-| #7 | API: add rating | `backend/places/views.py` (`PlaceRateView`, `PlaceRatingViewSet`), `backend/rating/` |
+| #7 | API: add rating | `backend/places/views.py` (`PlaceRateView`, `PlaceRatingViewSet`) |
 | #10 | Initialize frontend project | `frontend/` (SvelteKit + Tailwind 4; replaces the original Next.js plan — note in issue and close) |
 | #11 | Places list page | `frontend/src/routes/places/+page.svelte` |
 | #12 | Single place page | `frontend/src/routes/places/[id]/+page.svelte` |
 | #13 | Login / Register form | `frontend/src/routes/login`, `frontend/src/routes/register`, `src/lib/services/auth.service.ts` |
 | #14 | Add review form | `frontend/src/routes/places/[id]/+page.svelte` (review form), `backend/reviews/` |
 | #15 | Display map | `frontend/src/lib/components/places/MapPicker.svelte` (Leaflet) |
-| #21 | Create Rating model | `backend/rating/models.py` |
+| #21 | Create Rating model | `backend/places/models.py` (`PlaceRating`) |
 | #22 | Backend auth | `backend/users/` (SimpleJWT, register/login/refresh/logout/me) — see `README.md` table |
 | #24 | `POST /places/{id}/ratings/` | `backend/places/urls.py:31` (`place-rate`) + `PlaceRatingViewSet` |
 | #25 | `GET /places/{id}/` | `backend/places/urls.py:27` (returns place + reviews + avg rating) |

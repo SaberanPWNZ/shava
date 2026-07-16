@@ -64,7 +64,6 @@ INSTALLED_APPS = [
     "news",
     "places",
     "users",
-    "rating",
     "reviews",
     "shwarma",
     "ingredients",
@@ -491,15 +490,6 @@ LOGGING = {
             "propagate": False,
         },
         "users": {
-            "handlers": (
-                ["console", "file"]
-                if not os.path.exists("/.dockerenv")
-                else ["console"]
-            ),
-            "level": LOG_LEVEL,
-            "propagate": False,
-        },
-        "rating": {
             "handlers": (
                 ["console", "file"]
                 if not os.path.exists("/.dockerenv")
